@@ -1,5 +1,5 @@
 #define LED 13
-#define VBATPIN A7
+#define VBATPIN A9
 
 #if defined(ARDUINO_SAMD_ZERO) && defined(SERIAL_PORT_USBVIRTUAL)
     // Required for Serial on Zero based boards
@@ -7,12 +7,13 @@
 #endif
 
 
-void flashLED(int times) {
+void flashLED(int times, int endState) {
     digitalWrite(LED, LOW); delay(50);
     for (int i=0; i<times; i++) {
         digitalWrite(LED, HIGH); delay(50);
         digitalWrite(LED, LOW); delay(50);
     }
+    digitalWrite(LED, endState);
 }
 
 float batteryLevel() {

@@ -27,8 +27,14 @@ bool sensorSi1145Module = false;
 
 void setup() {
     while (!Serial); // only do this if connected to USB
+    flashLED(2, HIGH);
     Serial.begin(9600);
+    //Serial.begin(115200);
     Serial.println("Setup");
+
+    if (CHARGE_ONLY) {
+      return;
+    }
 
     pinMode(LED, OUTPUT);
     pinMode(RFM95_RST, OUTPUT);
@@ -63,36 +69,37 @@ void _receive() {
     uint8_t len = sizeof(buf);
     if (rf95.recv(buf, &len)) {
         char* msg = (char*)buf;
-        int msgID = strtol(msg+14, NULL, 10);
+        int msgID = strtol(msg+11, NULL, 10);
         int senderID = msg[4] - 48;
-        int origSenderID = strtol(msg+12, NULL, 10);
+        int origSenderID = strtol(msg+9, NULL, 10);
 
         /* log msg */
-        Serial.print("Sender: "); Serial.println(senderID);
-        Serial.print("Original Sender: "); Serial.println(origSenderID);
-        Serial.print("msgID: "); Serial.println(msgID);
-        Serial.println(msg);
-        Serial.print("RSSI: "); // min recommended RSSI: -91
-        Serial.println(rf95.lastRssi(), DEC);
-        flashLED(1);
+        if (DEBUG) {
+            Serial.println("RECEIVED:");
+            Serial.print("    Sender: "); Serial.print(senderID);
+            Serial.print("; Original Sender: "); Serial.print(origSenderID);
+            Serial.print("; MSG ID: "); Serial.println(msgID);
+            Serial.print("    Message: "); Serial.println(msg);
+            Serial.print("    RSSI: "); // min recommended RSSI: -91
+            Serial.println(rf95.lastRssi(), DEC);
+        }
+        flashLED(1, HIGH);
 
-        if (senderID != NODE_ID && origSenderID != NODE_ID && maxIDs[origSenderID] < msgID) {
-            Serial.print("Message ID: ");
-            Serial.print(origSenderID);
-            Serial.print(".");
-            Serial.print(msgID);
-            Serial.print(" is greater than ");
-            Serial.print(maxIDs[origSenderID]);
-            Serial.println(". Retransmitting message");
+        if (  senderID != NODE_ID 
+              && origSenderID != NODE_ID 
+              && maxIDs[origSenderID] < msgID) {
+
             buf[4] = NODE_ID + 48;
+            if (DEBUG) {
+                Serial.println("RETRANSMITTING:");
+                Serial.print("    "); Serial.println((char*)buf);
+            }
             rf95.send(buf, sizeof(buf));
             rf95.waitPacketSent();
-            Serial.println("Retransmitted");
-            flashLED(3);
+            flashLED(3, HIGH);
             maxIDs[origSenderID] = msgID;
 
             #if WIFI_MODULE
-                Serial.println("Calling web API");
                 if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {
                     Serial.println("Connected to API server");
                     char sendMsg[500];
@@ -101,6 +108,8 @@ void _receive() {
                     WIFI_CLIENT.print("Host: "); WIFI_CLIENT.println(API_HOST);
                     WIFI_CLIENT.println("Connection: close");
                     WIFI_CLIENT.println();
+                } else {
+                  Serial.println("Could not connect to API server");
                 }
             #endif
         }
@@ -111,7 +120,7 @@ void receive() {
     if (rf95.waitAvailableTimeout(10000)) {
         _receive();
     } else {
-            Serial.println("Receive failed");
+            Serial.println("No message received");
     }
 }
 
@@ -149,34 +158,35 @@ void transmit() {
       //encrypt(data, 128);
       rf95.send((const uint8_t*)data, sizeof(data));
       rf95.waitPacketSent();
-      Serial.print("Transmitted: ");
+      Serial.print("TRANSMIT:\n    ");
       Serial.println(data);
-      flashLED(3);
+      flashLED(3, HIGH);
 }
 
 unsigned long lastTransmit = 0;
 
 void loop() {
-    if ( (millis() - lastGPS) > 1000 * 60) {
-      doGPS();
+    if (CHARGE_ONLY) {
+      Serial.print("BAT: "); Serial.println(batteryLevel());
+      delay(10000);
       return;
     }
-    for (int i=0; i<1; i++)
-    {
-      receive();
-    }
+    
+    receive();
     if ( (millis() - lastTransmit) > 1000 * 10) {
-        //printGPS();
+        Serial.println("--------------------------------------------------------");
         Serial.print("ID: "); Serial.print(NODE_ID);
         Serial.print("; BAT: "); Serial.println(batteryLevel());
+        readGPS();
+        Serial.println("SENSORS:");
         if (sensorSi7021Module) {
-            Serial.print("Temperature: ");
+            Serial.print("    Temperature: ");
             Serial.print(sensorSi7021TempHumidity.readTemperature(), 2);
             Serial.print("; Humidity: ");
             Serial.println(sensorSi7021TempHumidity.readHumidity(), 2);
         }
         if (sensorSi1145Module) {
-            Serial.print("Vis: "); Serial.print(sensorSi1145UV.readVisible());
+            Serial.print("    Vis: "); Serial.print(sensorSi1145UV.readVisible());
             Serial.print("; IR: "); Serial.print(sensorSi1145UV.readIR());
             float UVindex = sensorSi1145UV.readUV();
             UVindex /= 100.0;
@@ -184,7 +194,7 @@ void loop() {
         }
         transmit();
         lastTransmit = millis();
-        Serial.println("*****************************");
+        Serial.println("********************************************************");
     }
 
     //delay(100);
