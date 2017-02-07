@@ -1,0 +1,33 @@
+#ifndef config_h
+#define config_h
+
+/*************/
+/* All Nodes */
+/*************/
+
+#define NODE_ID 1
+#define CHIPSET 1 // 1: 32u4; 2: M0
+#define RF95_FREQ 915.0 // 915.0 for U.S.
+
+// The default transmitter power is 13dBm, using PA_BOOST.
+// If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
+// you can set transmitter powers from 5 to 23 dBm:
+#define TX_POWER 10
+
+
+/********************/
+/* WiFi Module only */
+/********************/
+
+/** IMPORTANT NOTE: WiFi Module must be a Feather M0 (CHIPSET: 2) **/
+
+#define WIFI_MODULE false
+
+const char WIFI_SSID[] = ""; //  network SSID (name)
+const char WIFI_PASS[] = ""; // network password (use for WPA, or use as key for WEP)
+const char API_SERVER[] = "";
+const int API_PORT = 5000;
+const char API_HOST[] = "";
+
+
+#endif
