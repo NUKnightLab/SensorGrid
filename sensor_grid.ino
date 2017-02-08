@@ -1,6 +1,6 @@
 #include "config.h"
 #if CHIPSET == 2
-    #include <avr/dtostrf.h>
+    #include "lib/dtostrf.h"
 #endif
 #include "featherCommon.h"
 #include "GPS.h"
@@ -32,6 +32,12 @@ void setup() {
     //Serial.begin(115200);
     Serial.println("Setup");
 
+    Serial.print("Battery pin set to: ");
+    if (VBATPIN == A7) {
+        Serial.println("A7");
+    } else {
+        Serial.println("A9");
+    }
     if (CHARGE_ONLY) {
       return;
     }
@@ -89,6 +95,7 @@ void _receive() {
               && origSenderID != NODE_ID 
               && maxIDs[origSenderID] < msgID) {
 
+            // TODO: If end-node (i.e. Wifi) and successful write to API, we don't need to re-transmit
             buf[4] = NODE_ID + 48;
             if (DEBUG) {
                 Serial.println("RETRANSMITTING:");
@@ -101,13 +108,16 @@ void _receive() {
 
             #if WIFI_MODULE
                 if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {
-                    Serial.println("Connected to API server");
+                    Serial.println("API:");
+                    Serial.print("    Connected to API server: "); Serial.print(API_SERVER);
+                    Serial.print(":"); Serial.println(API_PORT);
                     char sendMsg[500];
                     sprintf(sendMsg, "GET /?msg=%s HTTP/1.1", msg);
                     WIFI_CLIENT.println(sendMsg);
                     WIFI_CLIENT.print("Host: "); WIFI_CLIENT.println(API_HOST);
                     WIFI_CLIENT.println("Connection: close");
                     WIFI_CLIENT.println();
+                    Serial.print("    "); Serial.println(sendMsg);
                 } else {
                   Serial.println("Could not connect to API server");
                 }
@@ -125,7 +135,9 @@ void receive() {
 }
 
 void transmit() {
-      //uint8_t data[] = "And hello back to you";
+      // TODO: if WiFi node, should write to API instead of transmitting
+      
+      //uint8_t data[] = "sample data"; // should we be using uint8_t instead of char?
       char data[100];
       char bat[5];
       dtostrf(batteryLevel(), 4, 2, bat);

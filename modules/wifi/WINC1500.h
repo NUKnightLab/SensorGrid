@@ -47,7 +47,7 @@ void setupWiFi() {
     Serial.println("connected to server");
     // Make a HTTP request:
     WIFI_CLIENT.println("GET /?status=START HTTP/1.1");
-    WIFI_CLIENT.print("Host: "); WIFI_CLIENT.prinln(API_HOST);
+    WIFI_CLIENT.print("Host: "); WIFI_CLIENT.println(API_HOST);
     WIFI_CLIENT.println("Connection: close");
     WIFI_CLIENT.println();
   }

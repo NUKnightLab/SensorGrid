@@ -1,5 +1,9 @@
 #define LED 13
-#define VBATPIN A9
+#if CHIPSET == 1 // not sure why ifdef/ifndef for A7,A9 doesn't work
+    #define VBATPIN A9
+#else
+    #define VBATPIN A7
+#endif
 
 #if defined(ARDUINO_SAMD_ZERO) && defined(SERIAL_PORT_USBVIRTUAL)
     // Required for Serial on Zero based boards
