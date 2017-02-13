@@ -23,9 +23,6 @@
 #include "Adafruit_Si7021.h"
 
 char codeVersion[5];
-
-
-
 int MSG_ID = 0;
 int maxIDs[5] = {0};
 
@@ -35,19 +32,18 @@ bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
 void setup() {
+    dtostrf(VERSION, 4, 2, codeVersion);
     if (DEBUG) {
         while (!Serial); // only do this if connected to USB
     }
-    dtostrf(VERSION, 4, 2, codeVersion);
-    flashLED(2, HIGH);
     Serial.begin(9600);  //Serial.begin(115200);
     if (DEBUG) {
         Serial.println("Serial ready");
     }
-
-    if (DUST_SENSOR) {
+    flashLED(2, HIGH);
+    #if DUST_SENSOR
         setupDustSensor();
-    }
+    #endif
 
     Serial.print("Battery pin set to: ");
     if (VBATPIN == A7) {
@@ -58,7 +54,6 @@ void setup() {
     if (CHARGE_ONLY) {
       return;
     }
-
     pinMode(LED, OUTPUT);
     pinMode(RFM95_RST, OUTPUT);
     digitalWrite(RFM95_RST, HIGH);
@@ -77,13 +72,15 @@ void setup() {
         Serial.println("Si7021 Not Found");
     }
 
+    /* TODO: Is UV sensor getting fried?
     if (sensorSi1145UV.begin()) {
         Serial.println("Found Si1145");
         sensorSi1145Module = true;
     } else {
         Serial.println("Si1145 Not Found");
     }
-
+    */
+    
     Serial.println("OK!");
 }
 
@@ -164,6 +161,7 @@ void transmit() {
       char bat[5];
       dtostrf(batteryLevel(), 4, 2, bat);
       MSG_ID += 1;
+      readGPS();
       if (GPS.fix) {
           if (DEBUG) {
               Serial.println("GPS Fix");
@@ -186,36 +184,34 @@ void transmit() {
             NODE_ID, NODE_ID, MSG_ID, codeVersion, bat, GPS.year, GPS.month, GPS.day,
             GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds);
       }
-      if (DEBUG) {
-          Serial.println("Checking for temp/humid module reading");
-      }
       if (sensorSi7021Module) {
+          if (DEBUG) {
+              Serial.println("Checking for temp/humid module reading");
+          }     
           char temp[5];
           char humid[5];
           dtostrf(sensorSi7021TempHumidity.readTemperature(), 4, 2, temp);
           dtostrf(sensorSi7021TempHumidity.readHumidity(), 4, 2, humid);
           sprintf(data, "%s&temp=%s&humid=%s", data, temp, humid);
       }
-      if (DEBUG) {
-          Serial.println("Checking for Vis/IR/UV light module reading");
-      }
       if (sensorSi1145Module) {
-          char vis[5];
-          char ir[5];
-          char uv[5];
-          dtostrf(sensorSi1145UV.readVisible(), 4, 2, vis);
-          dtostrf(sensorSi1145UV.readIR(), 4, 2, ir);
-          dtostrf(sensorSi1145UV.readUV()/100.0, 4, 2, uv);
-          sprintf(data, "%s&vis=%s&ir=%s&uv=%s", data, vis, ir, uv);
+          if (DEBUG) {
+              Serial.println("Checking for Vis/IR/UV light module reading");
+          }
+          //char uv[5];
+          int vis = sensorSi1145UV.readVisible();
+          int ir = sensorSi1145UV.readIR();
+          //dtostrf(sensorSi1145UV.readUV()/100.0, 4, 2, uv);
+          sprintf(data, "%s&vis=%d&ir=%d", data, vis, ir);
       }
-      if (DEBUG) {
-          Serial.println("Checking for dust module reading");
-      }
-      if (DUST_SENSOR) {
-        char dustDensity[5];
-        dtostrf(readDustSensor(), 4, 2, dustDensity);
-        sprintf(data, "%s&dust=%s", data, dustDensity);
-      }
+      #if DUST_SENSOR
+          if (DEBUG) {
+              Serial.println("Checking for dust module reading");
+          }
+          char dustDensity[5];
+          dtostrf(readDustSensor(), 4, 2, dustDensity);
+          sprintf(data, "%s&dust=%s", data, dustDensity);
+      #endif
       //encrypt(data, 128);
       rf95.send((const uint8_t*)data, sizeof(data));
       rf95.waitPacketSent();
@@ -240,7 +236,7 @@ void loop() {
         Serial.println("--------------------------------------------------------");
         Serial.print("ID: "); Serial.print(NODE_ID);
         Serial.print("; BAT: "); Serial.println(batteryLevel());
-        readGPS();
+        //readGPS();
         Serial.println("SENSORS:");
         if (sensorSi7021Module) {
             Serial.print("    Temperature: ");
@@ -255,10 +251,10 @@ void loop() {
             UVindex /= 100.0;
             Serial.print("; UV: ");  Serial.println(UVindex);
         }
-        if (DUST_SENSOR) {
+        #if DUST_SENSOR
             float dustDensity = readDustSensor();
             Serial.print("    Dust: "); Serial.println(dustDensity);
-        }
+        #endif
         transmit();
         lastTransmit = millis();
         Serial.println("********************************************************");

@@ -18,9 +18,9 @@ RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 void setupRadio() {
     Serial.println("Feather LoRa RX Test!");
-    digitalWrite(RFM95_RST, LOW);
+    digitalWrite(RFM95_RST, LOW); Serial.println("LoRa RST LOW");
     delay(10);
-    digitalWrite(RFM95_RST, HIGH);
+    digitalWrite(RFM95_RST, HIGH); Serial.println("LoRa RST HIGHT");
     delay(10);
     while (!rf95.init()) {
         Serial.println("LoRa radio init failed");

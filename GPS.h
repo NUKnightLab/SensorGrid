@@ -19,7 +19,8 @@ unsigned long lastGPS = 0;
 
 /*
  * 
- * This works for 32u4 boards only */
+ * This works for 32u4 boards only but not working well right now*/
+/*
 #if BOARD == Feather32u4
 SIGNAL(TIMER0_COMPA_vect) {
   char c = GPS.read();
@@ -42,6 +43,7 @@ void useInterrupt(boolean v) {
   }
 }
 #endif
+*/
 
 
 /*********************************************/
@@ -132,12 +134,13 @@ void TC3_Handler()
 void setupGPS() {
   Serial.println("Initializing GPS");
   GPS.begin(9600);
-  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
-  GPS.sendCommand(PGCMD_ANTENNA);
-  #if BOARD == Feather32u4
-    useInterrupt(usingInterrupt);
-  #endif
+  // Not sure why these are here. They don't seem to be needed and cause GPS init to hang
+  //GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  //GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
+  //GPS.sendCommand(PGCMD_ANTENNA);
+  //#if BOARD == Feather32u4
+  //  useInterrupt(usingInterrupt);
+  //#endif
   //setupSignal(); // Not currently working for M0
   Serial.println("GPS initialized"); // TODO: is there a way to tell GPS init is unsuccessful?
   delay(500);
