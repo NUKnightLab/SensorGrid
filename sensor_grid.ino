@@ -1,3 +1,4 @@
+#define VERSION 0.11
 #include "config.h"
 #if BOARD == FeatherM0
     #include "lib/dtostrf.h"
@@ -20,7 +21,11 @@
 
 #include "Adafruit_SI1145.h"
 #include "Adafruit_Si7021.h"
- 
+
+char codeVersion[5];
+
+
+
 int MSG_ID = 0;
 int maxIDs[5] = {0};
 
@@ -33,6 +38,7 @@ void setup() {
     if (DEBUG) {
         while (!Serial); // only do this if connected to USB
     }
+    dtostrf(VERSION, 4, 2, codeVersion);
     flashLED(2, HIGH);
     Serial.begin(9600);  //Serial.begin(115200);
     if (DEBUG) {
@@ -167,28 +173,40 @@ void transmit() {
           dtostrf(GPS.latitude, 7, 3, lat);
           dtostrf(GPS.longitude, 7, 3, lon);
           sprintf(data,
-            "snd=%d&id=%d.%04d&bat=%s&dt=20%d-%d-%dT%d:%d:%d.%d&loc=%s,%s",
-            NODE_ID, NODE_ID, MSG_ID, bat, GPS.year, GPS.month, GPS.day,
+            "snd=%d&id=%d.%04d&v=%s&bat=%s&dt=20%d-%d-%dT%d:%d:%d.%d&loc=%s,%s",
+            NODE_ID, NODE_ID, MSG_ID, codeVersion, bat, GPS.year, GPS.month, GPS.day,
             GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds,
             lat, lon);
       } else {
           if (DEBUG) {
               Serial.println("No GPS Fix");
           }
-          //"SND: %d; ID: %d.%04d; BAT: %s; DT: 20%d-%d-%dT%d:%d:%d.%d"
           sprintf(data,
-            "snd=%d&id=%d.%04d&bat=%s&dt=20%d-%d-%dT%d:%d:%d.%d",
-            NODE_ID, NODE_ID, MSG_ID, bat, GPS.year, GPS.month, GPS.day,
+            "snd=%d&id=%d.%04d&v=%s&bat=%s&dt=20%d-%d-%dT%d:%d:%d.%d",
+            NODE_ID, NODE_ID, MSG_ID, codeVersion, bat, GPS.year, GPS.month, GPS.day,
             GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds);
       }
       if (DEBUG) {
           Serial.println("Checking for temp/humid module reading");
       }
       if (sensorSi7021Module) {
-          sprintf(data,
-            "%s&temp=%d&hum=%d",
-            data, sensorSi7021TempHumidity.readTemperature(),
-            sensorSi7021TempHumidity.readHumidity());
+          char temp[5];
+          char humid[5];
+          dtostrf(sensorSi7021TempHumidity.readTemperature(), 4, 2, temp);
+          dtostrf(sensorSi7021TempHumidity.readHumidity(), 4, 2, humid);
+          sprintf(data, "%s&temp=%s&humid=%s", data, temp, humid);
+      }
+      if (DEBUG) {
+          Serial.println("Checking for Vis/IR/UV light module reading");
+      }
+      if (sensorSi1145Module) {
+          char vis[5];
+          char ir[5];
+          char uv[5];
+          dtostrf(sensorSi1145UV.readVisible(), 4, 2, vis);
+          dtostrf(sensorSi1145UV.readIR(), 4, 2, ir);
+          dtostrf(sensorSi1145UV.readUV()/100.0, 4, 2, uv);
+          sprintf(data, "%s&vis=%s&ir=%s&uv=%s", data, vis, ir, uv);
       }
       if (DEBUG) {
           Serial.println("Checking for dust module reading");
