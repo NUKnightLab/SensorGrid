@@ -8,8 +8,8 @@ Adafruit_GPS GPS(&GPSSerial);
 unsigned long lastGPS = 0;
 
 /* crude handling of SIGNAL only available on 32u4 */
-#if CHIPSET == 1
-    boolean usingInterrupt = true;
+#if BOARD == Feather32u4
+    boolean usingInterrupt = false; // interrupts not working well at the moment
 #else
     boolean usingInterrupt = false;
 #endif
@@ -20,7 +20,7 @@ unsigned long lastGPS = 0;
 /*
  * 
  * This works for 32u4 boards only */
-#if CHIPSET == 1
+#if BOARD == Feather32u4
 SIGNAL(TIMER0_COMPA_vect) {
   char c = GPS.read();
   // if you want to debug, this is a good time to do it!
@@ -135,7 +135,7 @@ void setupGPS() {
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
   GPS.sendCommand(PGCMD_ANTENNA);
-  #if CHIPSET == 1
+  #if BOARD == Feather32u4
     useInterrupt(usingInterrupt);
   #endif
   //setupSignal(); // Not currently working for M0

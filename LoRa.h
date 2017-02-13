@@ -1,14 +1,14 @@
 #include <RH_RF95.h>
 
 /* Feather 32u4 Chipset */
-#if CHIPSET == 1
+#if BOARD == Feather32u4
     #define RFM95_CS 8
     #define RFM95_RST 4
     #define RFM95_INT 7
 #endif
 
 /* Feather M0 Chipset */
-#if CHIPSET == 2
+#if BOARD == FeatherM0
     #define RFM95_CS 8
     #define RFM95_RST 4
     #define RFM95_INT 3

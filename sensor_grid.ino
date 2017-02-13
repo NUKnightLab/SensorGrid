@@ -1,5 +1,5 @@
 #include "config.h"
-#if CHIPSET == 2
+#if BOARD == FeatherM0
     #include "lib/dtostrf.h"
 #endif
 #include "featherCommon.h"
@@ -9,14 +9,18 @@
 #include <SPI.h>
 
 /* Modules */
-#if WIFI_MODULE
+#if WIFI_MODULE == WINC1500
     #include <WiFi101.h>
     #include "modules/wifi/WINC1500.h"
 #endif
 
+#if DUST_SENSOR == SHARP_GP2Y1010AU0F
+    #include "modules/dust/SHARP_GP2Y1010AU0F.h"
+#endif
+
 #include "Adafruit_SI1145.h"
 #include "Adafruit_Si7021.h"
-
+ 
 int MSG_ID = 0;
 int maxIDs[5] = {0};
 
@@ -26,11 +30,18 @@ bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
 void setup() {
-    while (!Serial); // only do this if connected to USB
+    if (DEBUG) {
+        while (!Serial); // only do this if connected to USB
+    }
     flashLED(2, HIGH);
-    Serial.begin(9600);
-    //Serial.begin(115200);
-    Serial.println("Setup");
+    Serial.begin(9600);  //Serial.begin(115200);
+    if (DEBUG) {
+        Serial.println("Serial ready");
+    }
+
+    if (DUST_SENSOR) {
+        setupDustSensor();
+    }
 
     Serial.print("Battery pin set to: ");
     if (VBATPIN == A7) {
@@ -105,6 +116,9 @@ void _receive() {
             rf95.waitPacketSent();
             flashLED(3, HIGH);
             maxIDs[origSenderID] = msgID;
+            if (DEBUG) {
+                Serial.println("    TRANSMITTED");
+            }
 
             #if WIFI_MODULE
                 if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {
@@ -127,6 +141,9 @@ void _receive() {
 }
 
 void receive() {
+    if (DEBUG) {
+      Serial.println("Listening for LoRa signal");
+    }
     if (rf95.waitAvailableTimeout(10000)) {
         _receive();
     } else {
@@ -135,8 +152,7 @@ void receive() {
 }
 
 void transmit() {
-      // TODO: if WiFi node, should write to API instead of transmitting
-      
+      // TODO: if WiFi node, should write to API instead of transmitting     
       //uint8_t data[] = "sample data"; // should we be using uint8_t instead of char?
       char data[100];
       char bat[5];
@@ -144,28 +160,43 @@ void transmit() {
       //bat.toFloat();
       MSG_ID += 1;
       if (GPS.fix) {
-        char lat[8];
-        char lon[8];
-        dtostrf(GPS.latitude, 7, 3, lat);
-        dtostrf(GPS.longitude, 7, 3, lon);
-        //"SND: %d; ID: %d.%04d; BAT: %s; DT: 20%d-%d-%dT%d:%d:%d.%d; LOC: %s,%s",
-        sprintf(data,
-          "SND=%d&ID=%d.%04d&BAT=%s&DT=20%d-%d-%dT%d:%d:%d.%d&LOC=%s,%s",
-          NODE_ID, NODE_ID, MSG_ID, bat, GPS.year, GPS.month, GPS.day,
-          GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds,
-          lat, lon);
+          if (DEBUG) {
+              Serial.println("GPS Fix");
+          }
+          char lat[8];
+          char lon[8];
+          dtostrf(GPS.latitude, 7, 3, lat);
+          dtostrf(GPS.longitude, 7, 3, lon);
+          //"SND: %d; ID: %d.%04d; BAT: %s; DT: 20%d-%d-%dT%d:%d:%d.%d; LOC: %s,%s",
+          sprintf(data,
+            "SND=%d&ID=%d.%04d&BAT=%s&DT=20%d-%d-%dT%d:%d:%d.%d&LOC=%s,%s",
+            NODE_ID, NODE_ID, MSG_ID, bat, GPS.year, GPS.month, GPS.day,
+            GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds,
+            lat, lon);
       } else {
-        //"SND: %d; ID: %d.%04d; BAT: %s; DT: 20%d-%d-%dT%d:%d:%d.%d"
-        sprintf(data,
-          "SND=%d&ID=%d.%04d&BAT=%s&DT=20%d-%d-%dT%d:%d:%d.%d",
-          NODE_ID, NODE_ID, MSG_ID, bat, GPS.year, GPS.month, GPS.day,
-          GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds);
+          if (DEBUG) {
+              Serial.println("No GPS Fix");
+          }
+          //"SND: %d; ID: %d.%04d; BAT: %s; DT: 20%d-%d-%dT%d:%d:%d.%d"
+          sprintf(data,
+            "SND=%d&ID=%d.%04d&BAT=%s&DT=20%d-%d-%dT%d:%d:%d.%d",
+            NODE_ID, NODE_ID, MSG_ID, bat, GPS.year, GPS.month, GPS.day,
+            GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds);
+      }
+      if (DEBUG) {
+          Serial.println("Checking for temp/humid module reading");
       }
       if (sensorSi7021Module) {
-        sprintf(data,
-          "%s&temp=%d&hum=%d",
-          data, sensorSi7021TempHumidity.readTemperature(),
-          sensorSi7021TempHumidity.readHumidity());
+          sprintf(data,
+            "%s&temp=%d&hum=%d",
+            data, sensorSi7021TempHumidity.readTemperature(),
+            sensorSi7021TempHumidity.readHumidity());
+      }
+      if (DEBUG) {
+          Serial.println("Checking for dust module reading");
+      }
+      if (DUST_SENSOR) {
+        sprintf(data, "%s&dust=%d", data, readDustSensor());
       }
       //encrypt(data, 128);
       rf95.send((const uint8_t*)data, sizeof(data));
@@ -178,13 +209,15 @@ void transmit() {
 unsigned long lastTransmit = 0;
 
 void loop() {
+    
     if (CHARGE_ONLY) {
       Serial.print("BAT: "); Serial.println(batteryLevel());
       delay(10000);
       return;
     }
-    
+
     receive();
+    
     if ( (millis() - lastTransmit) > 1000 * 10) {
         Serial.println("--------------------------------------------------------");
         Serial.print("ID: "); Serial.print(NODE_ID);
@@ -203,6 +236,10 @@ void loop() {
             float UVindex = sensorSi1145UV.readUV();
             UVindex /= 100.0;
             Serial.print("; UV: ");  Serial.println(UVindex);
+        }
+        if (DUST_SENSOR) {
+            float dustDensity = readDustSensor();
+            Serial.print("    Dust: "); Serial.println(dustDensity);
         }
         transmit();
         lastTransmit = millis();
