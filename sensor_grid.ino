@@ -157,7 +157,6 @@ void transmit() {
       char data[100];
       char bat[5];
       dtostrf(batteryLevel(), 4, 2, bat);
-      //bat.toFloat();
       MSG_ID += 1;
       if (GPS.fix) {
           if (DEBUG) {
@@ -167,9 +166,8 @@ void transmit() {
           char lon[8];
           dtostrf(GPS.latitude, 7, 3, lat);
           dtostrf(GPS.longitude, 7, 3, lon);
-          //"SND: %d; ID: %d.%04d; BAT: %s; DT: 20%d-%d-%dT%d:%d:%d.%d; LOC: %s,%s",
           sprintf(data,
-            "SND=%d&ID=%d.%04d&BAT=%s&DT=20%d-%d-%dT%d:%d:%d.%d&LOC=%s,%s",
+            "snd=%d&id=%d.%04d&bat=%s&dt=20%d-%d-%dT%d:%d:%d.%d&loc=%s,%s",
             NODE_ID, NODE_ID, MSG_ID, bat, GPS.year, GPS.month, GPS.day,
             GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds,
             lat, lon);
@@ -179,7 +177,7 @@ void transmit() {
           }
           //"SND: %d; ID: %d.%04d; BAT: %s; DT: 20%d-%d-%dT%d:%d:%d.%d"
           sprintf(data,
-            "SND=%d&ID=%d.%04d&BAT=%s&DT=20%d-%d-%dT%d:%d:%d.%d",
+            "snd=%d&id=%d.%04d&bat=%s&dt=20%d-%d-%dT%d:%d:%d.%d",
             NODE_ID, NODE_ID, MSG_ID, bat, GPS.year, GPS.month, GPS.day,
             GPS.hour, GPS.minute, GPS.seconds, GPS.milliseconds);
       }
@@ -196,7 +194,9 @@ void transmit() {
           Serial.println("Checking for dust module reading");
       }
       if (DUST_SENSOR) {
-        sprintf(data, "%s&dust=%d", data, readDustSensor());
+        char dustDensity[5];
+        dtostrf(readDustSensor(), 4, 2, dustDensity);
+        sprintf(data, "%s&dust=%s", data, dustDensity);
       }
       //encrypt(data, 128);
       rf95.send((const uint8_t*)data, sizeof(data));
