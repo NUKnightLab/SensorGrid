@@ -1,13 +1,32 @@
 #ifndef config_h
 #define config_h
 
+// Boards / Chipsets
+#define Feather32u4 1
+#define FeatherM0 2
+
+/* Module defs */
+
+#define NONE 0
+
+// WiFi modules
+#define WINC1500 1
+
+// Dust sensors
+#define SHARP_GP2Y1010AU0F 1
+
 /*************/
 /* All Nodes */
 /*************/
 
+#define CHARGE_ONLY false
+#define DEBUG true
+#define GPSECHO  false
 #define NODE_ID 1
-#define CHIPSET 1 // 1: 32u4; 2: M0
+#define BOARD Feather32u4
 #define RF95_FREQ 915.0 // 915.0 for U.S.
+#define WIFI_MODULE NONE
+#define DUST_SENSOR SHARP_GP2Y1010AU0F
 
 // The default transmitter power is 13dBm, using PA_BOOST.
 // If you are using RFM95/96/97/98 modules which uses the PA_BOOST transmitter pin, then 
@@ -19,15 +38,15 @@
 /* WiFi Module only */
 /********************/
 
-/** IMPORTANT NOTE: WiFi Module must be a Feather M0 (CHIPSET: 2) **/
+/** IMPORTANT NOTE: WiFi Module must be a Feather M0 (BOARD: FeatherM0) **/
 
-#define WIFI_MODULE false
-
+//const char WIFI_SSID[] = ""; //  network SSID (name)
+//const char WIFI_PASS[] = ""; // network password (use for WPA, or use as key for WEP)
 const char WIFI_SSID[] = ""; //  network SSID (name)
 const char WIFI_PASS[] = ""; // network password (use for WPA, or use as key for WEP)
 const char API_SERVER[] = "";
 const int API_PORT = 5000;
-const char API_HOST[] = "";
+const char API_HOST[] = "knilab.com";
 
 
 #endif
