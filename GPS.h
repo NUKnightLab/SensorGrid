@@ -9,7 +9,7 @@ unsigned long lastGPS = 0;
 
 /* crude handling of SIGNAL only available on 32u4 */
 #if BOARD == Feather32u4
-    boolean usingInterrupt = false; // interrupts not working well at the moment
+    boolean usingInterrupt = true; // interrupts not working well at the moment
 #else
     boolean usingInterrupt = false;
 #endif
@@ -20,14 +20,8 @@ unsigned long lastGPS = 0;
 /*
  * 
  * This works for 32u4 boards only but not working well right now*/
-/*
+
 #if BOARD == Feather32u4
-SIGNAL(TIMER0_COMPA_vect) {
-  char c = GPS.read();
-  // if you want to debug, this is a good time to do it!
-  if (GPSECHO)
-    if (c) Serial.print(c);
-}
 
 void useInterrupt(boolean v) {
   if (v) {
@@ -42,8 +36,29 @@ void useInterrupt(boolean v) {
     usingInterrupt = false;
   }
 }
+
+SIGNAL(TIMER0_COMPA_vect) {
+    /*
+    char c = GPS.read();   
+    if (GPS.newNMEAreceived()) {
+         GPS.parse(GPS.lastNMEA());
+    } */   
+    if (millis() - lastGPS > 15 * 1000) {
+        char c = GPS.read();
+        if (GPS.newNMEAreceived()) {
+            // a tricky thing here is if we print the NMEA sentence, or data
+            // we end up not listening and catching other sentences!
+            // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
+            if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
+                return;  // we can fail to parse a sentence in which case we should just wait for another
+            lastGPS = millis();
+        }
+    }
+}
+
+
 #endif
-*/
+
 
 
 /*********************************************/
@@ -132,20 +147,21 @@ void TC3_Handler()
 
 
 void setupGPS() {
-  Serial.println("Initializing GPS");
+  Serial.println(F("Initializing GPS"));
   GPS.begin(9600);
-  // Not sure why these are here. They don't seem to be needed and cause GPS init to hang
-  //GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
-  //GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
+  GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
+  GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
   //GPS.sendCommand(PGCMD_ANTENNA);
-  //#if BOARD == Feather32u4
-  //  useInterrupt(usingInterrupt);
-  //#endif
+  //Serial.println("GPS commands set"); // leave this println. GPS seems to freeze w/o it!?!
+  #if BOARD == Feather32u4
+    useInterrupt(usingInterrupt);
+  #endif
   //setupSignal(); // Not currently working for M0
-  Serial.println("GPS initialized"); // TODO: is there a way to tell GPS init is unsuccessful?
+  Serial.println(F("GPS initialized")); // TODO: is there a way to tell GPS init is unsuccessful?
   delay(500);
 }
 
+/*
 void printGPS() {
   Serial.println("GPS:");
   Serial.print("    DT: 20");
@@ -169,25 +185,28 @@ void printGPS() {
     Serial.print("; Satellites: "); Serial.println((int)GPS.satellites);
   }
 }
+*/
 
+/*
 void readGPS() {
-  if (! usingInterrupt) {
-    char c = GPS.read();
-    if (GPSECHO) {
-      if (c) Serial.println(c);
-    }
-  }
+  char c = GPS.read();
   if (GPS.newNMEAreceived()) {
     // a tricky thing here is if we print the NMEA sentence, or data
     // we end up not listening and catching other sentences!
     // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
     //Serial.println(GPS.lastNMEA());   // this also sets the newNMEAreceived() flag to false
-    if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
-      return;  // we can fail to parse a sentence in which case we should just wait for another
-    printGPS();
-    lastGPS = millis();
+    GPS.parse(GPS.lastNMEA());
+    //if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
+    //  return;  // we can fail to parse a sentence in which case we should just wait for another
+    //printGPS(); x
+    //lastGPS = millis();
+  } else {
+    Serial.println("No new NMEA received");
   }
 }
+*/
+
+
 
 
 

@@ -10,6 +10,8 @@
     #define Serial SERIAL_PORT_USBVIRTUAL
 #endif
 
+class __FlashStringHelper;
+#define F(string_literal) (reinterpret_cast<const __FlashStringHelper*>(PSTR(string_literal)))
 
 void flashLED(int times, int endState) {
     digitalWrite(LED, LOW); delay(50);
@@ -27,3 +29,10 @@ float batteryLevel() {
     measuredvbat /= 1024; // convert to voltage
     return measuredvbat;
 }
+
+int freeRam () {
+  extern int __heap_start, *__brkval; 
+  int v; 
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+}
+
