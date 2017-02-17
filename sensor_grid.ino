@@ -1,4 +1,4 @@
-#define VERSION "0.11"
+#define VERSION 0.11
 #include "config.h"
 #if BOARD == FeatherM0
     #include "lib/dtostrf.h"
@@ -24,6 +24,10 @@
 #include "Adafruit_Si7021.h"
 
 #define MAX_MSG_LENGTH 160
+typedef struct msgStruct {
+  int snd;
+  int orig;
+};
 int MSG_ID = 0;
 int maxIDs[5] = {0};
 char txData[MAX_MSG_LENGTH] = {0};
@@ -36,11 +40,41 @@ bool sensorSi1145Module = false;
 
 
 void _receive() {
-    uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-    uint8_t len = sizeof(buf);   
+    //uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
+    //uint8_t len = sizeof(buf); 
+    //uint8_t buf[sizeof(msgStruct)];
+    char buf[RH_RF95_MAX_MESSAGE_LEN];
+    uint8_t len = sizeof(buf);  
+    
+    
     if (rf95.recv(buf, &len)) {
+
         char* msg = (char*)buf;
+        Serial.println("Received msg");
+        /*
+        msgStruct *structuredMessage;
+        structuredMessage = (msgStruct*)msg;
+        
+        Serial.print("STRUCT snd: "); Serial.println(structuredMessage->snd);
+        Serial.print("STRUCT ver: "); Serial.println(structuredMessage->ver);
+        Serial.print("STRUCT orig: "); Serial.println(structuredMessage->orig);
+        Serial.print("STRUCT id: "); Serial.println(structuredMessage->id);
+        Serial.print("STRUCT bat: "); Serial.println(structuredMessage->bat);
+        */
+        //uint8_t *msgBuf2[sizeof(msgTx2)] = {0};
+        //memcpy(msgBuf2, msgTx2, sizeof(msgStruct));
+        struct msgStruct *msgReceived = (struct msgStruct*)msg;
+
+        //struct msgStruct *msgRx2 = (struct msgStruct*)buf;
+        int senderID = msgReceived->snd;
+        int origSenderID = msgReceived->orig;
+        //float ver = msgReceived->ver;     
+        Serial.print("RX STRUCT snd: "); Serial.println(senderID);
+        Serial.print("RX STRUCT orig: "); Serial.println(origSenderID);
+        //Serial.print("RX STRUCT ver: "); Serial.println(ver);
+        
         // TODO: parse out msg ID
+        /*
         int msgID = strtol(msg+24, NULL, 10);
         int senderID = msg[4] - 48;
         // TODO: parse out orig sender
@@ -91,6 +125,7 @@ void _receive() {
                 }
             #endif
         }
+        */
         delete msg;
     }
 }
@@ -134,13 +169,19 @@ void appendFloat(char *str, float val, int precision) {
    itoa(fraction, str+strlen(str), 10);
 }
 
+
+
+
 void transmit() {
       // TODO: if WiFi node, should write to API instead of transmitting     
       //uint8_t data[] = "sample data"; // should we be using uint8_t instead of char?
       MSG_ID += 1;
       float bat = batteryLevel();
+      
+      
       Serial.print(F("BAT: ")); Serial.println(bat);
 
+      /*
       memset(&txData[0], 0, MAX_MSG_LENGTH);
       strcpy(txData, "snd=");
       appendInt(txData, NODE_ID);
@@ -165,6 +206,25 @@ void transmit() {
       append(txData, ":");
       appendInt(txData, GPS.seconds, 2);
 
+      */
+      
+      struct msgStruct *msgTransmit = malloc(sizeof(struct msgStruct));
+      //struct msgStruct *msgTransmit;
+      char *msgTx = (char*)msgTransmit;
+      msgTransmit->snd = NODE_ID; 
+      msgTransmit->orig = NODE_ID;
+      //msgTransmit->ver = VERSION;
+   
+      //uint8_t *msgPtr = (uint8_t*)&msg;
+      //uint8_t *msgPtr = (uint8_t*)&msg;
+      
+      //memcpy(&msgRx, msgPtr, sizeof msgRx);
+      
+      //struct msgStruct *structuredMessage;
+      //structuredMessage = (struct msgStruct*)msgPtr;
+      //struct messageStruct *structuredMessage = (struct messageStruct*)msgPtr2;
+
+      /*  
       Serial.print(F("GPS ")); Serial.println(GPS.fix? F("(Fix)") : F("(No Fix)"));
       Serial.print(F("    YEAR: ")); Serial.print(GPS.year, DEC);
       Serial.print(F("; MONTH: ")); Serial.print(GPS.month, DEC);
@@ -173,7 +233,9 @@ void transmit() {
       Serial.print(GPS.hour); Serial.print(F(":"));
       Serial.print(GPS.minute); Serial.print(F(":"));
       Serial.println(GPS.seconds);
+      */
 
+      /*
       if (GPS.fix) {         
           float lat = GPS.latitudeDegrees;
           float lon = GPS.longitudeDegrees;
@@ -221,11 +283,42 @@ void transmit() {
           append(txData, "&dust=");
           appendFloat(txData, dust, 100);
       #endif
+      */
       //encrypt(data, 128);
-      rf95.send((const uint8_t*)txData, sizeof(txData));
+      //rf95.send((const uint8_t*)txData, sizeof(txData));
+      //rf95.send(msgPtr, sizeof(msg));
+      //uint8_t *msgTx = (uint8_t*)&msg;
+
+      Serial.println("transmitting");
+      //char *msgTx = (char*)msgTransmit;
+      //const uint8_t *msgTx2 = (const uint8_t*)msg;
+      
+      //Serial.print("Size of msg: "); Serial.println(sizeof(msg));
+      //Serial.print("Size of msg thing: "); Serial.print(sizeof(*msg));
+      //Serial.print("Size of msgTx: "); Serial.println(sizeof(msgTx));
+      //Serial.print("Size of msgStruct: "); Serial.println(sizeof(msgStruct));
+      //Serial.print("Size of msgTx2: "); Serial.println(sizeof(msgTx2));
+           
+      rf95.send(msgTx, sizeof(msgStruct));
       rf95.waitPacketSent();
+      Serial.println("transmitted");
+      char *msgBuf[sizeof(msgTx)] = {0};
+      //uint8_t *msgBuf2[sizeof(msgTx2)] = {0};
+      memcpy(msgBuf, msgTx, sizeof(msgStruct));
+      //memcpy(msgBuf2, msgTx2, sizeof(msgStruct));
+      
+      struct msgStruct *msgRx = (struct msgStruct*)msgBuf;
+      //struct msgStruct *msgRx2 = (struct msgStruct*)msgBuf2;
+      
+      Serial.print("STRUCT snd: "); Serial.println(msgRx->snd);
+      Serial.print("STRUCT orig: "); Serial.println(msgRx->orig);
+      //Serial.print("STRUCT ver: "); Serial.println(msgRx->ver);
+      
       Serial.print(F("TRANSMIT:\n    "));
-      Serial.println(txData);
+      //Serial.println(txData);
+      free(msgTransmit);
+      //delete(msgTx);
+      //delete msgTransmit;
       flashLED(3, HIGH);
 }
 
@@ -286,10 +379,12 @@ void setup() {
 
 void loop() {
 
+    
     Serial.print(F("freeMemory: "));
     Serial.print(freeMemory());
     Serial.print(F("; freeRam: "));
     Serial.println(freeRam());
+    
 
     if (CHARGE_ONLY) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
