@@ -162,18 +162,8 @@ void appendFloat(char *str, float val, int precision) {
 }
 
 
-
-
-void transmit() {
-      // TODO: if WiFi node, should write to API instead of transmitting     
-      //uint8_t data[] = "sample data"; // should we be using uint8_t instead of char?
-      MSG_ID += 1;
-      float bat = batteryLevel();
-      
-      
-      Serial.print(F("BAT: ")); Serial.println(bat);
-
-      /*
+void constructQueryString() {
+       /*
       memset(&txData[0], 0, MAX_MSG_LENGTH);
       strcpy(txData, "snd=");
       appendInt(txData, NODE_ID);
@@ -197,15 +187,21 @@ void transmit() {
       appendInt(txData, GPS.minute, 2);
       append(txData, ":");
       appendInt(txData, GPS.seconds, 2);
-
       */
-      
+}
+
+void transmit() {
+      // TODO: if WiFi node, should write to API instead of transmitting     
+      //uint8_t data[] = "sample data"; // should we be using uint8_t instead of char?
+      MSG_ID += 1;
+      float bat = batteryLevel();
       struct msgStruct *msgTransmit = malloc(sizeof(struct msgStruct));
-      //struct msgStruct *msgTransmit;
       char *msgTx = (char*)msgTransmit;
       msgTransmit->snd = NODE_ID; 
       msgTransmit->orig = NODE_ID;
-      //msgTransmit->ver = VERSION;
+      msgTransmit->ver = VERSION;
+      msgTransmit->id = MSG_ID;
+      msgTransmit->bat = bat;
    
       //uint8_t *msgPtr = (uint8_t*)&msg;
       //uint8_t *msgPtr = (uint8_t*)&msg;
@@ -277,40 +273,22 @@ void transmit() {
       #endif
       */
       //encrypt(data, 128);
+      // old char array/query-string based transmit
       //rf95.send((const uint8_t*)txData, sizeof(txData));
-      //rf95.send(msgPtr, sizeof(msg));
-      //uint8_t *msgTx = (uint8_t*)&msg;
 
-      Serial.println("transmitting");
-      //char *msgTx = (char*)msgTransmit;
-      //const uint8_t *msgTx2 = (const uint8_t*)msg;
-      
-      //Serial.print("Size of msg: "); Serial.println(sizeof(msg));
-      //Serial.print("Size of msg thing: "); Serial.print(sizeof(*msg));
-      //Serial.print("Size of msgTx: "); Serial.println(sizeof(msgTx));
-      //Serial.print("Size of msgStruct: "); Serial.println(sizeof(msgStruct));
-      //Serial.print("Size of msgTx2: "); Serial.println(sizeof(msgTx2));
-           
       rf95.send(msgTx, sizeof(msgStruct));
       rf95.waitPacketSent();
-      Serial.println("transmitted");
-      char *msgBuf[sizeof(msgTx)] = {0};
-      //uint8_t *msgBuf2[sizeof(msgTx2)] = {0};
+      char *msgBuf[sizeof(msgStruct)] = {0};
       memcpy(msgBuf, msgTx, sizeof(msgStruct));
-      //memcpy(msgBuf2, msgTx2, sizeof(msgStruct));
       
       struct msgStruct *msgRx = (struct msgStruct*)msgBuf;
-      //struct msgStruct *msgRx2 = (struct msgStruct*)msgBuf2;
-      
-      Serial.print("STRUCT snd: "); Serial.println(msgRx->snd);
-      Serial.print("STRUCT orig: "); Serial.println(msgRx->orig);
-      //Serial.print("STRUCT ver: "); Serial.println(msgRx->ver);
-      
-      Serial.print(F("TRANSMIT:\n    "));
-      //Serial.println(txData);
+      Serial.println("TRANSMIT (Test struct):");
+      Serial.print("    snd: "); Serial.println(msgRx->snd);
+      Serial.print("    orig: "); Serial.println(msgRx->orig);
+      Serial.print("    ver: "); Serial.println(msgRx->ver);
+      Serial.print("    id: "); Serial.println(msgRx->id);
+      Serial.print("    bat: "); Serial.println(msgRx->bat);
       free(msgTransmit);
-      //delete(msgTx);
-      //delete msgTransmit;
       flashLED(3, HIGH);
 }
 
@@ -371,11 +349,12 @@ void setup() {
 
 void loop() {
 
-
+    /*
     Serial.print(F("freeMemory: "));
     Serial.print(freeMemory());
     Serial.print(F("; freeRam: "));
     Serial.println(freeRam());
+    */
 
 
     if (CHARGE_ONLY) {
