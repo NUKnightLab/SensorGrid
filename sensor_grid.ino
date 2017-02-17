@@ -379,22 +379,24 @@ void setup() {
 
 void loop() {
 
-    
+
     Serial.print(F("freeMemory: "));
     Serial.print(freeMemory());
     Serial.print(F("; freeRam: "));
     Serial.println(freeRam());
-    
+
 
     if (CHARGE_ONLY) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
       delay(10000);
       return;
     }
- 
-    receive();
 
-    if ( (millis() - lastTransmit) > 1000 * 10) {
+    if (RECEIVE) {
+        receive();
+    }
+
+    if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 10) {
         Serial.println(F("--------------------------------------------------------"));
         transmit();
         lastTransmit = millis();
