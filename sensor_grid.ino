@@ -30,6 +30,7 @@ typedef struct msgStruct {
   float ver;
   int id;
   float bat;
+  uint8_t hour, minute, seconds, year, month, day;
 };
 int MSG_ID = 0;
 int maxIDs[5] = {0};
@@ -53,34 +54,29 @@ void _receive() {
     if (rf95.recv(buf, &len)) {
 
         char* msg = (char*)buf;
-        struct msgStruct *msgReceived = (struct msgStruct*)msg;
-        int senderID = msgReceived->snd;
-        int origSenderID = msgReceived->orig;
-        float ver = msgReceived->ver;     
-        int id = msgReceived->id;
-        float bat = msgReceived-> bat;
-        Serial.println("RECEIVED (into struct): ");
+        struct msgStruct *rx = (struct msgStruct*)msg;
+        int senderID = rx->snd;
+        int origSenderID = rx->orig;
+        float ver = rx->ver;     
+        int id = rx->id;
+        float bat = rx-> bat;
+        Serial.println(F("RECEIVED (into struct): "));
+        Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
+        Serial.println(rf95.lastRssi(), DEC);
         Serial.print("    snd: "); Serial.println(senderID);
         Serial.print("    orig: "); Serial.println(origSenderID);
         Serial.print("    ver: "); Serial.println(ver);
         Serial.print("    id: "); Serial.println(id);
         Serial.print("    bat: "); Serial.println(bat);
-        
-        /*
-        int msgID = strtol(msg+24, NULL, 10);
-        int senderID = msg[4] - 48;
-        // TODO: parse out orig sender
-        int origSenderID = strtol(msg+19, NULL, 10);
-        if (DEBUG) {
-            Serial.println(F("RECEIVED:"));
-            Serial.print(F("    Sender: ")); Serial.print(senderID);
-            Serial.print(F("; Original Sender: ")); Serial.print(origSenderID);
-            Serial.print(F("; MSG ID: ")); Serial.println(msgID);
-            Serial.print(F("    Message: ")); Serial.println(msg);
-            Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
-            Serial.println(rf95.lastRssi(), DEC);
-        }
+        Serial.print("    dt: ");
+        Serial.print(rx->year); Serial.print("-");
+        Serial.print(rx->month); Serial.print("-");
+        Serial.print(rx->day); Serial.print("T");
+        Serial.print(rx->hour); Serial.print(":");
+        Serial.print(rx->minute); Serial.print(":");
+        Serial.println(rx->seconds);
         flashLED(1, HIGH);
+        /*        
         if (  senderID != NODE_ID 
               && origSenderID != NODE_ID 
               && maxIDs[origSenderID] < msgID) {
