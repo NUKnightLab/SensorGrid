@@ -27,6 +27,9 @@
 typedef struct msgStruct {
   int snd;
   int orig;
+  float ver;
+  int id;
+  float bat;
 };
 int MSG_ID = 0;
 int maxIDs[5] = {0};
@@ -50,30 +53,19 @@ void _receive() {
     if (rf95.recv(buf, &len)) {
 
         char* msg = (char*)buf;
-        Serial.println("Received msg");
-        /*
-        msgStruct *structuredMessage;
-        structuredMessage = (msgStruct*)msg;
-        
-        Serial.print("STRUCT snd: "); Serial.println(structuredMessage->snd);
-        Serial.print("STRUCT ver: "); Serial.println(structuredMessage->ver);
-        Serial.print("STRUCT orig: "); Serial.println(structuredMessage->orig);
-        Serial.print("STRUCT id: "); Serial.println(structuredMessage->id);
-        Serial.print("STRUCT bat: "); Serial.println(structuredMessage->bat);
-        */
-        //uint8_t *msgBuf2[sizeof(msgTx2)] = {0};
-        //memcpy(msgBuf2, msgTx2, sizeof(msgStruct));
         struct msgStruct *msgReceived = (struct msgStruct*)msg;
-
-        //struct msgStruct *msgRx2 = (struct msgStruct*)buf;
         int senderID = msgReceived->snd;
         int origSenderID = msgReceived->orig;
-        //float ver = msgReceived->ver;     
-        Serial.print("RX STRUCT snd: "); Serial.println(senderID);
-        Serial.print("RX STRUCT orig: "); Serial.println(origSenderID);
-        //Serial.print("RX STRUCT ver: "); Serial.println(ver);
+        float ver = msgReceived->ver;     
+        int id = msgReceived->id;
+        float bat = msgReceived-> bat;
+        Serial.println("RECEIVED (into struct): ");
+        Serial.print("    snd: "); Serial.println(senderID);
+        Serial.print("    orig: "); Serial.println(origSenderID);
+        Serial.print("    ver: "); Serial.println(ver);
+        Serial.print("    id: "); Serial.println(id);
+        Serial.print("    bat: "); Serial.println(bat);
         
-        // TODO: parse out msg ID
         /*
         int msgID = strtol(msg+24, NULL, 10);
         int senderID = msg[4] - 48;
