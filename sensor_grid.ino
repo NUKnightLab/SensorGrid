@@ -45,17 +45,24 @@ Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
+struct msgStruct *msgTransmit;
+char *msgTx = (char*)msgTransmit;
+
+char receiveBuffer[RH_RF95_MAX_MESSAGE_LEN];
+uint8_t receiveBufferLen = sizeof(receiveBuffer);
+char* msg = (char*)receiveBuffer;
+struct msgStruct *rx = (struct msgStruct*)msg;
 
 void _receive() {
     //uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
     //uint8_t len = sizeof(buf); 
     //uint8_t buf[sizeof(msgStruct)];
-    char buf[RH_RF95_MAX_MESSAGE_LEN];
-    uint8_t len = sizeof(buf);  
-        
-    if (rf95.recv(buf, &len)) {
-        char* msg = (char*)buf;
-        struct msgStruct *rx = (struct msgStruct*)msg;
+    //char buf[RH_RF95_MAX_MESSAGE_LEN];
+    //uint8_t len = sizeof(buf);  
+    memset(&receiveBuffer, 0, receiveBufferLen);
+    if (rf95.recv(receiveBuffer, &receiveBufferLen)) {
+        //char* msg = (char*)buf;
+        //struct msgStruct *rx = (struct msgStruct*)msg;
         int senderID = rx->snd;
         int origSenderID = rx->orig;
         float ver = rx->ver;     
@@ -81,12 +88,15 @@ void _receive() {
         Serial.print("; lon: "); Serial.print(rx->lon);
         Serial.print("; sats: "); Serial.println(rx->sats);
         flashLED(1, HIGH);
-     
+
+        /* TODO: This won't properly handle a node restart b/c the message IDs
+         *  start back over from 1
+         */
         if (  senderID != NODE_ID
               && maxIDs[origSenderID] < msgID) {
 
             if (origSenderID == NODE_ID) {
-                Serial.print("Received own message: "); Serial.println(msgID);
+                Serial.print(F("Received own message: ")); Serial.println(msgID);
             } else {
                 // TODO: If end-node (i.e. Wifi) and successful write to API, we don't need to re-transmit
                 //buf[4] = NODE_ID + 48;
@@ -131,7 +141,6 @@ void receive() {
             Serial.println(F("No message received"));
     }  
 }
-
 
 void append(char *str, char *newStr) {
   strcpy(str+strlen(str), newStr);
@@ -194,8 +203,12 @@ void transmit() {
       //uint8_t data[] = "sample data"; // should we be using uint8_t instead of char?
       MSG_ID += 1;
       float bat = batteryLevel();
-      struct msgStruct *msgTransmit = malloc(sizeof(struct msgStruct));
-      char *msgTx = (char*)msgTransmit;
+      Serial.print("malloc tx msg: "); Serial.println(sizeof(struct msgStruct));
+      //memset(msgTransmit, 0, sizeof(msgStruct));
+      //struct msgStruct *msgTransmit = malloc(sizeof(struct msgStruct));
+      //struct msgStruct *msgTransmit;
+      //Serial.println("cast to char*");
+      //char *msgTx = (char*)msgTransmit;
       msgTransmit->snd = NODE_ID; 
       msgTransmit->orig = NODE_ID;
       msgTransmit->ver = VERSION;
@@ -211,6 +224,7 @@ void transmit() {
       msgTransmit->lat = GPS.latitudeDegrees;
       msgTransmit->lon = GPS.longitudeDegrees;
       msgTransmit->sats = GPS.satellites;
+      Serial.println("Data assigned");
 
       /*
       if (sensorSi7021Module) {
@@ -253,6 +267,9 @@ void transmit() {
 
       rf95.send(msgTx, sizeof(msgStruct));
       rf95.waitPacketSent();
+      Serial.println(F("Transmitted"));
+
+      /*
       char *msgBuf[sizeof(msgStruct)] = {0};
       memcpy(msgBuf, msgTx, sizeof(msgStruct));
       
@@ -274,7 +291,8 @@ void transmit() {
       Serial.print("; lat: "); Serial.print(msgRx->lat);
       Serial.print("; lon: "); Serial.print(msgRx->lon);
       Serial.print("; sats: "); Serial.println(msgRx->sats);
-      free(msgTransmit);
+      */
+      //free(msgTransmit);
       flashLED(3, HIGH);
 }
 
@@ -349,6 +367,7 @@ void loop() {
     }
 
     if (RECEIVE) {
+        Serial.println(F("Ready to receive ..."));
         printRam();
         Serial.println(F("--------------------------------------------------------"));
         receive();
@@ -356,6 +375,7 @@ void loop() {
     }
 
     if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 10) {
+        Serial.println(F("Ready to transmit ..."));
         printRam();
         Serial.println(F("--------------------------------------------------------"));
         transmit();
