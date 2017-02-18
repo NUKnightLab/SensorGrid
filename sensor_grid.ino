@@ -59,7 +59,7 @@ void _receive() {
         int senderID = rx->snd;
         int origSenderID = rx->orig;
         float ver = rx->ver;     
-        int id = rx->id;
+        int msgID = rx->id;
         float bat = rx-> bat;
         Serial.println(F("RECEIVED (into struct): "));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
@@ -67,7 +67,7 @@ void _receive() {
         Serial.print("    snd: "); Serial.println(senderID);
         Serial.print("    orig: "); Serial.println(origSenderID);
         Serial.print("    ver: "); Serial.println(ver);
-        Serial.print("    id: "); Serial.println(id);
+        Serial.print("    id: "); Serial.println(msgID);
         Serial.print("    bat: "); Serial.println(bat);
         Serial.print("    DATETIME: ");
         Serial.print(rx->year); Serial.print("-");
@@ -81,25 +81,24 @@ void _receive() {
         Serial.print("; lon: "); Serial.print(rx->lon);
         Serial.print("; sats: "); Serial.println(rx->sats);
         flashLED(1, HIGH);
-        /*        
-        if (  senderID != NODE_ID 
-              && origSenderID != NODE_ID 
+     
+        if (  senderID != NODE_ID
               && maxIDs[origSenderID] < msgID) {
 
-            // TODO: If end-node (i.e. Wifi) and successful write to API, we don't need to re-transmit
-            buf[4] = NODE_ID + 48;
-            if (DEBUG) {
-                Serial.println(F("RETRANSMITTING:"));
-                Serial.print(F("    Message: ")); Serial.println((char*)buf);
+            if (origSenderID == NODE_ID) {
+                Serial.print("Received own message: "); Serial.println(msgID);
+            } else {
+                // TODO: If end-node (i.e. Wifi) and successful write to API, we don't need to re-transmit
+                //buf[4] = NODE_ID + 48;
+                rx->snd = NODE_ID;
+                Serial.println(F("RETRANSMITTING ..."));
+                //rf95.send(buf, sizeof(buf));
+                rf95.send(msg, sizeof(msgStruct));
+                rf95.waitPacketSent();
+                flashLED(3, HIGH);
+                maxIDs[origSenderID] = msgID;
+                Serial.println(F("    ...RETRANSMITTED"));           
             }
-            
-            rf95.send(buf, sizeof(buf));
-            rf95.waitPacketSent();
-            flashLED(3, HIGH);
-            maxIDs[origSenderID] = msgID;
-            if (DEBUG) {
-                Serial.println(F("    TRANSMITTED"));
-            }           
             
             #if WIFI_MODULE
                 if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {
@@ -118,7 +117,6 @@ void _receive() {
                 }
             #endif
         }
-        */
         delete msg;
     }
 }
@@ -352,7 +350,9 @@ void loop() {
 
     if (RECEIVE) {
         printRam();
+        Serial.println(F("--------------------------------------------------------"));
         receive();
+        Serial.println(F("********************************************************"));
     }
 
     if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 10) {
