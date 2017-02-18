@@ -33,6 +33,7 @@ typedef struct msgStruct {
   uint8_t hour, minute, seconds, year, month, day;
   bool fix;
   float lat, lon;
+  int sats;
 };
 int MSG_ID = 0;
 int maxIDs[5] = {0};
@@ -51,10 +52,8 @@ void _receive() {
     //uint8_t buf[sizeof(msgStruct)];
     char buf[RH_RF95_MAX_MESSAGE_LEN];
     uint8_t len = sizeof(buf);  
-    
-    
+        
     if (rf95.recv(buf, &len)) {
-
         char* msg = (char*)buf;
         struct msgStruct *rx = (struct msgStruct*)msg;
         int senderID = rx->snd;
@@ -79,7 +78,8 @@ void _receive() {
         Serial.println(rx->seconds);
         Serial.print("    fix: "); Serial.print(rx->fix);
         Serial.print("; lat: "); Serial.print(rx->lat);
-        Serial.print("; lon: "); Serial.println(rx->lon);
+        Serial.print("; lon: "); Serial.print(rx->lon);
+        Serial.print("; sats: "); Serial.println(rx->sats);
         flashLED(1, HIGH);
         /*        
         if (  senderID != NODE_ID 
@@ -212,42 +212,9 @@ void transmit() {
       msgTransmit->fix = GPS.fix;
       msgTransmit->lat = GPS.latitudeDegrees;
       msgTransmit->lon = GPS.longitudeDegrees;
-   
-      //uint8_t *msgPtr = (uint8_t*)&msg;
-      //uint8_t *msgPtr = (uint8_t*)&msg;
-      
-      //memcpy(&msgRx, msgPtr, sizeof msgRx);
-      
-      //struct msgStruct *structuredMessage;
-      //structuredMessage = (struct msgStruct*)msgPtr;
-      //struct messageStruct *structuredMessage = (struct messageStruct*)msgPtr2;
-
-      /*  
-      Serial.print(F("GPS ")); Serial.println(GPS.fix? F("(Fix)") : F("(No Fix)"));
-      Serial.print(F("    YEAR: ")); Serial.print(GPS.year, DEC);
-      Serial.print(F("; MONTH: ")); Serial.print(GPS.month, DEC);
-      Serial.print(F("; DATE: ")); Serial.print(GPS.day, DEC);
-      Serial.print(F("; TIME: "));
-      Serial.print(GPS.hour); Serial.print(F(":"));
-      Serial.print(GPS.minute); Serial.print(F(":"));
-      Serial.println(GPS.seconds);
-      */
+      msgTransmit->sats = GPS.satellites;
 
       /*
-      if (GPS.fix) {         
-          float lat = GPS.latitudeDegrees;
-          float lon = GPS.longitudeDegrees;
-          Serial.print(F("    LAT: ")); Serial.print(lat, 4);
-          Serial.print(F("; LON: ")); Serial.print(lon, 4);
-          Serial.print(F("; SATS: ")); Serial.println((int)GPS.satellites);
-          append(txData, "&lat=");
-          appendFloat(txData, lat, 10000);
-          append(txData, "&lon=");
-          appendFloat(txData, lon, 10000);
-          append(txData, "&sats=");
-          appendInt(txData, GPS.satellites);  
-      }
-
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));   
           float temp = sensorSi7021TempHumidity.readTemperature();
@@ -307,7 +274,8 @@ void transmit() {
       Serial.println(msgRx->seconds);
       Serial.print("    fix: "); Serial.print(msgRx->fix);
       Serial.print("; lat: "); Serial.print(msgRx->lat);
-      Serial.print("; lon: "); Serial.println(msgRx->lon);
+      Serial.print("; lon: "); Serial.print(msgRx->lon);
+      Serial.print("; sats: "); Serial.println(msgRx->sats);
       free(msgTransmit);
       flashLED(3, HIGH);
 }
