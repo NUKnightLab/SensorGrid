@@ -68,7 +68,7 @@ void _receive() {
         Serial.print("    ver: "); Serial.println(ver);
         Serial.print("    id: "); Serial.println(id);
         Serial.print("    bat: "); Serial.println(bat);
-        Serial.print("    dt: ");
+        Serial.print("    DATETIME: ");
         Serial.print(rx->year); Serial.print("-");
         Serial.print(rx->month); Serial.print("-");
         Serial.print(rx->day); Serial.print("T");
@@ -198,6 +198,12 @@ void transmit() {
       msgTransmit->ver = VERSION;
       msgTransmit->id = MSG_ID;
       msgTransmit->bat = bat;
+      msgTransmit->hour = GPS.hour;
+      msgTransmit->minute = GPS.minute;
+      msgTransmit->seconds = GPS.seconds;
+      msgTransmit->year = GPS.year;
+      msgTransmit->month = GPS.month;
+      msgTransmit->day = GPS.day;
    
       //uint8_t *msgPtr = (uint8_t*)&msg;
       //uint8_t *msgPtr = (uint8_t*)&msg;
@@ -284,6 +290,13 @@ void transmit() {
       Serial.print("    ver: "); Serial.println(msgRx->ver);
       Serial.print("    id: "); Serial.println(msgRx->id);
       Serial.print("    bat: "); Serial.println(msgRx->bat);
+      Serial.print("    DATETIME: ");
+      Serial.print(msgRx->year); Serial.print("-");
+      Serial.print(msgRx->month); Serial.print("-");
+      Serial.print(msgRx->day); Serial.print("T");
+      Serial.print(msgRx->hour); Serial.print(":");
+      Serial.print(msgRx->minute); Serial.print(":");
+      Serial.println(msgRx->seconds);
       free(msgTransmit);
       flashLED(3, HIGH);
 }
