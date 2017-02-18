@@ -45,7 +45,7 @@ Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
-struct msgStruct *msgTransmit;
+struct msgStruct *msgTransmit = malloc(sizeof(struct msgStruct));
 char *msgTx = (char*)msgTransmit;
 
 char receiveBuffer[RH_RF95_MAX_MESSAGE_LEN];
@@ -209,9 +209,9 @@ void transmit() {
       //struct msgStruct *msgTransmit;
       //Serial.println("cast to char*");
       //char *msgTx = (char*)msgTransmit;
-      msgTransmit->snd = NODE_ID; 
-      msgTransmit->orig = NODE_ID;
-      msgTransmit->ver = VERSION;
+      //msgTransmit->snd = NODE_ID; 
+      //msgTransmit->orig = NODE_ID;
+      //msgTransmit->ver = VERSION;
       msgTransmit->id = MSG_ID;
       msgTransmit->bat = bat;
       msgTransmit->hour = GPS.hour;
@@ -347,6 +347,10 @@ void setup() {
     } else {
         Serial.println(F("Si1145 Not Found"));
     }
+
+    msgTransmit->snd = NODE_ID; 
+    msgTransmit->orig = NODE_ID;
+    msgTransmit->ver = VERSION;
 
     Serial.println("OK!");
 }
