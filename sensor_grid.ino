@@ -31,6 +31,8 @@ typedef struct msgStruct {
   int id;
   float bat;
   uint8_t hour, minute, seconds, year, month, day;
+  bool fix;
+  float lat, lon;
 };
 int MSG_ID = 0;
 int maxIDs[5] = {0};
@@ -75,6 +77,9 @@ void _receive() {
         Serial.print(rx->hour); Serial.print(":");
         Serial.print(rx->minute); Serial.print(":");
         Serial.println(rx->seconds);
+        Serial.print("    fix: "); Serial.print(rx->fix);
+        Serial.print("; lat: "); Serial.print(rx->lat);
+        Serial.print("; lon: "); Serial.println(rx->lon);
         flashLED(1, HIGH);
         /*        
         if (  senderID != NODE_ID 
