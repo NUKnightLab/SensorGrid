@@ -209,6 +209,9 @@ void transmit() {
       msgTransmit->year = GPS.year;
       msgTransmit->month = GPS.month;
       msgTransmit->day = GPS.day;
+      msgTransmit->fix = GPS.fix;
+      msgTransmit->lat = GPS.latitudeDegrees;
+      msgTransmit->lon = GPS.longitudeDegrees;
    
       //uint8_t *msgPtr = (uint8_t*)&msg;
       //uint8_t *msgPtr = (uint8_t*)&msg;
@@ -302,6 +305,9 @@ void transmit() {
       Serial.print(msgRx->hour); Serial.print(":");
       Serial.print(msgRx->minute); Serial.print(":");
       Serial.println(msgRx->seconds);
+      Serial.print("    fix: "); Serial.print(msgRx->fix);
+      Serial.print("; lat: "); Serial.print(msgRx->lat);
+      Serial.print("; lon: "); Serial.println(msgRx->lon);
       free(msgTransmit);
       flashLED(3, HIGH);
 }
