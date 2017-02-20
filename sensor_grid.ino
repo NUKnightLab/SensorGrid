@@ -24,7 +24,7 @@
 #include "Adafruit_Si7021.h"
 
 #define MAX_MSG_LENGTH 160
-typedef struct msgStruct {
+typedef struct Message {
   int snd;
   int orig;
   float ver;
@@ -35,9 +35,9 @@ typedef struct msgStruct {
   float lat, lon;
   int sats;
 };
+
 int MSG_ID = 0;
 int maxIDs[5] = {0};
-//char txData[MAX_MSG_LENGTH] = {0};
 unsigned long lastTransmit = 0;
 
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
@@ -45,17 +45,22 @@ Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
-//struct msgStruct *msgTransmit = malloc(sizeof(struct msgStruct));
-//struct msgStruct msgTransmit[sizeof(msgStruct)] = {0};
-//char *msgTx = (char*)msgTransmit;
+char msgBytes[sizeof(Message)];
+uint8_t msgLen = sizeof(msgBytes);
+//struct Message *rx = (struct Message*)msgBytes;
+//struct Message *msgTransmit = rx;
+struct Message *msg = (struct Message*)msgBytes;
 
-//char receiveBuffer[RH_RF95_MAX_MESSAGE_LEN];
-char receiveBuffer[sizeof(msgStruct)];
-uint8_t receiveBufferLen = sizeof(receiveBuffer);
-char* msg = (char*)receiveBuffer;
-struct msgStruct *rx = (struct msgStruct*)msg;
-struct msgStruct *msgTransmit = rx;
-char *msgTx = (char*)msgTransmit;
+void clearMessage() {
+    memset(&msgBytes, 0, msgLen);
+}
+
+void sendCurrent() {
+    rf95.send(msgBytes, sizeof(Message));
+    rf95.waitPacketSent();
+    flashLED(3, HIGH);
+}
+
 
 void _receive() {
     //uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
@@ -63,15 +68,15 @@ void _receive() {
     //uint8_t buf[sizeof(msgStruct)];
     //char buf[RH_RF95_MAX_MESSAGE_LEN];
     //uint8_t len = sizeof(buf);
-    memset(&receiveBuffer, 0, receiveBufferLen);
-    if (rf95.recv(receiveBuffer, &receiveBufferLen)) {
+    clearMessage();
+    if (rf95.recv(msgBytes, &msgLen)) {
         //char* msg = (char*)buf;
         //struct msgStruct *rx = (struct msgStruct*)msg;
-        int senderID = rx->snd;
-        int origSenderID = rx->orig;
-        float ver = rx->ver;
-        int msgID = rx->id;
-        float bat = rx-> bat;
+        int senderID = msg->snd;
+        int origSenderID = msg->orig;
+        float ver = msg->ver;
+        int msgID = msg->id;
+        float bat = msg-> bat;
         Serial.println(F("RECEIVED (into struct): "));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.println(rf95.lastRssi(), DEC);
@@ -81,20 +86,20 @@ void _receive() {
         Serial.print(F("    id: ")); Serial.println(msgID);
         Serial.print(F("    bat: ")); Serial.println(bat);
         Serial.print(F("    DATETIME: "));
-        Serial.print(rx->year); Serial.print(F("-"));
-        Serial.print(rx->month); Serial.print(F("-"));
-        Serial.print(rx->day); Serial.print(F("T"));
-        Serial.print(rx->hour); Serial.print(F(":"));
-        Serial.print(rx->minute); Serial.print(F(":"));
-        Serial.println(rx->seconds);
-        Serial.print(F("    fix: ")); Serial.print(rx->fix);
-        Serial.print(F("; lat: ")); Serial.print(rx->lat);
-        Serial.print(F("; lon: ")); Serial.print(rx->lon);
-        Serial.print(F("; sats: ")); Serial.println(rx->sats);
+        Serial.print(msg->year); Serial.print(F("-"));
+        Serial.print(msg->month); Serial.print(F("-"));
+        Serial.print(msg->day); Serial.print(F("T"));
+        Serial.print(msg->hour); Serial.print(F(":"));
+        Serial.print(msg->minute); Serial.print(F(":"));
+        Serial.println(msg->seconds);
+        Serial.print(F("    fix: ")); Serial.print(msg->fix);
+        Serial.print(F("; lat: ")); Serial.print(msg->lat);
+        Serial.print(F("; lon: ")); Serial.print(msg->lon);
+        Serial.print(F("; sats: ")); Serial.println(msg->sats);
         flashLED(1, HIGH);
 
         if ( origSenderID == NODE_ID ) {
-            Serial.print(F("Received own message: ")); Serial.println(msgID);
+            Serial.print(F("NO-OP: Received own message: ")); Serial.println(msgID);
         } else {
             if (msgID <= maxIDs[origSenderID]) {
                 Serial.print(F("Ignoring message previous to current max ID: "));
@@ -110,15 +115,15 @@ void _receive() {
                     maxIDs[origSenderID] = 0;
                 }
             } else {
-                // TODO: If end-node (i.e. Wifi) and successful write to API, we don't need to re-transmit
-                //buf[4] = NODE_ID + 48;
-                rx->snd = NODE_ID;
+                /* TODO: If end-node (i.e. Wifi) and successful write to API, 
+                 *  we don't need to re-transmit
+                 */
+                msg->snd = NODE_ID;
                 delay(100);
                 Serial.println(F("RETRANSMITTING ..."));
-                //rf95.send(buf, sizeof(buf));
-                rf95.send(msg, sizeof(msgStruct));
-                rf95.waitPacketSent();
-                flashLED(3, HIGH);
+                Serial.print(F("    snd: ")); Serial.print(msg->snd);
+                Serial.print(F("; orig: ")); Serial.println(msg->orig);
+                sendCurrent();            
                 maxIDs[origSenderID] = msgID;
                 Serial.println(F("    ...RETRANSMITTED"));
             }
@@ -140,7 +145,7 @@ void _receive() {
                 }
             #endif
         }
-        delete msg;
+        //delete msg;
     }
 }
 
@@ -215,8 +220,8 @@ void constructQueryString() {
 void transmit() {
       // TODO: if WiFi node, should write to API instead of transmitting
       //uint8_t data[] = "sample data"; // should we be using uint8_t instead of char?
-      MSG_ID += 1;
-      memset(&receiveBuffer, 0, receiveBufferLen);
+      MSG_ID++;
+      clearMessage();
       float bat = batteryLevel();
       //Serial.print(F("malloc tx msg: ")); Serial.println(sizeof(struct msgStruct));
       //memset(msgTransmit, 0, sizeof(msgStruct));
@@ -224,21 +229,21 @@ void transmit() {
       //struct msgStruct *msgTransmit;
       //Serial.println("cast to char*");
       //char *msgTx = (char*)msgTransmit;
-      msgTransmit->snd = NODE_ID;
-      msgTransmit->orig = NODE_ID;
-      msgTransmit->ver = VERSION;
-      msgTransmit->id = MSG_ID;
-      msgTransmit->bat = bat;
-      msgTransmit->hour = GPS.hour;
-      msgTransmit->minute = GPS.minute;
-      msgTransmit->seconds = GPS.seconds;
-      msgTransmit->year = GPS.year;
-      msgTransmit->month = GPS.month;
-      msgTransmit->day = GPS.day;
-      msgTransmit->fix = GPS.fix;
-      msgTransmit->lat = GPS.latitudeDegrees;
-      msgTransmit->lon = GPS.longitudeDegrees;
-      msgTransmit->sats = GPS.satellites;
+      msg->snd = NODE_ID;
+      msg->orig = NODE_ID;
+      msg->ver = VERSION;
+      msg->id = MSG_ID;
+      msg->bat = bat;
+      msg->hour = GPS.hour;
+      msg->minute = GPS.minute;
+      msg->seconds = GPS.seconds;
+      msg->year = GPS.year;
+      msg->month = GPS.month;
+      msg->day = GPS.day;
+      msg->fix = GPS.fix;
+      msg->lat = GPS.latitudeDegrees;
+      msg->lon = GPS.longitudeDegrees;
+      msg->sats = GPS.satellites;
       Serial.println(F("Data assigned"));
 
       /*
@@ -280,8 +285,10 @@ void transmit() {
       // old char array/query-string based transmit
       //rf95.send((const uint8_t*)txData, sizeof(txData));
 
-      rf95.send(msgTx, sizeof(msgStruct));
-      rf95.waitPacketSent();
+      //rf95.send(msgTx, sizeof(msgStruct));
+      //rf95.waitPacketSent();
+
+      sendCurrent();
       Serial.println(F("Transmitted"));
 
       /*
@@ -321,6 +328,7 @@ void setup() {
     if (DEBUG) {
         Serial.println(F("Serial ready"));
     }
+
 
     flashLED(2, HIGH);
     #if DUST_SENSOR
@@ -363,10 +371,9 @@ void setup() {
         Serial.println(F("Si1145 Not Found"));
     }
 
-    //msgTransmit->snd = NODE_ID;
-    //msgTransmit->orig = NODE_ID;
-    //msgTransmit->ver = VERSION;
-
+    if (sizeof(Message) > RH_RF95_MAX_MESSAGE_LEN) {
+        Serial.println(F("!!!MESSAGE STRUCT IS TOO LARGE!!!"));
+    }
     Serial.println(F("OK!"));
 }
 
