@@ -214,9 +214,9 @@ void transmit() {
       //struct msgStruct *msgTransmit;
       //Serial.println("cast to char*");
       //char *msgTx = (char*)msgTransmit;
-      //msgTransmit->snd = NODE_ID;
-      //msgTransmit->orig = NODE_ID;
-      //msgTransmit->ver = VERSION;
+      msgTransmit->snd = NODE_ID;
+      msgTransmit->orig = NODE_ID;
+      msgTransmit->ver = VERSION;
       msgTransmit->id = MSG_ID;
       msgTransmit->bat = bat;
       msgTransmit->hour = GPS.hour;
@@ -353,9 +353,9 @@ void setup() {
         Serial.println(F("Si1145 Not Found"));
     }
 
-    msgTransmit->snd = NODE_ID;
-    msgTransmit->orig = NODE_ID;
-    msgTransmit->ver = VERSION;
+    //msgTransmit->snd = NODE_ID;
+    //msgTransmit->orig = NODE_ID;
+    //msgTransmit->ver = VERSION;
 
     Serial.println(F("OK!"));
 }
