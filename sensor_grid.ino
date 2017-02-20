@@ -93,15 +93,22 @@ void _receive() {
         Serial.print(F("; sats: ")); Serial.println(rx->sats);
         flashLED(1, HIGH);
 
-        /* TODO: This won't properly handle a node restart b/c the message IDs
-         *  start back over from 1
-         */
         if ( origSenderID == NODE_ID ) {
             Serial.print(F("Received own message: ")); Serial.println(msgID);
         } else {
             if (msgID <= maxIDs[origSenderID]) {
-                Serial.print("Ignoring message previous to current max ID: ");
-                Serial.print(origSenderID); Serial.print("."); Serial.println(msgID);
+                Serial.print(F("Ignoring message previous to current max ID: "));
+                Serial.print(origSenderID); Serial.print("."); Serial.print(msgID);
+                Serial.print(F("(Current Max: ")); Serial.print(maxIDs[origSenderID]);
+                Serial.println(F(")"));
+                if (maxIDs[origSenderID] - msgID > 5) {
+                    // Crude handling of node reset will drop some packets but eventually
+                    // start again. TODO: A better approach would be for each node to store
+                    // its Max ID in flash and get rid of this reset
+                    Serial.println(F("Resetting Max ID for Node: "));
+                    Serial.println(origSenderID);
+                    maxIDs[origSenderID] = 0;
+                }
             } else {
                 // TODO: If end-node (i.e. Wifi) and successful write to API, we don't need to re-transmit
                 //buf[4] = NODE_ID + 48;
