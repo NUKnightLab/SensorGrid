@@ -9,6 +9,7 @@
 #include "encryption.h"
 //#include <SPI.h>
 #include <MemoryFree.h>
+#include <avr/pgmspace.h>
 
 /* Modules */
 #if WIFI_MODULE == WINC1500
@@ -23,17 +24,30 @@
 #include "Adafruit_SI1145.h"
 #include "Adafruit_Si7021.h"
 
-#define MAX_MSG_LENGTH 160
+enum FLOAT_DATA_TYPES {
+    TEMPERATURE,
+    HUMIDITY,
+    DUST
+};
+
+enum INT_DATA_TYPES {
+    VISIBLE_LIGHT,
+    IR_LIGHT,
+    UV_LIGHT
+};
+
 typedef struct Message {
-  int snd;
-  int orig;
-  float ver;
-  int id;
-  float bat;
-  uint8_t hour, minute, seconds, year, month, day;
-  bool fix;
-  float lat, lon;
-  int sats;
+    int snd;
+    int orig;
+    float ver;
+    int id;
+    float bat;
+    uint8_t hour, minute, seconds, year, month, day;
+    bool fix;
+    float lat, lon;
+    int sats;
+    float fvals[3];
+    int ivals[3];
 };
 
 int MSG_ID = 0;
@@ -47,8 +61,6 @@ bool sensorSi1145Module = false;
 
 char msgBytes[sizeof(Message)];
 uint8_t msgLen = sizeof(msgBytes);
-//struct Message *rx = (struct Message*)msgBytes;
-//struct Message *msgTransmit = rx;
 struct Message *msg = (struct Message*)msgBytes;
 
 void clearMessage() {
@@ -61,30 +73,17 @@ void sendCurrent() {
     flashLED(3, HIGH);
 }
 
-
 void _receive() {
-    //uint8_t buf[RH_RF95_MAX_MESSAGE_LEN];
-    //uint8_t len = sizeof(buf);
-    //uint8_t buf[sizeof(msgStruct)];
-    //char buf[RH_RF95_MAX_MESSAGE_LEN];
-    //uint8_t len = sizeof(buf);
     clearMessage();
     if (rf95.recv(msgBytes, &msgLen)) {
-        //char* msg = (char*)buf;
-        //struct msgStruct *rx = (struct msgStruct*)msg;
-        int senderID = msg->snd;
-        int origSenderID = msg->orig;
-        float ver = msg->ver;
-        int msgID = msg->id;
-        float bat = msg-> bat;
         Serial.println(F("RECEIVED (into struct): "));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.println(rf95.lastRssi(), DEC);
-        Serial.print(F("    snd: ")); Serial.println(senderID);
-        Serial.print(F("    orig: ")); Serial.println(origSenderID);
-        Serial.print(F("    ver: ")); Serial.println(ver);
-        Serial.print(F("    id: ")); Serial.println(msgID);
-        Serial.print(F("    bat: ")); Serial.println(bat);
+        Serial.print(F("    snd: ")); Serial.println(msg->snd);
+        Serial.print(F("    orig: ")); Serial.println(msg->orig);
+        Serial.print(F("    ver: ")); Serial.println(msg->ver);
+        Serial.print(F("    id: ")); Serial.println(msg->id);
+        Serial.print(F("    bat: ")); Serial.println(msg->bat);
         Serial.print(F("    DATETIME: "));
         Serial.print(msg->year); Serial.print(F("-"));
         Serial.print(msg->month); Serial.print(F("-"));
@@ -98,33 +97,36 @@ void _receive() {
         Serial.print(F("; sats: ")); Serial.println(msg->sats);
         flashLED(1, HIGH);
 
-        if ( origSenderID == NODE_ID ) {
-            Serial.print(F("NO-OP: Received own message: ")); Serial.println(msgID);
+        if ( msg->orig == NODE_ID ) {
+            Serial.print(F("NO-OP: Received own message: ")); Serial.println(msg->id);
         } else {
-            if (msgID <= maxIDs[origSenderID]) {
+            if (msg->id <= maxIDs[msg->orig]) {
                 Serial.print(F("Ignoring message previous to current max ID: "));
-                Serial.print(origSenderID); Serial.print("."); Serial.print(msgID);
-                Serial.print(F("(Current Max: ")); Serial.print(maxIDs[origSenderID]);
+                Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
+                Serial.print(F("(Current Max: ")); Serial.print(maxIDs[msg->orig]);
                 Serial.println(F(")"));
-                if (maxIDs[origSenderID] - msgID > 5) {
-                    // Crude handling of node reset will drop some packets but eventually
-                    // start again. TODO: A better approach would be for each node to store
-                    // its Max ID in flash and get rid of this reset
+                if (maxIDs[msg->orig] - msg->id > 5) {
+                    /* Crude handling of node reset will drop some packets but eventually
+                     * start again. TODO: A better approach would be for each node to store
+                     * its Max ID in EEPROM and get rid of this reset - but EEPROM on
+                     * M0 Feather boards is complex (if available at all?). See:
+                     * https://forums.adafruit.com/viewtopic.php?f=22&t=88272
+                     */ 
                     Serial.println(F("Resetting Max ID for Node: "));
-                    Serial.println(origSenderID);
-                    maxIDs[origSenderID] = 0;
+                    Serial.println(msg->orig);
+                    maxIDs[msg->orig] = 0;
                 }
             } else {
                 /* TODO: If end-node (i.e. Wifi) and successful write to API, 
                  *  we don't need to re-transmit
                  */
                 msg->snd = NODE_ID;
-                delay(100);
+                delay(1000); // needed for sending radio to receive the bounce
                 Serial.println(F("RETRANSMITTING ..."));
                 Serial.print(F("    snd: ")); Serial.print(msg->snd);
                 Serial.print(F("; orig: ")); Serial.println(msg->orig);
                 sendCurrent();            
-                maxIDs[origSenderID] = msgID;
+                maxIDs[msg->orig] = msg->id;
                 Serial.println(F("    ...RETRANSMITTED"));
             }
 
@@ -157,16 +159,16 @@ void receive() {
     if (rf95.waitAvailableTimeout(delta)) {
         _receive();
     } else {
-            Serial.println(F("No message received"));
+        Serial.println(F("No message received"));
     }
 }
 
 void append(char *str, char *newStr) {
-  strcpy(str+strlen(str), newStr);
+    strcpy(str+strlen(str), newStr);
 }
 
 void appendInt(char *str, int val) {
-  itoa(val, str+strlen(str), 10);
+    itoa(val, str+strlen(str), 10);
 }
 
 void appendInt(char *str, int val, int zerofill) {
@@ -222,18 +224,11 @@ void transmit() {
       //uint8_t data[] = "sample data"; // should we be using uint8_t instead of char?
       MSG_ID++;
       clearMessage();
-      float bat = batteryLevel();
-      //Serial.print(F("malloc tx msg: ")); Serial.println(sizeof(struct msgStruct));
-      //memset(msgTransmit, 0, sizeof(msgStruct));
-      //struct msgStruct *msgTransmit = malloc(sizeof(struct msgStruct));
-      //struct msgStruct *msgTransmit;
-      //Serial.println("cast to char*");
-      //char *msgTx = (char*)msgTransmit;
       msg->snd = NODE_ID;
       msg->orig = NODE_ID;
       msg->ver = VERSION;
       msg->id = MSG_ID;
-      msg->bat = bat;
+      msg->bat = batteryLevel();
       msg->hour = GPS.hour;
       msg->minute = GPS.minute;
       msg->seconds = GPS.seconds;
@@ -246,47 +241,43 @@ void transmit() {
       msg->sats = GPS.satellites;
       Serial.println(F("Data assigned"));
 
-      /*
+      
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
-          float temp = sensorSi7021TempHumidity.readTemperature();
-          float humid = sensorSi7021TempHumidity.readHumidity();
-          Serial.print(F("    TEMP: ")); Serial.print(temp);
-          Serial.print(F("; HUMID: ")); Serial.println(humid);
-          append(txData, "&temp=");
-          appendFloat(txData, temp, 100);
-          append(txData, "&humid=");
-          appendFloat(txData, humid, 100);
+          //float temp = sensorSi7021TempHumidity.readTemperature();
+          msg->fvals[TEMPERATURE] = sensorSi7021TempHumidity.readTemperature();
+          //float humid = sensorSi7021TempHumidity.readHumidity();
+          msg->fvals[HUMIDITY] = sensorSi7021TempHumidity.readHumidity();
+          Serial.print(F("    TEMP: ")); Serial.print(msg->fvals[TEMPERATURE]);
+          Serial.print(F("; HUMID: ")); Serial.println(msg->fvals[HUMIDITY]);
+          //append(txData, "&temp=");
+          //appendFloat(txData, temp, 100);
+          //append(txData, "&humid=");
+          //appendFloat(txData, humid, 100);
       }
 
       if (sensorSi1145Module) {
           Serial.println(F("Vis/IR/UV:"));
-          int vis = sensorSi1145UV.readVisible();
-          int ir = sensorSi1145UV.readIR();
-          int uv = sensorSi1145UV.readUV();
-          Serial.print(F("    VIS: ")); Serial.print(vis);
-          Serial.print(F("; IR: ")); Serial.print(ir);
-          Serial.print(F("; UV: ")); Serial.println(uv);
-          append(txData, "&vis=");
-          appendInt(txData, vis);
-          append(txData, "&ir=");
-          appendInt(txData, ir);
-          append(txData, "&uv=");
-          appendInt(txData, uv);
+          msg->ivals[VISIBLE_LIGHT] = sensorSi1145UV.readVisible();
+          msg->ivals[IR_LIGHT] = sensorSi1145UV.readIR();
+          msg->ivals[UV_LIGHT] = sensorSi1145UV.readUV();
+          Serial.print(F("    VIS: ")); Serial.print(msg->ivals[VISIBLE_LIGHT]);
+          Serial.print(F("; IR: ")); Serial.print(msg->ivals[IR_LIGHT]);
+          Serial.print(F("; UV: ")); Serial.println(msg->ivals[UV_LIGHT]);
+          //append(txData, "&vis=");
+          //appendInt(txData, vis);
+          //append(txData, "&ir=");
+          //appendInt(txData, ir);
+          //append(txData, "&uv=");
+          //appendInt(txData, uv);
       }
-      #if DUST_SENSOR
-          Serial.println(F("DUST:"));
-          float dust = readDustSensor();
-          append(txData, "&dust=");
-          appendFloat(txData, dust, 100);
-      #endif
-      */
-      //encrypt(data, 128);
-      // old char array/query-string based transmit
-      //rf95.send((const uint8_t*)txData, sizeof(txData));
 
-      //rf95.send(msgTx, sizeof(msgStruct));
-      //rf95.waitPacketSent();
+      #if DUST_SENSOR
+          msg->fvals[DUST] = readDustSensor();
+          Serial.print(F("DUST: ")); Serial.print(msg->fvals[DUST]);
+          //append(txData, "&dust=");
+          //appendFloat(txData, dust, 100);
+      #endif
 
       sendCurrent();
       Serial.println(F("Transmitted"));
@@ -323,20 +314,15 @@ void setup() {
         while (!Serial); // only do this if connected to USB
     }
     Serial.begin(9600);
-    //Serial.begin(115200);
-    //Serial.begin(19200);
     if (DEBUG) {
         Serial.println(F("Serial ready"));
     }
-
 
     flashLED(2, HIGH);
     #if DUST_SENSOR
         setupDustSensor();
     #endif
-
-    Serial.print(F("Max RH_RF95 Message length: "));
-    Serial.println(RH_RF95_MAX_MESSAGE_LEN);
+    
     Serial.print(F("Battery pin set to: "));
     if (VBATPIN == A7) {
         Serial.println(F("A7"));
