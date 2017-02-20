@@ -1,4 +1,5 @@
 #define VERSION 0.11
+#include "errors.h"
 #include "config.h"
 #if BOARD == FeatherM0
     #include "lib/dtostrf.h"
@@ -8,12 +9,10 @@
 #include "LoRa.h"
 #include "encryption.h"
 //#include <SPI.h>
-#include <MemoryFree.h>
-#include <avr/pgmspace.h>
 
 /* Modules */
 #if WIFI_MODULE == WINC1500
-    #include <WiFi101.h>
+    //#include <WiFi101.h>
     #include "modules/wifi/WINC1500.h"
 #endif
 
@@ -76,15 +75,14 @@ void sendCurrent() {
 void _receive() {
     clearMessage();
     if (rf95.recv(msgBytes, &msgLen)) {
-        Serial.println(F("RECEIVED (into struct): "));
+        Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver); Serial.println(")");
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
-        Serial.println(rf95.lastRssi(), DEC);
-        Serial.print(F("    snd: ")); Serial.println(msg->snd);
-        Serial.print(F("    orig: ")); Serial.println(msg->orig);
-        Serial.print(F("    ver: ")); Serial.println(msg->ver);
-        Serial.print(F("    id: ")); Serial.println(msg->id);
-        Serial.print(F("    bat: ")); Serial.println(msg->bat);
-        Serial.print(F("    DATETIME: "));
+        Serial.print(rf95.lastRssi(), DEC);
+        Serial.print(F("; SND: ")); Serial.print(msg->snd);
+        Serial.print(F("; ORIG: ")); Serial.print(msg->orig);
+        Serial.print(F("; ID: ")); Serial.println(msg->id);
+        Serial.print(F("    BAT: ")); Serial.print(msg->bat);
+        Serial.print(F("; DT: "));
         Serial.print(msg->year); Serial.print(F("-"));
         Serial.print(msg->month); Serial.print(F("-"));
         Serial.print(msg->day); Serial.print(F("T"));
@@ -104,10 +102,10 @@ void _receive() {
         flashLED(1, HIGH);
 
         if ( msg->orig == NODE_ID ) {
-            Serial.print(F("NO-OP: Received own message: ")); Serial.println(msg->id);
+            Serial.print(F("NO-OP. OWN MSG: ")); Serial.println(msg->id);
         } else {
             if (msg->id <= maxIDs[msg->orig]) {
-                Serial.print(F("Ignoring message previous to current max ID: "));
+                Serial.print(F("Ignore old Msg: "));
                 Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
                 Serial.print(F("(Current Max: ")); Serial.print(maxIDs[msg->orig]);
                 Serial.println(F(")"));
@@ -118,7 +116,7 @@ void _receive() {
                      * M0 Feather boards is complex (if available at all?). See:
                      * https://forums.adafruit.com/viewtopic.php?f=22&t=88272
                      */ 
-                    Serial.println(F("Resetting Max ID for Node: "));
+                    Serial.println(F("Reset Max ID. Node: "));
                     Serial.println(msg->orig);
                     maxIDs[msg->orig] = 0;
                 }
@@ -128,28 +126,29 @@ void _receive() {
                  */
                 msg->snd = NODE_ID;
                 delay(1000); // needed for sending radio to receive the bounce
-                Serial.println(F("RETRANSMITTING ..."));
-                Serial.print(F("    snd: ")); Serial.print(msg->snd);
-                Serial.print(F("; orig: ")); Serial.println(msg->orig);
+                Serial.print(F("RETRANSMITTING ..."));
+                Serial.print(F("  snd: ")); Serial.print(msg->snd);
+                Serial.print(F("; orig: ")); Serial.print(msg->orig);
                 sendCurrent();            
                 maxIDs[msg->orig] = msg->id;
-                Serial.println(F("    ...RETRANSMITTED"));
+                Serial.println(F("  ...RETRANSMITTED"));
             }
 
             #if WIFI_MODULE
                 if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {
                     Serial.println(F("API:"));
-                    Serial.print(F("    Connected to API server: ")); Serial.print(API_SERVER);
+                    Serial.print(F("    CON: "));
+                    Serial.print(API_SERVER);
                     Serial.print(F(":")); Serial.println(API_PORT);
                     char sendMsg[500];
-                    sprintf(sendMsg, F("GET /?msg=%s HTTP/1.1"), msg);
-                    WIFI_CLIENT.println(sendMsg);
+                    //sprintf(sendMsg, F("GET /?msg=%s HTTP/1.1"), msg);
+                    //WIFI_CLIENT.println(sendMsg);
                     WIFI_CLIENT.print(F("Host: ")); WIFI_CLIENT.println(API_HOST);
-                    WIFI_CLIENT.println(F("Connection: close"));
+                    WIFI_CLIENT.println(F("CLOSE"));
                     WIFI_CLIENT.println();
-                    Serial.print(F("    ")); Serial.println(sendMsg);
+                    //Serial.print(F("    ")); Serial.println(sendMsg);
                 } else {
-                  Serial.println(F("Could not connect to API server"));
+                  Serial.println(F("FAIL: API CON"));
                 }
             #endif
         }
@@ -159,12 +158,13 @@ void _receive() {
 void receive() {
     // randomized receive cycle to avoid loop sync across nodes
     int delta = 5000 + rand() % 5000;
-    Serial.print(F("Listening for LoRa signal: ")); Serial.print(delta);
-    Serial.println(F("ms"));
+    Serial.print(F("NODE ")); Serial.print(NODE_ID);
+    Serial.print(F(" LISTEN: ")); Serial.print(delta);
+    Serial.print(F("ms"));
     if (rf95.waitAvailableTimeout(delta)) {
         _receive();
     } else {
-        Serial.println(F("No message received"));
+        Serial.println(F("  ..NO MSG REC"));
     }
 }
 
@@ -244,8 +244,6 @@ void transmit() {
       msg->lat = GPS.latitudeDegrees;
       msg->lon = GPS.longitudeDegrees;
       msg->sats = GPS.satellites;
-      Serial.println(F("Data assigned"));
-
       
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
@@ -285,7 +283,7 @@ void transmit() {
       #endif
 
       sendCurrent();
-      Serial.println(F("Transmitted"));
+      Serial.println(F("!TX"));
 
       /*
       char *msgBuf[sizeof(msgStruct)] = {0};
@@ -320,7 +318,7 @@ void setup() {
     }
     Serial.begin(9600);
     if (DEBUG) {
-        Serial.println(F("Serial ready"));
+        Serial.println(F("SRL RDY"));
     }
 
     flashLED(2, HIGH);
@@ -328,7 +326,7 @@ void setup() {
         setupDustSensor();
     #endif
     
-    Serial.print(F("Battery pin set to: "));
+    Serial.print(F("BAT: "));
     if (VBATPIN == A7) {
         Serial.println(F("A7"));
     } else {
@@ -348,31 +346,26 @@ void setup() {
         setupWiFi();
     #endif
 
+    Serial.print(F("Si7021 "));
     if (sensorSi7021TempHumidity.begin()) {
-        Serial.println(F("Found Si7021"));
+        Serial.println(F("Found"));
         sensorSi7021Module = true;
     } else {
-        Serial.println(F("Si7021 Not Found"));
+        Serial.println(F("Not Found"));
     }
 
+    Serial.print(F("Si1145 "));
     if (sensorSi1145UV.begin()) {
-        Serial.println(F("Found Si1145"));
+        Serial.println(F("Found"));
         sensorSi1145Module = true;
     } else {
-        Serial.println(F("Si1145 Not Found"));
+        Serial.println(F("Not Found"));
     }
 
     if (sizeof(Message) > RH_RF95_MAX_MESSAGE_LEN) {
-        Serial.println(F("!!!MESSAGE STRUCT IS TOO LARGE!!!"));
+        fail(MESSAGE_STRUCT_TOO_LARGE);
     }
     Serial.println(F("OK!"));
-}
-
-void printRam() {
-    Serial.print(F("freeMemory: "));
-    Serial.print(freeMemory());
-    Serial.print(F("; freeRam: "));
-    Serial.println(freeRam());
 }
 
 void loop() {
@@ -384,19 +377,17 @@ void loop() {
     }
 
     if (RECEIVE) {
-        Serial.println(F("Ready to receive ..."));
         printRam();
-        Serial.println(F("--------------------------------------------------------"));
+        Serial.println(F("---"));
         receive();
-        Serial.println(F("********************************************************"));
+        Serial.println(F("***"));
     }
 
     if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 10) {
-        Serial.println(F("Ready to transmit ..."));
         printRam();
-        Serial.println(F("--------------------------------------------------------"));
+        Serial.println(F("---"));
         transmit();
         lastTransmit = millis();
-        Serial.println(F("********************************************************"));
+        Serial.println(F("***"));
     }
 }

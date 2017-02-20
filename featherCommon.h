@@ -36,3 +36,12 @@ int freeRam () {
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
 
+//#include <MemoryFree.h>
+void printRam() {
+    //Serial.print(F("freeMemory: "));
+    //Serial.print(freeMemory());
+    //Serial.print("; ");
+    Serial.print(F("freeRam: "));
+    Serial.println(freeRam());
+}
+

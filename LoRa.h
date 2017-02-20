@@ -17,21 +17,19 @@
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 
 void setupRadio() {
-    Serial.println(F("Feather LoRa RX Test!"));
-    digitalWrite(RFM95_RST, LOW); Serial.println(F("LoRa RST LOW"));
+    Serial.println(F("LoRa Test!"));
+    digitalWrite(RFM95_RST, LOW);
     delay(10);
-    digitalWrite(RFM95_RST, HIGH); Serial.println(F("LoRa RST HIGH"));
+    digitalWrite(RFM95_RST, HIGH);
     delay(10);
     while (!rf95.init()) {
-        Serial.println(F("LoRa radio init failed"));
-        while (1);
+        fail(LORA_INIT_FAIL);
     }
-    Serial.println(F("LoRa radio init OK!"));
+    Serial.println(F("LoRa OK!"));
     if (!rf95.setFrequency(RF95_FREQ)) {
-        Serial.println(F("setFrequency failed"));
-        while (1);
+        fail(LORA_FREQ_FAIL);
     }
-    Serial.print(F("Set Freq to: ")); Serial.println(RF95_FREQ);
+    Serial.print(F("FREQ: ")); Serial.println(RF95_FREQ);
     rf95.setTxPower(TX_POWER, false);
     delay(100);
 }
