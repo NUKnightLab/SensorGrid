@@ -96,15 +96,17 @@ void _receive() {
         /* TODO: This won't properly handle a node restart b/c the message IDs
          *  start back over from 1
          */
-        if (  senderID != NODE_ID
-              && maxIDs[origSenderID] < msgID) {
-
-            if (origSenderID == NODE_ID) {
-                Serial.print(F("Received own message: ")); Serial.println(msgID);
+        if ( senderID == NODE_ID ) {
+            Serial.print(F("Received own message: ")); Serial.println(msgID);
+        } else {
+            if (msgID <= maxIDs[origSenderID]) {
+                Serial.print("Ignoring message previous to current max ID: ");
+                Serial.print(origSenderID); Serial.print("."); Serial.println(msgID);
             } else {
                 // TODO: If end-node (i.e. Wifi) and successful write to API, we don't need to re-transmit
                 //buf[4] = NODE_ID + 48;
                 rx->snd = NODE_ID;
+                delay(100);
                 Serial.println(F("RETRANSMITTING ..."));
                 //rf95.send(buf, sizeof(buf));
                 rf95.send(msg, sizeof(msgStruct));
@@ -136,10 +138,11 @@ void _receive() {
 }
 
 void receive() {
-    if (DEBUG) {
-      Serial.println(F("Listening for LoRa signal"));
-    }
-    if (rf95.waitAvailableTimeout(10000)) {
+    // randomized receive cycle to avoid loop sync across nodes
+    int delta = 5000 + rand() % 5000;
+    Serial.print(F("Listening for LoRa signal: ")); Serial.print(delta);
+    Serial.println(F("ms"));
+    if (rf95.waitAvailableTimeout(delta)) {
         _receive();
     } else {
             Serial.println(F("No message received"));
