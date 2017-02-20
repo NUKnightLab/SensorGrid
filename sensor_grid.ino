@@ -95,6 +95,12 @@ void _receive() {
         Serial.print(F("; lat: ")); Serial.print(msg->lat);
         Serial.print(F("; lon: ")); Serial.print(msg->lon);
         Serial.print(F("; sats: ")); Serial.println(msg->sats);
+        Serial.print(F("    Temp: ")); Serial.print(msg->fvals[TEMPERATURE]);
+        Serial.print(F("; Humid: ")); Serial.println(msg->fvals[HUMIDITY]);
+        Serial.print(F("    Dust: ")); Serial.println(msg->fvals[DUST]);
+        Serial.print(F("    Vis: ")); Serial.print(msg->ivals[VISIBLE_LIGHT]);
+        Serial.print(F("; IR: ")); Serial.print(msg->ivals[IR_LIGHT]);
+        Serial.print(F("; UV: ")); Serial.println(msg->ivals[UV_LIGHT]);
         flashLED(1, HIGH);
 
         if ( msg->orig == NODE_ID ) {
@@ -147,7 +153,6 @@ void _receive() {
                 }
             #endif
         }
-        //delete msg;
     }
 }
 
@@ -274,7 +279,7 @@ void transmit() {
 
       #if DUST_SENSOR
           msg->fvals[DUST] = readDustSensor();
-          Serial.print(F("DUST: ")); Serial.print(msg->fvals[DUST]);
+          Serial.print(F("DUST: ")); Serial.println(msg->fvals[DUST]);
           //append(txData, "&dust=");
           //appendFloat(txData, dust, 100);
       #endif
