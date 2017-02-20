@@ -96,7 +96,7 @@ void _receive() {
         /* TODO: This won't properly handle a node restart b/c the message IDs
          *  start back over from 1
          */
-        if ( senderID == NODE_ID ) {
+        if ( origSenderID == NODE_ID ) {
             Serial.print(F("Received own message: ")); Serial.println(msgID);
         } else {
             if (msgID <= maxIDs[origSenderID]) {
