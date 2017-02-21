@@ -37,11 +37,11 @@ enum INT_DATA_TYPES {
 };
 
 typedef struct Message {
-    int snd;
-    int orig;
+    uint8_t snd;
+    uint8_t orig;
     uint8_t ver_a;
     uint8_t ver_b;
-    int id;
+    uint32_t id;
     //float bat;
     //uint8_t hour, minute, seconds, year, month, day;
     //bool fix;
