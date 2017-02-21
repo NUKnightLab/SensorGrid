@@ -24,17 +24,15 @@
 #include "Adafruit_SI1145.h"
 #include "Adafruit_Si7021.h"
 
-enum FLOAT_DATA_TYPES {
-    TEMPERATURE,
-    HUMIDITY,
-    DUST
-};
-
-enum INT_DATA_TYPES {
+enum DATA_TYPES {
     VISIBLE_LIGHT,
     IR_LIGHT,
-    UV_LIGHT
+    UV_LIGHT,
+    TEMPERATURE_100,
+    HUMIDITY_100,
+    DUST_100
 };
+
 
 typedef struct Message {
     uint8_t snd;
@@ -42,13 +40,12 @@ typedef struct Message {
     uint8_t ver_a;
     uint8_t ver_b;
     uint32_t id;
-    uint8_t bat;
+    int16_t bat_100;
     uint8_t hour, minute, seconds, year, month, day;
     bool fix;
-    //float lat, lon;
-    //int sats;
-    //float fvals[3];
-    //int ivals[3];
+    int16_t lat_100, lon_100;
+    uint8_t sats;
+    int32_t data[6];
 };
 
 int MSG_ID = 0;
@@ -85,7 +82,7 @@ void _receive() {
         Serial.print(F("; SND: ")); Serial.print(msg->snd);
         Serial.print(F("; ORIG: ")); Serial.print(msg->orig);
         Serial.print(F("; ID: ")); Serial.println(msg->id);
-        Serial.print(F("    BAT: ")); Serial.print(msg->bat/100);
+        Serial.print(F("    BAT: ")); Serial.print(msg->bat_100/100);
         Serial.print(F("; DT: "));
         Serial.print(msg->year); Serial.print(F("-"));
         Serial.print(msg->month); Serial.print(F("-"));
@@ -94,15 +91,15 @@ void _receive() {
         Serial.print(msg->minute); Serial.print(F(":"));
         Serial.println(msg->seconds);
         Serial.print(F("    fix: ")); Serial.print(msg->fix);
-        //Serial.print(F("; lat: ")); Serial.print(msg->lat);
-        //Serial.print(F("; lon: ")); Serial.print(msg->lon);
-        //Serial.print(F("; sats: ")); Serial.println(msg->sats);
-        //Serial.print(F("    Temp: ")); Serial.print(msg->fvals[TEMPERATURE]);
-        //Serial.print(F("; Humid: ")); Serial.println(msg->fvals[HUMIDITY]);
-        //Serial.print(F("    Dust: ")); Serial.println(msg->fvals[DUST]);
-        //Serial.print(F("    Vis: ")); Serial.print(msg->ivals[VISIBLE_LIGHT]);
-        //Serial.print(F("; IR: ")); Serial.print(msg->ivals[IR_LIGHT]);
-        //Serial.print(F("; UV: ")); Serial.println(msg->ivals[UV_LIGHT]);
+        Serial.print(F("; lat: ")); Serial.print(msg->lat_100/100);
+        Serial.print(F("; lon: ")); Serial.print(msg->lon_100/100);
+        Serial.print(F("; sats: ")); Serial.println(msg->sats);
+        Serial.print(F("    Temp: ")); Serial.print(msg->data[TEMPERATURE_100]);
+        Serial.print(F("; Humid: ")); Serial.println(msg->data[HUMIDITY_100]);
+        Serial.print(F("    Dust: ")); Serial.println(msg->data[DUST_100]);
+        Serial.print(F("    Vis: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
+        Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
+        Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
         flashLED(1, HIGH);
 
         if ( msg->orig == NODE_ID ) {
@@ -240,7 +237,7 @@ void transmit() {
       msg->ver_a = VERSION_A;
       msg->ver_b = VERSION_B;
       msg->id = MSG_ID;
-      msg->bat = (uint8_t)(batteryLevel() * 100);
+      msg->bat_100 = (int16_t)(batteryLevel() * 100);
       msg->hour = GPS.hour;
       msg->minute = GPS.minute;
       msg->seconds = GPS.seconds;
@@ -248,19 +245,17 @@ void transmit() {
       msg->month = GPS.month;
       msg->day = GPS.day;
       msg->fix = GPS.fix;
-      //msg->lat = GPS.latitudeDegrees;
-      //msg->lon = GPS.longitudeDegrees;
-      //msg->sats = GPS.satellites;
+      msg->lat_100 = (int16_t)(GPS.latitudeDegrees * 100);
+      msg->lon_100 = (int16_t)(GPS.longitudeDegrees * 100);
+      msg->sats = GPS.satellites;
 
-      /*
+
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
-          //float temp = sensorSi7021TempHumidity.readTemperature();
-          msg->fvals[TEMPERATURE] = sensorSi7021TempHumidity.readTemperature();
-          //float humid = sensorSi7021TempHumidity.readHumidity();
-          msg->fvals[HUMIDITY] = sensorSi7021TempHumidity.readHumidity();
-          Serial.print(F("    TEMP: ")); Serial.print(msg->fvals[TEMPERATURE]);
-          Serial.print(F("; HUMID: ")); Serial.println(msg->fvals[HUMIDITY]);
+          msg->data[TEMPERATURE_100] = (int32_t)(sensorSi7021TempHumidity.readTemperature()*100);
+          msg->data[HUMIDITY_100] = (int32_t)(sensorSi7021TempHumidity.readHumidity()*100);
+          Serial.print(F("    TEMP: ")); Serial.print(msg->data[TEMPERATURE_100]);
+          Serial.print(F("; HUMID: ")); Serial.println(msg->data[HUMIDITY_100]);
           //append(txData, "&temp=");
           //appendFloat(txData, temp, 100);
           //append(txData, "&humid=");
@@ -269,12 +264,12 @@ void transmit() {
 
       if (sensorSi1145Module) {
           Serial.println(F("Vis/IR/UV:"));
-          msg->ivals[VISIBLE_LIGHT] = sensorSi1145UV.readVisible();
-          msg->ivals[IR_LIGHT] = sensorSi1145UV.readIR();
-          msg->ivals[UV_LIGHT] = sensorSi1145UV.readUV();
-          Serial.print(F("    VIS: ")); Serial.print(msg->ivals[VISIBLE_LIGHT]);
-          Serial.print(F("; IR: ")); Serial.print(msg->ivals[IR_LIGHT]);
-          Serial.print(F("; UV: ")); Serial.println(msg->ivals[UV_LIGHT]);
+          msg->data[VISIBLE_LIGHT] = (int32_t)sensorSi1145UV.readVisible();
+          msg->data[IR_LIGHT] = (int32_t)sensorSi1145UV.readIR();
+          msg->data[UV_LIGHT] = (int32_t)sensorSi1145UV.readUV();
+          Serial.print(F("    VIS: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
+          Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
+          Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
           //append(txData, "&vis=");
           //appendInt(txData, vis);
           //append(txData, "&ir=");
@@ -284,12 +279,11 @@ void transmit() {
       }
 
       #if DUST_SENSOR
-          msg->fvals[DUST] = readDustSensor();
-          Serial.print(F("DUST: ")); Serial.println(msg->fvals[DUST]);
+          msg->data[DUST_100] = (int32_t)(readDustSensor()*100);
+          Serial.print(F("DUST: ")); Serial.println(msg->data[DUST_100]);
           //append(txData, "&dust=");
           //appendFloat(txData, dust, 100);
       #endif
-      */
       sendCurrent();
       Serial.println(F("!TX"));
 
