@@ -1,4 +1,5 @@
-#define VERSION 0.11
+#define VERSION_A 0
+#define VERSION_B 11
 #include "errors.h"
 #include "config.h"
 #if BOARD == FeatherM0
@@ -38,15 +39,16 @@ enum INT_DATA_TYPES {
 typedef struct Message {
     int snd;
     int orig;
-    float ver;
+    uint8_t ver_a;
+    uint8_t ver_b;
     int id;
-    float bat;
-    uint8_t hour, minute, seconds, year, month, day;
-    bool fix;
-    float lat, lon;
-    int sats;
-    float fvals[3];
-    int ivals[3];
+    //float bat;
+    //uint8_t hour, minute, seconds, year, month, day;
+    //bool fix;
+    //float lat, lon;
+    //int sats;
+    //float fvals[3];
+    //int ivals[3];
 };
 
 int MSG_ID = 0;
@@ -76,30 +78,31 @@ void sendCurrent() {
 void _receive() {
     clearMessage();
     if (rf95.recv(msgBytes, &msgLen)) {
-        Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver); Serial.println(")");
+        Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_a);
+        Serial.print(F(".")); Serial.print(msg->ver_b); Serial.println(")");
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.print(rf95.lastRssi(), DEC);
         Serial.print(F("; SND: ")); Serial.print(msg->snd);
         Serial.print(F("; ORIG: ")); Serial.print(msg->orig);
         Serial.print(F("; ID: ")); Serial.println(msg->id);
-        Serial.print(F("    BAT: ")); Serial.print(msg->bat);
-        Serial.print(F("; DT: "));
-        Serial.print(msg->year); Serial.print(F("-"));
-        Serial.print(msg->month); Serial.print(F("-"));
-        Serial.print(msg->day); Serial.print(F("T"));
-        Serial.print(msg->hour); Serial.print(F(":"));
-        Serial.print(msg->minute); Serial.print(F(":"));
-        Serial.println(msg->seconds);
-        Serial.print(F("    fix: ")); Serial.print(msg->fix);
-        Serial.print(F("; lat: ")); Serial.print(msg->lat);
-        Serial.print(F("; lon: ")); Serial.print(msg->lon);
-        Serial.print(F("; sats: ")); Serial.println(msg->sats);
-        Serial.print(F("    Temp: ")); Serial.print(msg->fvals[TEMPERATURE]);
-        Serial.print(F("; Humid: ")); Serial.println(msg->fvals[HUMIDITY]);
-        Serial.print(F("    Dust: ")); Serial.println(msg->fvals[DUST]);
-        Serial.print(F("    Vis: ")); Serial.print(msg->ivals[VISIBLE_LIGHT]);
-        Serial.print(F("; IR: ")); Serial.print(msg->ivals[IR_LIGHT]);
-        Serial.print(F("; UV: ")); Serial.println(msg->ivals[UV_LIGHT]);
+        //Serial.print(F("    BAT: ")); Serial.print(msg->bat);
+        //Serial.print(F("; DT: "));
+        //Serial.print(msg->year); Serial.print(F("-"));
+        //Serial.print(msg->month); Serial.print(F("-"));
+        //Serial.print(msg->day); Serial.print(F("T"));
+        //Serial.print(msg->hour); Serial.print(F(":"));
+        //Serial.print(msg->minute); Serial.print(F(":"));
+        //Serial.println(msg->seconds);
+        //Serial.print(F("    fix: ")); Serial.print(msg->fix);
+        //Serial.print(F("; lat: ")); Serial.print(msg->lat);
+        //Serial.print(F("; lon: ")); Serial.print(msg->lon);
+        //Serial.print(F("; sats: ")); Serial.println(msg->sats);
+        //Serial.print(F("    Temp: ")); Serial.print(msg->fvals[TEMPERATURE]);
+        //Serial.print(F("; Humid: ")); Serial.println(msg->fvals[HUMIDITY]);
+        //Serial.print(F("    Dust: ")); Serial.println(msg->fvals[DUST]);
+        //Serial.print(F("    Vis: ")); Serial.print(msg->ivals[VISIBLE_LIGHT]);
+        //Serial.print(F("; IR: ")); Serial.print(msg->ivals[IR_LIGHT]);
+        //Serial.print(F("; UV: ")); Serial.println(msg->ivals[UV_LIGHT]);
         flashLED(1, HIGH);
 
         if ( msg->orig == NODE_ID ) {
@@ -234,20 +237,22 @@ void transmit() {
       clearMessage();
       msg->snd = NODE_ID;
       msg->orig = NODE_ID;
-      msg->ver = VERSION;
+      msg->ver_a = VERSION_A;
+      msg->ver_b = VERSION_B;
       msg->id = MSG_ID;
-      msg->bat = batteryLevel();
-      msg->hour = GPS.hour;
-      msg->minute = GPS.minute;
-      msg->seconds = GPS.seconds;
-      msg->year = GPS.year;
-      msg->month = GPS.month;
-      msg->day = GPS.day;
-      msg->fix = GPS.fix;
-      msg->lat = GPS.latitudeDegrees;
-      msg->lon = GPS.longitudeDegrees;
-      msg->sats = GPS.satellites;
-      
+      //msg->bat = batteryLevel();
+      //msg->hour = GPS.hour;
+      //msg->minute = GPS.minute;
+      //msg->seconds = GPS.seconds;
+      //msg->year = GPS.year;
+      //msg->month = GPS.month;
+      //msg->day = GPS.day;
+      //msg->fix = GPS.fix;
+      //msg->lat = GPS.latitudeDegrees;
+      //msg->lon = GPS.longitudeDegrees;
+      //msg->sats = GPS.satellites;
+
+      /*
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
           //float temp = sensorSi7021TempHumidity.readTemperature();
@@ -284,7 +289,7 @@ void transmit() {
           //append(txData, "&dust=");
           //appendFloat(txData, dust, 100);
       #endif
-
+      */
       sendCurrent();
       Serial.println(F("!TX"));
 
