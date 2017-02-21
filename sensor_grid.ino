@@ -58,7 +58,8 @@ Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
-char msgBytes[sizeof(Message)];
+//char msgBytes[sizeof(Message)];
+uint8_t msgBytes[sizeof(Message)];
 uint8_t msgLen = sizeof(msgBytes);
 struct Message *msg = (struct Message*)msgBytes;
 
@@ -169,23 +170,24 @@ void receive() {
 }
 
 void append(char *str, char *newStr) {
-    strcpy(str+strlen(str), newStr);
+    //strcpy(str+strlen(str), newStr);
 }
 
 void appendInt(char *str, int val) {
-    itoa(val, str+strlen(str), 10);
+    //itoa(val, str+strlen(str), 10);
 }
 
 void appendInt(char *str, int val, int zerofill) {
   // up to 5 char
-  char valString[5];
-  itoa(val, valString, 10);
-  char tmp[zerofill] = {'0'};
-  strcpy(tmp+(zerofill-strlen(valString)), valString);
-  append(str, tmp);
+  //char valString[5];
+  //itoa(val, valString, 10);
+  //char tmp[zerofill] = {'0'};
+  //strcpy(tmp+(zerofill-strlen(valString)), valString);
+  //append(str, tmp);
 }
 
 void appendFloat(char *str, float val, int precision) {
+   /*
    itoa((int)val, str+strlen(str), 10);
    strcpy(str+strlen(str), ".");
    // regular modulo % on casted ints give us bad vals for the GPS data for some reason
@@ -193,6 +195,7 @@ void appendFloat(char *str, float val, int precision) {
    int fraction = abs((int)(fmod(val, 1)*precision));
    // TODO: zero fill fraction to width of precision
    itoa(fraction, str+strlen(str), 10);
+   */
 }
 
 

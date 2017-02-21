@@ -30,18 +30,25 @@ float batteryLevel() {
     return measuredvbat;
 }
 
+#if BOARD == Feather32u4
 int freeRam () {
   extern int __heap_start, *__brkval; 
   int v; 
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
+*/
 
 //#include <MemoryFree.h>
 void printRam() {
+    // Not working on M0;
     //Serial.print(F("freeMemory: "));
-    //Serial.print(freeMemory());
+    //Serial.println(freeMemory());
     //Serial.print("; ");
     Serial.print(F("freeRam: "));
     Serial.println(freeRam());
 }
+#else
+//TODO: get RAM check working on M0
+void printRam(){}
+#endif
 
