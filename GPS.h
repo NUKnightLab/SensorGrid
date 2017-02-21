@@ -147,7 +147,7 @@ void TC3_Handler()
 
 
 void setupGPS() {
-  Serial.println(F("INIT GPS.."));
+  Serial.print(F("INIT GPS.."));
   GPS.begin(9600);
   GPS.sendCommand(PMTK_SET_NMEA_OUTPUT_RMCGGA);
   GPS.sendCommand(PMTK_SET_NMEA_UPDATE_1HZ);
@@ -155,7 +155,7 @@ void setupGPS() {
     useInterrupt(usingInterrupt);
   #endif
   //setupSignal(); // Not currently working for M0
-  Serial.println(F("..GPS INIT")); // TODO: is there a way to tell GPS init is unsuccessful?
+  Serial.println(F("  ..GPS INIT")); // TODO: is there a way to tell GPS init is unsuccessful?
   delay(500);
 }
 
