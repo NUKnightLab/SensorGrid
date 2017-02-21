@@ -39,13 +39,13 @@ typedef struct Message {
     uint8_t orig;
     uint8_t ver_a;
     uint8_t ver_b;
-    uint32_t id;
+    uint16_t id;
     int16_t bat_100;
     uint8_t hour, minute, seconds, year, month, day;
     bool fix;
-    int16_t lat_100, lon_100;
+    int16_t lat_1000, lon_1000;
     uint8_t sats;
-    int32_t data[6];
+    int16_t data[6];
 };
 
 int MSG_ID = 0;
@@ -91,8 +91,8 @@ void _receive() {
         Serial.print(msg->minute); Serial.print(F(":"));
         Serial.println(msg->seconds);
         Serial.print(F("    fix: ")); Serial.print(msg->fix);
-        Serial.print(F("; lat: ")); Serial.print(msg->lat_100/100);
-        Serial.print(F("; lon: ")); Serial.print(msg->lon_100/100);
+        Serial.print(F("; lat: ")); Serial.print((float)msg->lat_1000/1000.0);
+        Serial.print(F("; lon: ")); Serial.print((float)msg->lon_1000/1000.0);
         Serial.print(F("; sats: ")); Serial.println(msg->sats);
         Serial.print(F("    Temp: ")); Serial.print(msg->data[TEMPERATURE_100]);
         Serial.print(F("; Humid: ")); Serial.println(msg->data[HUMIDITY_100]);
@@ -237,7 +237,7 @@ void transmit() {
       msg->ver_a = VERSION_A;
       msg->ver_b = VERSION_B;
       msg->id = MSG_ID;
-      msg->bat_100 = (int16_t)(batteryLevel() * 100);
+      msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
       msg->hour = GPS.hour;
       msg->minute = GPS.minute;
       msg->seconds = GPS.seconds;
@@ -245,15 +245,15 @@ void transmit() {
       msg->month = GPS.month;
       msg->day = GPS.day;
       msg->fix = GPS.fix;
-      msg->lat_100 = (int16_t)(GPS.latitudeDegrees * 100);
-      msg->lon_100 = (int16_t)(GPS.longitudeDegrees * 100);
+      msg->lat_1000 = (int16_t)(roundf(GPS.latitudeDegrees * 1000));
+      msg->lon_1000 = (int16_t)(roundf(GPS.longitudeDegrees * 1000));
       msg->sats = GPS.satellites;
 
 
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
-          msg->data[TEMPERATURE_100] = (int32_t)(sensorSi7021TempHumidity.readTemperature()*100);
-          msg->data[HUMIDITY_100] = (int32_t)(sensorSi7021TempHumidity.readHumidity()*100);
+          msg->data[TEMPERATURE_100] = (int16_t)(sensorSi7021TempHumidity.readTemperature()*100);
+          msg->data[HUMIDITY_100] = (int16_t)(sensorSi7021TempHumidity.readHumidity()*100);
           Serial.print(F("    TEMP: ")); Serial.print(msg->data[TEMPERATURE_100]);
           Serial.print(F("; HUMID: ")); Serial.println(msg->data[HUMIDITY_100]);
           //append(txData, "&temp=");
@@ -264,9 +264,9 @@ void transmit() {
 
       if (sensorSi1145Module) {
           Serial.println(F("Vis/IR/UV:"));
-          msg->data[VISIBLE_LIGHT] = (int32_t)sensorSi1145UV.readVisible();
-          msg->data[IR_LIGHT] = (int32_t)sensorSi1145UV.readIR();
-          msg->data[UV_LIGHT] = (int32_t)sensorSi1145UV.readUV();
+          msg->data[VISIBLE_LIGHT] = (int16_t)sensorSi1145UV.readVisible();
+          msg->data[IR_LIGHT] = (int16_t)sensorSi1145UV.readIR();
+          msg->data[UV_LIGHT] = (int16_t)sensorSi1145UV.readUV();
           Serial.print(F("    VIS: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
           Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
           Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
@@ -279,7 +279,7 @@ void transmit() {
       }
 
       #if DUST_SENSOR
-          msg->data[DUST_100] = (int32_t)(readDustSensor()*100);
+          msg->data[DUST_100] = (int16_t)(readDustSensor()*100);
           Serial.print(F("DUST: ")); Serial.println(msg->data[DUST_100]);
           //append(txData, "&dust=");
           //appendFloat(txData, dust, 100);
