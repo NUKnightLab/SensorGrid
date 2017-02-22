@@ -150,8 +150,8 @@ void _receive() {
                     maxIDs[msg->orig] = 0;
                 }
             } else {
+                msg->snd = NODE_ID;
                 if (!postToAPI()) {
-                    msg->snd = NODE_ID;
                     delay(1000); // needed for sending radio to receive the bounce
                     Serial.print(F("RETRANSMITTING ..."));
                     Serial.print(F("  snd: ")); Serial.print(msg->snd);
