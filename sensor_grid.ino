@@ -183,7 +183,7 @@ void receive() {
 void transmit() {
       MSG_ID++;
       clearMessage();
-      msg->ver_100 = (uint16)(roundf(VERSION * 100));
+      msg->ver_100 = (uint16_t)(roundf(VERSION * 100));
       msg->net = NETWORK_ID;
       msg->snd = NODE_ID;
       msg->orig = NODE_ID;
