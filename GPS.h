@@ -1,8 +1,8 @@
 #include <Adafruit_GPS.h>
 #define GPSSerial Serial1
-#ifndef GPSECHO
-#define GPSECHO false
-#endif
+//#ifndef GPSECHO
+//#define GPSECHO false
+//#endif
 
 Adafruit_GPS GPS(&GPSSerial);
 unsigned long lastGPS = 0;
