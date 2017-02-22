@@ -8,11 +8,9 @@
 #include "GPS.h"
 #include "LoRa.h"
 #include "encryption.h"
-//#include <SPI.h>
 
 /* Modules */
 #if WIFI_MODULE == WINC1500
-    //#include <WiFi101.h>
     #include "modules/wifi/WINC1500.h"
 #endif
 
@@ -103,11 +101,10 @@ bool postToAPI() {
             WIFI_CLIENT.println("Connection: close");
             WIFI_CLIENT.println("Content-Type: application/x-www-form-urlencoded");
             WIFI_CLIENT.print("Content-Length: "); WIFI_CLIENT.println(msgLen);
-            Serial.print("Message length is: "); Serial.println(msgLen);
+            Serial.print(F("Message length is: ")); Serial.println(msgLen);
             WIFI_CLIENT.println();
             WIFI_CLIENT.write(msgBytes, msgLen);
             WIFI_CLIENT.println();
-            //Serial.print(F("    ")); Serial.println(sendMsg);
             return true;
         } else {
           Serial.println(F("FAIL: API CON"));
@@ -123,7 +120,7 @@ void _receive() {
     clearMessage();
     if (rf95.recv(msgBytes, &msgLen)) {
         Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
-        Serial.print(")");
+        Serial.print(F(")"));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.println(rf95.lastRssi(), DEC);
         printMessageData();

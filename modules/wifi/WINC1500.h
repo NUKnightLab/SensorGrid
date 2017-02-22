@@ -85,6 +85,7 @@ void setupWiFi() {
   */
   connectWiFi();
 
+  /*
   Serial.println(F("\nCON SERVER..."));
   if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {
     Serial.println(F("!CON"));
@@ -92,12 +93,13 @@ void setupWiFi() {
     WIFI_CLIENT.println("POST /data HTTP/1.1");
     WIFI_CLIENT.print("Host: "); WIFI_CLIENT.println(API_HOST);
     WIFI_CLIENT.println("Connection: close");
-
     WIFI_CLIENT.println("Content-Type: application/x-www-form-urlencoded");
-    WIFI_CLIENT.println("Content-Length: 22");
+    WIFI_CLIENT.print("Content-Length: "); WIFI_CLIENT.println(msgLen);
     WIFI_CLIENT.println();
-    WIFI_CLIENT.println("THIS IS SOME TEST DATA");
+    WIFI_CLIENT.write(msgBytes, msgLen);
+    WIFI_CLIENT.println();
   } else {
       Serial.println("FAILED WIFI TEST");
   }
+  */
 }
