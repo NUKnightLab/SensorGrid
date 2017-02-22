@@ -34,7 +34,6 @@ typedef struct Message {
     bool fix;
     int32_t lat_1000, lon_1000;
     uint8_t sats;
-    char * fields[];
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
 
@@ -178,7 +177,6 @@ void receive() {
         Serial.println(F("  ..NO MSG REC"));
     }
 }
-
 
 void transmit() {
       MSG_ID++;
