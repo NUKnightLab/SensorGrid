@@ -1,12 +1,16 @@
 #include "defs.h"
 #include "errors.h"
 #include "config.h"
+
 #if BOARD == FeatherM0
     #include "lib/dtostrf.h"
 #endif
 #include "featherCommon.h"
-#include "GPS.h"
+
+
 #include "LoRa.h"
+#include "GPS.h"
+
 #include "encryption.h"
 
 /* Modules */
@@ -34,6 +38,17 @@ typedef struct Message {
     uint8_t sats;
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
+
+/*
+ * TODO on M0:
+ * From: https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module?view=all
+ * If you're used to AVR, you've probably used PROGMEM to let the compiler know you'd like to put a variable or string in flash memory to save on RAM. On the ARM, its a little easier, simply add const before the variable name:
+const char str[] = "My very long string";
+That string is now in FLASH. You can manipulate the string just like RAM data, the compiler will automatically read from FLASH so you dont need special progmem-knowledgeable functions.
+You can verify where data is stored by printing out the address:
+Serial.print("Address of str $"); Serial.println((int)&str, HEX);
+If the address is $2000000 or larger, its in SRAM. If the address is between $0000 and $3FFFF Then it is in FLASH
+*/
 
 uint32_t MSG_ID = 0;
 int maxIDs[5] = {0};
@@ -229,6 +244,7 @@ void transmit() {
 }
 
 void setup() {
+
     if (DEBUG) {
         while (!Serial); // only do this if connected to USB
     }
@@ -285,7 +301,7 @@ void setup() {
 }
 
 void loop() {
-
+   
     if (CHARGE_ONLY) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
       delay(10000);

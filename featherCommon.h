@@ -49,6 +49,14 @@ void printRam() {
 }
 #else
 //TODO: get RAM check working on M0
+/* here is the code that should work for RAM checks on M0:
+extern "C" char *sbrk(int i);
+ 
+int FreeRam () {
+  char stack_dummy = 0;
+  return &stack_dummy - sbrk(0);
+}
+*/
 void printRam(){}
 #endif
 
