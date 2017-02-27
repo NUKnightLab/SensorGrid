@@ -35,8 +35,10 @@ typedef struct Message {
     uint8_t year, month, day, hour, minute, seconds;
     bool fix;
     int32_t lat_1000, lon_1000;
-    uint8_t sats;
-    int32_t data[10]; /* -2147483648 through 2147483647 */
+    //uint8_t padding1;
+    //uint8_t sats;
+    //int32_t data[10]; /* -2147483648 through 2147483647 */
+    //uint8_t padding2;
 };
 
 /*
@@ -91,13 +93,14 @@ void printMessageData() {
         Serial.print(F("    fix: ")); Serial.print(msg->fix);
         Serial.print(F("; lat: ")); Serial.print((float)msg->lat_1000/1000);
         Serial.print(F("; lon: ")); Serial.print((float)msg->lon_1000/1000);
-        Serial.print(F("; sats: ")); Serial.println(msg->sats);
-        Serial.print(F("    Temp: ")); Serial.print((float)msg->data[TEMPERATURE_100]/100);
-        Serial.print(F("; Humid: ")); Serial.println((float)msg->data[HUMIDITY_100]/100);
-        Serial.print(F("    Dust: ")); Serial.println((float)msg->data[DUST_100]/100);
-        Serial.print(F("    Vis: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
-        Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
-        Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
+        //Serial.print(F("; sats: ")); Serial.println(msg->sats);
+        //Serial.print(F("    Temp: ")); Serial.print((float)msg->data[TEMPERATURE_100]/100);
+        //Serial.print(F("; Humid: ")); Serial.println((float)msg->data[HUMIDITY_100]/100);
+        //Serial.print(F("    Dust: ")); Serial.println((float)msg->data[DUST_100]/100);
+        //Serial.print(F("    Vis: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
+        //Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
+        //Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
+        Serial.print("Message length:"); Serial.println(sizeof(msgBytes));
 }
 
 bool postToAPI() {
@@ -208,10 +211,11 @@ void transmit() {
       msg->fix = GPS.fix;
       msg->lat_1000 = (int32_t)(roundf(GPS.latitudeDegrees * 1000));
       msg->lon_1000 = (int32_t)(roundf(GPS.longitudeDegrees * 1000));
-      msg->sats = GPS.satellites;
+      //msg->sats = GPS.satellites;
 
       printMessageData();
-     
+
+      /*
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
           msg->data[TEMPERATURE_100] = (int32_t)(sensorSi7021TempHumidity.readTemperature()*100);
@@ -234,7 +238,7 @@ void transmit() {
           msg->data[DUST_100] = (int32_t)(readDustSensor()*100);
           Serial.print(F("DUST: ")); Serial.println((float)msg->data[DUST_100]/100);
       #endif
-
+      */
       if (!postToAPI()) {
           sendCurrent();
           Serial.println(F("!TX"));
