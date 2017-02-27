@@ -34,7 +34,11 @@ typedef struct Message {
     uint16_t bat_100;
     uint8_t year, month, day, hour, minute, seconds;
     bool fix;
-    int32_t lat_1000, lon_1000;
+    uint8_t padding1;
+    int32_t lat_1000;
+    uint8_t padding3;
+    int32_t lon_1000;
+    uint8_t padding2;
     //uint8_t padding1;
     //uint8_t sats;
     //int32_t data[10]; /* -2147483648 through 2147483647 */
@@ -215,6 +219,8 @@ void transmit() {
 
       printMessageData();
 
+      msg->lat_1000 = htonl(msg->lat_1000);
+      
       /*
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
