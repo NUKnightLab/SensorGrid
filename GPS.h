@@ -5,21 +5,17 @@
 //#endif
 
 Adafruit_GPS GPS(&GPSSerial);
-unsigned long lastGPS = 0;
 
 void _readGPSIfTime() {
-  // call this from a timer interrupt
-  if (true || millis() - lastGPS > 15 * 1000) {
-        char c = GPS.read();
-        if (GPS.newNMEAreceived()) {
-            // a tricky thing here is if we print the NMEA sentence, or data
-            // we end up not listening and catching other sentences!
-            // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
-            if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
-                return;  // we can fail to parse a sentence in which case we should just wait for another
-            lastGPS = millis();
-        }
-  }
+    // call this from a timer interrupt
+    char c = GPS.read(); // Note: we are only reading one character per interrupt!
+    if (GPS.newNMEAreceived()) {
+        // a tricky thing here is if we print the NMEA sentence, or data
+        // we end up not listening and catching other sentences!
+        // so be very wary if using OUTPUT_ALLDATA and trytng to print out data
+        if (!GPS.parse(GPS.lastNMEA()))   // this also sets the newNMEAreceived() flag to false
+            return;  // we can fail to parse a sentence in which case we should just wait for another
+    }
 }
 
 /* crude handling of SIGNAL only available on 32u4 */

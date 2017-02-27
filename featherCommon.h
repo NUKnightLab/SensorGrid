@@ -36,27 +36,18 @@ int freeRam () {
   int v; 
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
+#endif
 
-
-//#include <MemoryFree.h>
-void printRam() {
-    // Not working on M0;
-    //Serial.print(F("freeMemory: "));
-    //Serial.println(freeMemory());
-    //Serial.print("; ");
-    Serial.print(F("freeRam: "));
-    Serial.println(freeRam());
-}
-#else
-//TODO: get RAM check working on M0
-/* here is the code that should work for RAM checks on M0:
+#if BOARD == FeatherM0
 extern "C" char *sbrk(int i);
- 
-int FreeRam () {
+int freeRam() {
   char stack_dummy = 0;
   return &stack_dummy - sbrk(0);
 }
-*/
-void printRam(){}
 #endif
+
+void printRam() {
+    Serial.print(F("freeRam: "));
+    Serial.println(freeRam());
+}
 
