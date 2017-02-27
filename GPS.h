@@ -9,7 +9,7 @@ unsigned long lastGPS = 0;
 
 void _readGPSIfTime() {
   // call this from a timer interrupt
-  if (millis() - lastGPS > 15 * 1000) {
+  if (true || millis() - lastGPS > 15 * 1000) {
         char c = GPS.read();
         if (GPS.newNMEAreceived()) {
             // a tricky thing here is if we print the NMEA sentence, or data
