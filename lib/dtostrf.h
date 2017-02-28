@@ -63,7 +63,7 @@ char *dtostrf(double val, int width, unsigned int prec, char *sout)
       decpt++;
       *p++ = '0';
     }
-  }    
+  }
   while (p < e) {
     *p++ = *s++;
     if (p == e) break;

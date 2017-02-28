@@ -17,9 +17,9 @@ float dustSenseCalcVoltage = 0;
 float dustDensity = 0;
 
 void setupDustSensor() {
-	if (DEBUG) {
+    #ifdef DEBUG
 		Serial.println(F("Setting up Dust Sensor"));
-	}
+    #endif
     pinMode(DUST_SENSOR_LED_POWER,OUTPUT);
     pinMode(DUST_SENSOR_READ, INPUT);
 }
@@ -33,13 +33,13 @@ float readDustSensor() {
     delayMicroseconds(DUST_SENSOR_SLEEP_TIME);
     dustSenseCalcVoltage = dustSenseVoMeasured * (DUST_SENSOR_VCC / 1024);
     dustDensity = 0.17 * dustSenseCalcVoltage - 0.1;
-	if (DEBUG) {
+    #ifdef DEBUG
     	Serial.print(F("Raw Signal Value (0-1023): "));
     	Serial.print(dustSenseVoMeasured);
     	Serial.print(F(" - Voltage: "));
     	Serial.print(dustSenseCalcVoltage);
     	Serial.print(F(" - Dust Density: "));
     	Serial.println(dustDensity);
-	}
+    #endif
 	return dustDensity;
 }

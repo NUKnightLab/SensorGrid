@@ -3,9 +3,8 @@
 #include "config.h"
 #include "featherCommon.h"
 
-
 #include "LoRa.h"
-#include "GPS.h"
+#include "modules/gps/GPS.h"
 
 #include "encryption.h"
 
@@ -241,13 +240,11 @@ void transmit() {
 
 void setup() {
 
-    if (DEBUG) {
+    #ifdef DEBUG
         while (!Serial); // only do this if connected to USB
-    }
+    #endif
     Serial.begin(9600);
-    if (DEBUG) {
-        Serial.println(F("SRL RDY"));
-    }
+    Serial.println(F("SRL RDY"));
 
     flashLED(2, HIGH);
     #if DUST_SENSOR
