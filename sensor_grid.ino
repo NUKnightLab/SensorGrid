@@ -1,10 +1,6 @@
 #include "defs.h"
 #include "errors.h"
 #include "config.h"
-
-#if BOARD == FeatherM0
-    #include "lib/dtostrf.h"
-#endif
 #include "featherCommon.h"
 
 
