@@ -1,3 +1,9 @@
+#ifndef SENSORGRID_H
+#define SENSORGRID_H
+#include "defs.h"
+#include "errors.h"
+#include "config.h"
+
 #define LED 13
 #if BOARD == Feather32u4 // not sure why ifdef/ifndef for A7,A9 doesn't work
     #define VBATPIN A9
@@ -51,3 +57,4 @@ void printRam() {
     Serial.println(freeRam());
 }
 
+#endif

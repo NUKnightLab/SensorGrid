@@ -1,7 +1,4 @@
-#include "defs.h"
-#include "errors.h"
-#include "config.h"
-#include "featherCommon.h"
+#include "sensor_grid.h"
 
 #include "LoRa.h"
 #include "modules/gps/GPS.h"
