@@ -1,15 +1,9 @@
 #include <RH_RF95.h>
 
-/* Feather 32u4 Chipset */
-//#if BOARD == Feather32u4
 #if defined(__AVR_ATmega32U4__)
     #define RFM95_CS 8
     #define RFM95_RST 4
     #define RFM95_INT 7
-//#endif
-
-/* Feather M0 Chipset */
-//#if BOARD == FeatherM0
 #elif defined(ARDUINO_ARCH_SAMD)
     #define RFM95_CS 8
     #define RFM95_RST 4
