@@ -97,7 +97,7 @@ bool postToAPI() {
       #if WIFI_MODULE
         connectWiFi(); // keep-alive. This should not be necessary!
         //WIFI_CLIENT.stop();
-        if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {                
+        if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {
             Serial.println(F("API:"));
             Serial.print(F("    CON: "));
             Serial.print(API_SERVER);
@@ -149,7 +149,7 @@ void _receive() {
                     // its Max ID in EEPROM and get rid of this reset - but EEPROM on
                     // M0 Feather boards is complex (if available at all?). See:
                     // https://forums.adafruit.com/viewtopic.php?f=22&t=88272
-                    // 
+                    //
                     Serial.println(F("Reset Max ID. Node: "));
                     Serial.println(msg->orig);
                     maxIDs[msg->orig] = 0;
@@ -161,7 +161,7 @@ void _receive() {
                     Serial.print(F("RETRANSMITTING ..."));
                     Serial.print(F("  snd: ")); Serial.print(msg->snd);
                     Serial.print(F("; orig: ")); Serial.print(msg->orig);
-                    sendCurrent();            
+                    sendCurrent();
                     maxIDs[msg->orig] = msg->id;
                     Serial.println(F("  ...RETRANSMITTED"));
                 }
@@ -204,7 +204,7 @@ void transmit() {
       msg->sats = GPS.satellites;
 
       printMessageData();
-     
+
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
           msg->data[TEMPERATURE_100] = (int32_t)(sensorSi7021TempHumidity.readTemperature()*100);
@@ -212,7 +212,7 @@ void transmit() {
           Serial.print(F("    TEMP: ")); Serial.print(msg->data[TEMPERATURE_100]);
           Serial.print(F("; HUMID: ")); Serial.println(msg->data[HUMIDITY_100]);
       }
-      
+
       if (sensorSi1145Module) {
           Serial.println(F("Vis/IR/UV:"));
           msg->data[VISIBLE_LIGHT] = (int32_t)sensorSi1145UV.readVisible();
@@ -248,7 +248,7 @@ void setup() {
     #if DUST_SENSOR
         setupDustSensor();
     #endif
-    
+
     Serial.print(F("BAT: "));
     if (VBATPIN == A7) {
         Serial.println(F("A7"));
@@ -292,7 +292,7 @@ void setup() {
 }
 
 void loop() {
-   
+
     if (CHARGE_ONLY) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
       delay(10000);

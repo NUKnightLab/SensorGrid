@@ -3,10 +3,6 @@
 
 #define NONE 0
 
-// Boards / Chipsets
-#define Feather32u4 1
-#define FeatherM0 2
-
 /* Module defs */
 
 // WiFi modules
@@ -22,9 +18,8 @@ enum ERRORS {
      LORA_FREQ_FAIL,
      WIFI_MODULE_NOT_DETECTED
 };
-
-#include <KnightLab_GPS.h>
 #include "config.h"
+#include <KnightLab_GPS.h>
 #include "encryption.h"
 
 typedef struct Message {
