@@ -1,13 +1,14 @@
 #ifndef SENSORGRID_H
 #define SENSORGRID_H
+
 #include "defs.h"
 #include "errors.h"
 #include "config.h"
 
 #define LED 13
-#if BOARD == Feather32u4 // not sure why ifdef/ifndef for A7,A9 doesn't work
+#if defined(__AVR_ATmega32U4__)
     #define VBATPIN A9
-#else
+#elif defined(ARDUINO_ARCH_SAMD)
     #define VBATPIN A7
 #endif
 
@@ -36,15 +37,13 @@ float batteryLevel() {
     return measuredvbat;
 }
 
-#if BOARD == Feather32u4
+#if defined(__AVR_ATmega32U4__)
 int freeRam () {
   extern int __heap_start, *__brkval; 
   int v; 
   return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
 }
-#endif
-
-#if BOARD == FeatherM0
+#elif defined(ARDUINO_ARCH_SAMD)
 extern "C" char *sbrk(int i);
 int freeRam() {
   char stack_dummy = 0;

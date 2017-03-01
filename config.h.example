@@ -7,7 +7,6 @@
 #define VERSION 0.11
 #define NETWORK_ID 1
 #define NODE_ID 1
-#define BOARD FeatherM0
 #define WIFI_MODULE WINC1500
 #define DUST_SENSOR SHARP_GP2Y1010AU0F
 
@@ -38,7 +37,7 @@ enum DATA_TYPES {
 /* WiFi Module only */
 /********************/
 
-/** IMPORTANT NOTE: WiFi Module must be a Feather M0 (BOARD: FeatherM0) **/
+/** IMPORTANT NOTE: WiFi Module must be a Feather M0 **/
 
 #if WIFI_MODULE
 const char WIFI_SSID[] = ""; //  network SSID (name)

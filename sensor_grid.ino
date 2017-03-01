@@ -2,7 +2,6 @@
 
 #include "LoRa.h"
 #include "modules/gps/GPS.h"
-
 #include "encryption.h"
 
 /* Modules */
