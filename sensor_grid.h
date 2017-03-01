@@ -19,6 +19,7 @@ enum ERRORS {
      WIFI_MODULE_NOT_DETECTED
 };
 #include "config.h"
+#include "io.h"
 #include <KnightLab_GPS.h>
 
 typedef struct Message {
@@ -53,10 +54,12 @@ If the address is $2000000 or larger, its in SRAM. If the address is between $00
     #define VBATPIN A7
 #endif
 
+/*
 #if defined(ARDUINO_SAMD_ZERO) && defined(SERIAL_PORT_USBVIRTUAL)
     // Required for Serial on Zero based boards
     #define Serial SERIAL_PORT_USBVIRTUAL
 #endif
+*/
 
 class __FlashStringHelper;
 #define F(string_literal) (reinterpret_cast<const __FlashStringHelper*>(PSTR(string_literal)))
