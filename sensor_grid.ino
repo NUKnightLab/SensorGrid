@@ -68,29 +68,29 @@ void sendCurrent() {
 }
 
 void printMessageData() {
-        Serial.print(F("VER: ")); Serial.print((float)msg->ver_100/100);
-        Serial.print(F("; NET: ")); Serial.print(msg->net);
-        Serial.print(F("; SND: ")); Serial.print(msg->snd);
-        Serial.print(F("; ORIG: ")); Serial.print(msg->orig);
-        Serial.print(F("; ID: ")); Serial.println(msg->id);
-        Serial.print(F("BAT: ")); Serial.println((float)msg->bat_100/100);
-        Serial.print(F("; DT: "));
-        Serial.print(msg->year); Serial.print(F("-"));
-        Serial.print(msg->month); Serial.print(F("-"));
-        Serial.print(msg->day); Serial.print(F("T"));
-        Serial.print(msg->hour); Serial.print(F(":"));
-        Serial.print(msg->minute); Serial.print(F(":"));
-        Serial.println(msg->seconds);
-        Serial.print(F("    fix: ")); Serial.print(msg->fix);
-        Serial.print(F("; lat: ")); Serial.print((float)msg->lat_1000/1000);
-        Serial.print(F("; lon: ")); Serial.print((float)msg->lon_1000/1000);
-        Serial.print(F("; sats: ")); Serial.println(msg->sats);
-        Serial.print(F("    Temp: ")); Serial.print((float)msg->data[TEMPERATURE_100]/100);
-        Serial.print(F("; Humid: ")); Serial.println((float)msg->data[HUMIDITY_100]/100);
-        Serial.print(F("    Dust: ")); Serial.println((float)msg->data[DUST_100]/100);
-        Serial.print(F("    Vis: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
-        Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
-        Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
+    Serial.print(F("VER: ")); Serial.print((float)msg->ver_100/100);
+    Serial.print(F("; NET: ")); Serial.print(msg->net);
+    Serial.print(F("; SND: ")); Serial.print(msg->snd);
+    Serial.print(F("; ORIG: ")); Serial.print(msg->orig);
+    Serial.print(F("; ID: ")); Serial.println(msg->id);
+    Serial.print(F("BAT: ")); Serial.println((float)msg->bat_100/100);
+    Serial.print(F("; DT: "));
+    Serial.print(msg->year); Serial.print(F("-"));
+    Serial.print(msg->month); Serial.print(F("-"));
+    Serial.print(msg->day); Serial.print(F("T"));
+    Serial.print(msg->hour); Serial.print(F(":"));
+    Serial.print(msg->minute); Serial.print(F(":"));
+    Serial.println(msg->seconds);
+    Serial.print(F("    fix: ")); Serial.print(msg->fix);
+    Serial.print(F("; lat: ")); Serial.print((float)msg->lat_1000/1000);
+    Serial.print(F("; lon: ")); Serial.print((float)msg->lon_1000/1000);
+    Serial.print(F("; sats: ")); Serial.println(msg->sats);
+    Serial.print(F("    Temp: ")); Serial.print((float)msg->data[TEMPERATURE_100]/100);
+    Serial.print(F("; Humid: ")); Serial.println((float)msg->data[HUMIDITY_100]/100);
+    Serial.print(F("    Dust: ")); Serial.println((float)msg->data[DUST_100]/100);
+    Serial.print(F("    Vis: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
+    Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
+    Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
 }
 
 bool postToAPI() {

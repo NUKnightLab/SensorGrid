@@ -20,7 +20,6 @@ enum ERRORS {
 };
 #include "config.h"
 #include <KnightLab_GPS.h>
-#include "encryption.h"
 
 typedef struct Message {
     uint16_t ver_100;
