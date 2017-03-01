@@ -1,3 +1,4 @@
+#include "sensor_grid.h"
 #include <RH_RF95.h>
 
 #if defined(__AVR_ATmega32U4__)

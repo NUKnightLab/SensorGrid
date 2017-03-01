@@ -1,8 +1,6 @@
 #include "sensor_grid.h"
-
 #include "LoRa.h"
-#include "modules/gps/GPS.h"
-#include "encryption.h"
+
 
 /* Modules */
 #if WIFI_MODULE == WINC1500
@@ -15,31 +13,6 @@
 
 #include "Adafruit_SI1145.h"
 #include "Adafruit_Si7021.h"
-
-typedef struct Message {
-    uint16_t ver_100;
-    uint16_t net;
-    uint16_t snd;
-    uint16_t orig;
-    uint32_t id;
-    uint16_t bat_100;
-    uint8_t year, month, day, hour, minute, seconds;
-    bool fix;
-    int32_t lat_1000, lon_1000;
-    uint8_t sats;
-    int32_t data[10]; /* -2147483648 through 2147483647 */
-};
-
-/*
- * TODO on M0:
- * From: https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module?view=all
- * If you're used to AVR, you've probably used PROGMEM to let the compiler know you'd like to put a variable or string in flash memory to save on RAM. On the ARM, its a little easier, simply add const before the variable name:
-const char str[] = "My very long string";
-That string is now in FLASH. You can manipulate the string just like RAM data, the compiler will automatically read from FLASH so you dont need special progmem-knowledgeable functions.
-You can verify where data is stored by printing out the address:
-Serial.print("Address of str $"); Serial.println((int)&str, HEX);
-If the address is $2000000 or larger, its in SRAM. If the address is between $0000 and $3FFFF Then it is in FLASH
-*/
 
 uint32_t MSG_ID = 0;
 int maxIDs[5] = {0};
