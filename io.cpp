@@ -57,34 +57,5 @@ void printMessageData() {
     Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
 }
 
-bool postToAPI() {
-      #if WIFI_MODULE
-        connectWiFi(WIFI_SSID, WIFI_PASS); // keep-alive. This should not be necessary!
-        //WIFI_CLIENT.stop();
-        if (WIFI_CLIENT.connect(API_SERVER, API_PORT)) {
-            Serial.println(F("API:"));
-            Serial.print(F("    CON: "));
-            Serial.print(API_SERVER);
-            Serial.print(F(":")); Serial.println(API_PORT);
-            char* messageChars = (char*)msgBytes;
-            WIFI_CLIENT.println("POST /data HTTP/1.1");
-            WIFI_CLIENT.print("Host: "); WIFI_CLIENT.println(API_HOST);
-            WIFI_CLIENT.println("User-Agent: ArduinoWiFi/1.1");
-            WIFI_CLIENT.println("Connection: close");
-            WIFI_CLIENT.println("Content-Type: application/x-www-form-urlencoded");
-            WIFI_CLIENT.print("Content-Length: "); WIFI_CLIENT.println(msgLen);
-            Serial.print(F("Message length is: ")); Serial.println(msgLen);
-            WIFI_CLIENT.println();
-            WIFI_CLIENT.write(msgBytes, msgLen);
-            WIFI_CLIENT.println();
-            return true;
-        } else {
-          Serial.println(F("FAIL: API CON"));
-          return false;
-        }
-    #else
-        Serial.println(F("NO API POST: Not an end node"));
-        return false;
-    #endif
-}
+
 

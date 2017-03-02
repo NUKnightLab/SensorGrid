@@ -1,9 +1,6 @@
 #include "sensor_grid.h"
 
 /* Modules */
-//#if WIFI_MODULE == WINC1500
-//    #include "modules/wifi/WINC1500.h"
-//#endif
 
 #if DUST_SENSOR == SHARP_GP2Y1010AU0F
     #include "modules/dust/SHARP_GP2Y1010AU0F.h"
@@ -25,6 +22,7 @@ bool sensorSi1145Module = false;
 uint8_t msgBytes[sizeof(Message)];
 uint8_t msgLen = sizeof(msgBytes);
 struct Message *msg = (struct Message*)msgBytes;
+bool WifiPresent = false;
 
 void _receive() {
     clearMessage();
@@ -58,7 +56,7 @@ void _receive() {
                 }
             } else {
                 msg->snd = NODE_ID;
-                if (!postToAPI()) {
+                if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, msgBytes, msgLen)) {
                     delay(1000); // needed for sending radio to receive the bounce
                     Serial.print(F("RETRANSMITTING ..."));
                     Serial.print(F("  snd: ")); Serial.print(msg->snd);
@@ -130,7 +128,7 @@ void transmit() {
           Serial.print(F("DUST: ")); Serial.println((float)msg->data[DUST_100]/100);
       #endif
 
-      if (!postToAPI()) {
+      if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, msgBytes, msgLen)) {
           sendCurrentMessage();
           Serial.println(F("!TX"));
       }
@@ -166,10 +164,8 @@ void setup() {
 
     setupGPS();
     setupRadio();
+    WiFiPresent = setupWiFi();
 
-    #if WIFI_MODULE
-        setupWiFi();
-    #endif
 
     Serial.print(F("Si7021 "));
     if (sensorSi7021TempHumidity.begin()) {

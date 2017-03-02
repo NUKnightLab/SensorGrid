@@ -7,7 +7,6 @@
 #define VERSION 0.11
 #define NETWORK_ID 1
 #define NODE_ID 1
-#define WIFI_MODULE WINC1500
 #define DUST_SENSOR SHARP_GP2Y1010AU0F
 
 const bool DEBUG = true; // only use debug if attached to USB
@@ -37,14 +36,15 @@ enum DATA_TYPES {
 /* WiFi Module only */
 /********************/
 
-/** IMPORTANT NOTE: WiFi Module must be a Feather M0 **/
-
-#if WIFI_MODULE
+/**
+ * IMPORTANT NOTE: WiFi Module must be a Feather M0
+ * Currently these configs must be defined even if this is not a WIFI module.
+ * TODO: make these optional
+ */
 const char WIFI_SSID[] = ""; //  network SSID (name)
 const char WIFI_PASS[] = ""; // network password (use for WPA, or use as key for WEP)
 const char API_SERVER[] = "";
 const int API_PORT = 5000;
 const char API_HOST[] = "";
-#endif
 
 #endif
