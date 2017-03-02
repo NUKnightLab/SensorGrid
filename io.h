@@ -1,7 +1,11 @@
 #ifndef IO_H
-#define IOD_H
+#define IO_H
 
 #include <RH_RF95.h>
+/* Modules */
+#if WIFI_MODULE == WINC1500
+    #include "modules/wifi/WINC1500.h"
+#endif
 
 #if defined(__AVR_ATmega32U4__)
     #define RFM95_CS 8
@@ -14,7 +18,11 @@
 #endif
 
 extern RH_RF95 rf95;
+
+void clearMessage();
 void setupRadio();
-void sendCurrent();
+void sendCurrentMessage();
+void printMessageData();
+bool postToAPI();
 
 #endif

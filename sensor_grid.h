@@ -35,6 +35,10 @@ typedef struct Message {
     uint8_t sats;
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
+extern uint8_t msgBytes[];
+extern uint8_t msgLen;
+extern struct Message *msg;
+
 
 /*
  * TODO on M0:
