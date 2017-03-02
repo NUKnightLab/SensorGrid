@@ -3,9 +3,6 @@
 
 #include <RH_RF95.h>
 /* Modules */
-#if WIFI_MODULE == WINC1500
-    #include "modules/wifi/WINC1500.h"
-#endif
 
 #if defined(__AVR_ATmega32U4__)
     #define RFM95_CS 8

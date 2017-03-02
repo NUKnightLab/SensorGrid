@@ -4,11 +4,7 @@
 #define NONE 0
 
 /* Module defs */
-
-// WiFi modules
-//#define WINC1500 1
-
-
+#include "modules/wifi/WINC1500.h"
 
 // Dust sensors
 #define SHARP_GP2Y1010AU0F 1
@@ -21,25 +17,6 @@ enum ERRORS {
      WIFI_MODULE_NOT_DETECTED
 };
 #include "config.h"
-// janky placeholders during refactoring
-/*
-#ifndef WIFI_SSID
-  #define WIFI_SSID "x"
-#endif
-#ifndef WIFI_PASS
-  #define WIFI_PASS "x"
-#endif
-#ifndef API_SERVER
-  #define API_SERVER "x"
-#endif
-#ifndef API_PORT
-  #define API_PORT 5000
-#endif
-#ifndef API_HOST
-  #define API_HOST "x"
-#endif
-*/
-
 #include "io.h"
 #include <KnightLab_GPS.h>
 
