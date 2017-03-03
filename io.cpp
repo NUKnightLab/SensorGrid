@@ -6,7 +6,7 @@ static int maxIDs[5] = {0};
 static uint32_t MSG_ID = 0;
 static uint8_t msgLen = sizeof(Message);
 
-static uint8_t* buf[sizeof(Message)] = {0};
+static uint8_t buf[sizeof(Message)] = {0};
 //static struct Message message = (Message)buf;
 static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
@@ -57,7 +57,7 @@ static void sendCurrentMessage() {
     //message.data[8] = 108;
     //message.data[9] = 109;
     //memcpy(buf, &message, msgLen);
-    rf95.send(*buf, msgLen);
+    rf95.send((const uint8_t*)buf, msgLen);
     rf95.waitPacketSent();
     flashLED(3, HIGH);
 }
@@ -168,15 +168,16 @@ static void _receive() {
     //struct Message *msg = (struct Message*)msgBytes;
     //uint8_t msgLen = sizeof(Message);
     //clearMessage();
-    clearBuffer();
+    //clearBuffer();
     //uint8_t buf[sizeof(Message)];
-    if (rf95.recv(*buf, &msgLen)) {
+    if (rf95.recv(buf, &msgLen)) {
         //memcpy(&message, buf, msgLen);
+        Serial.print("STR LEN: "); Serial.println(strlen(charBuf));
         Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
         Serial.print(F(")"));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.println(rf95.lastRssi(), DEC);
-        Serial.println(charBuf);
+        //Serial.println(charBuf);
         //Serial.println(buf[1]);
         printMessageData();
 
@@ -219,6 +220,7 @@ static void _receive() {
 
 void receive() {
     // randomized receive cycle to avoid loop sync across nodes
+    clearBuffer();
     int delta = 5000 + rand() % 5000;
     Serial.print("rand val: "); Serial.println(delta);
     Serial.print(F("NODE ")); Serial.print(NODE_ID);
