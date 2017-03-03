@@ -1,6 +1,8 @@
 #include "WINC1500.h"
 
 static bool WiFiPresent = false;
+//static uint8_t msgLen = sizeof(Message);
+//static char* buf = char[sizeof(Message)];
 
 #if defined(ARDUINO_ARCH_SAMD)
 WiFiClient WIFI_CLIENT;
@@ -40,7 +42,8 @@ static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass) {
 	return true;
 }
 
-bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
+//bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
+bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
 	if (!WiFiPresent || !connectWiFi(wifi_ssid, wifi_pass)) {
 	   return false;
 	}
@@ -49,7 +52,7 @@ bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServ
         Serial.print(F("    CON: "));
         Serial.print(apiServer);
         Serial.print(F(":")); Serial.println(apiPort);
-        char* messageChars = (char*)msgBytes;
+        //char* messageChars = (char*)msgBytes;
         //char* messageChars = (char*)*msg;
         WIFI_CLIENT.println("POST /data HTTP/1.1");
         WIFI_CLIENT.print("Host: "); WIFI_CLIENT.println(apiHost);
@@ -59,7 +62,7 @@ bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServ
         WIFI_CLIENT.print("Content-Length: "); WIFI_CLIENT.println(msgLen);
         Serial.print(F("Message length is: ")); Serial.println(msgLen);
         WIFI_CLIENT.println();
-        WIFI_CLIENT.write(msgBytes, msgLen);
+        WIFI_CLIENT.write(msg, msgLen);
         WIFI_CLIENT.println();
         return true;
     } else {
@@ -68,7 +71,8 @@ bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServ
     return false;
 }
 #else
-bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
+//bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
+bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
     return false;
 }
 

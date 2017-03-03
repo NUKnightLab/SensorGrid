@@ -6,10 +6,12 @@ static int maxIDs[5] = {0};
 static uint32_t MSG_ID = 0;
 static uint8_t msgLen = sizeof(Message);
 static uint8_t* buf[sizeof(Message)] = {0};
+static char* charBuf = (char*)buf;
 static struct Message message;
 
 static void clearMessage() {
-    memset(&message, 0, msgLen);
+    //memset(&message, 0, msgLen);
+    message = {0};
 }
 
 static void clearBuffer() {
@@ -136,11 +138,10 @@ void transmit() {
           Serial.print(F("DUST: ")); Serial.println((float)message.data[DUST_100]/100);
       #endif
 
-      /*
-      if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, msgBytes, msgLen)) {
-          sendCurrentMessage(msgBytes, msgLen);
+      if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, charBuf, msgLen)) {
+          sendCurrentMessage();
           Serial.println(F("!TX"));
-      } */
+      }
 
       flashLED(3, HIGH);
 }
@@ -183,16 +184,15 @@ static void _receive() {
                 }
             } else {
                 message.snd = NODE_ID;
-                /*
-                if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, msgBytes, msgLen)) {
+                if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, charBuf, msgLen)) {
                     delay(1000); // needed for sending radio to receive the bounce
                     Serial.print(F("RETRANSMITTING ..."));
-                    Serial.print(F("  snd: ")); Serial.print(msg->snd);
-                    Serial.print(F("; orig: ")); Serial.print(msg->orig);
-                    sendCurrentMessage(msg);
-                    maxIDs[msg->orig] = msg->id;
+                    Serial.print(F("  snd: ")); Serial.print(message.snd);
+                    Serial.print(F("; orig: ")); Serial.print(message.orig);
+                    sendCurrentMessage();
+                    maxIDs[message.orig] = message.id;
                     Serial.println(F("  ...RETRANSMITTED"));
-                } */
+                }
             }
         }
     }
