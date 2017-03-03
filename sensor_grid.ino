@@ -21,7 +21,7 @@ bool sensorSi1145Module = false;
 uint8_t msgBytes[sizeof(Message)];
 uint8_t msgLen = sizeof(msgBytes);
 struct Message *msg = (struct Message*)msgBytes;
-bool WifiPresent = false;
+bool WiFiPresent = false;
 
 void _receive() {
     clearMessage();
@@ -163,7 +163,9 @@ void setup() {
 
     setupGPS();
     setupRadio();
-    WiFiPresent = setupWiFi();
+    #if defined(ARDUINO_ARCH_SAMD)
+      WiFiPresent = setupWiFi();
+    #endif
 
     Serial.print(F("Si7021 "));
     if (sensorSi7021TempHumidity.begin()) {
