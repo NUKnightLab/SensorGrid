@@ -6,7 +6,7 @@ static int maxIDs[5] = {0};
 static uint32_t MSG_ID = 0;
 static uint8_t msgLen = sizeof(Message);
 
-static uint8_t* buf[sizeof(Message)] = {0};
+static uint8_t buf[sizeof(Message)] = {0};
 //static struct Message message = (Message)buf;
 static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
@@ -57,7 +57,8 @@ static void sendCurrentMessage() {
     //message.data[8] = 108;
     //message.data[9] = 109;
     //memcpy(buf, &message, msgLen);
-    rf95.send(*buf, msgLen);
+    Serial.print("STR LEN: "); Serial.println(strlen(charBuf));
+    rf95.send((const uint8_t*)buf, msgLen);
     rf95.waitPacketSent();
     flashLED(3, HIGH);
 }
@@ -151,7 +152,7 @@ void transmit() {
       }
 
       #if DUST_SENSOR
-          msg->data[DUST_100] = (int32_t)(readDustSensor()*100);
+          //msg->data[DUST_100] = (int32_t)(readDustSensor()*100);
           Serial.print(F("DUST: ")); Serial.println((float)msg->data[DUST_100]/100);
       #endif
 

@@ -32,7 +32,7 @@ void setup() {
     flashLED(2, HIGH);
     
     #if DUST_SENSOR
-        setupDustSensor();
+        //setupDustSensor();
     #endif
 
     Serial.print(F("BAT: "));
