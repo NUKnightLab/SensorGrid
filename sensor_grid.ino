@@ -18,7 +18,6 @@ Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
-
 uint8_t msgBytes[sizeof(Message)];
 uint8_t msgLen = sizeof(msgBytes);
 struct Message *msg = (struct Message*)msgBytes;
@@ -165,7 +164,6 @@ void setup() {
     setupGPS();
     setupRadio();
     WiFiPresent = setupWiFi();
-
 
     Serial.print(F("Si7021 "));
     if (sensorSi7021TempHumidity.begin()) {
