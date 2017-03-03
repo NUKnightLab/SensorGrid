@@ -1,8 +1,9 @@
 #include "WINC1500.h"
 
+bool WiFiPresent = false;
+
 #if defined(ARDUINO_ARCH_SAMD)
 WiFiClient WIFI_CLIENT;
-bool WiFiPresent = false;
 
 void printWifiStatus() {
     Serial.print(F("SSID: "));
@@ -66,13 +67,17 @@ bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServ
     }
     return false;
 }
+#else
+bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
+    return false;
+}
 
 #endif
 
 bool setupWiFi() {
     Serial.print(F("WiFi Module.. "));
     #if defined(__AVR_ATmega32U4__)
-        Serial.println(F(" ..Not Supported on 32u4 devices")) 
+        Serial.println(F(" ..Not Supported on 32u4 devices"));
     #elif defined(ARDUINO_ARCH_SAMD)
         WiFi.setPins(10,11,12); // Adafruit uses 8,7,4 in tutorials, but these are used by LoRa
     if (WiFi.status() == WL_NO_SHIELD) {
