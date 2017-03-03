@@ -1,13 +1,16 @@
 #ifndef SENSORGRID_H
 #define SENSORGRID_H
 
+
 #define NONE 0
+
 
 /* Module defs */
 #include "modules/wifi/WINC1500.h"
 
 // Dust sensors
 #define SHARP_GP2Y1010AU0F 1
+#include "config.h"
 
 enum ERRORS {
      NO_ERR,
@@ -16,7 +19,10 @@ enum ERRORS {
      LORA_FREQ_FAIL,
      WIFI_MODULE_NOT_DETECTED
 };
-#include "config.h"
+
+#include "Adafruit_SI1145.h"
+#include "Adafruit_Si7021.h"
+
 #include "io.h"
 #include <KnightLab_GPS.h>
 
@@ -33,9 +39,9 @@ typedef struct Message {
     uint8_t sats;
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
-extern uint8_t msgBytes[];
-extern uint8_t msgLen;
-extern struct Message *msg;
+//extern uint8_t msgBytes[];
+//extern uint8_t msgLen;
+//extern struct Message *msg;
 extern bool WiFiPresent;
 
 
@@ -71,5 +77,10 @@ void fail(enum ERRORS err);
 void flashLED(int times, int endState);
 float batteryLevel();
 void printRam();
+
+extern Adafruit_Si7021 sensorSi7021TempHumidity;
+extern Adafruit_SI1145 sensorSi1145UV;
+extern bool sensorSi7021Module;
+extern bool sensorSi1145Module;
 
 #endif

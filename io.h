@@ -1,6 +1,7 @@
 #ifndef IO_H
 #define IO_H
 
+#include "sensor_grid.h"
 #include <RH_RF95.h>
 /* Modules */
 
@@ -14,12 +15,16 @@
     #define RFM95_INT 3
 #endif
 
+#if DUST_SENSOR == SHARP_GP2Y1010AU0F
+    #include "modules/dust/SHARP_GP2Y1010AU0F.h"
+#endif
+
 extern RH_RF95 rf95;
 
-void clearMessage();
 void setupRadio();
-void sendCurrentMessage();
 void printMessageData();
 bool postToAPI();
+void transmit();
+void receive();
 
 #endif

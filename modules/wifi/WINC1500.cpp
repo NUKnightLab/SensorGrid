@@ -1,6 +1,6 @@
 #include "WINC1500.h"
 
-bool WiFiPresent = false;
+static bool WiFiPresent = false;
 
 #if defined(ARDUINO_ARCH_SAMD)
 WiFiClient WIFI_CLIENT;
