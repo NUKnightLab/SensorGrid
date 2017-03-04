@@ -7,16 +7,12 @@ static uint32_t MSG_ID = 0;
 static uint8_t msgLen = sizeof(Message);
 
 static uint8_t buf[sizeof(Message)] = {0};
-//static struct Message message = (Message)buf;
 static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
-//static struct Message message;
-//static uint8_t* buf = (uint8*)message;
 static char* charBuf = (char*)buf;
 
 
 static void clearMessage() {
-    //memset(&message, 0, msgLen);
     message = {0};
 }
 
@@ -43,20 +39,6 @@ void setupRadio() {
 }
 
 static void sendCurrentMessage() {
-    //rf95.send(msgBytes, sizeof(Message));
-    //uint8_t* buf[sizeof(Message)];
-    //clearBuffer();
-    //message.data[0] = 100;
-    //message.data[1] = 101;
-    //message.data[2] = 102;
-    //message.data[3] = 103;
-    //message.data[4] = 104;
-    //message.data[5] = 105;
-    //message.data[6] = 106;
-    //message.data[7] = 107;
-    //message.data[8] = 108;
-    //message.data[9] = 109;
-    //memcpy(buf, &message, msgLen);
     rf95.send((const uint8_t*)buf, msgLen);
     rf95.waitPacketSent();
     flashLED(3, HIGH);
@@ -91,43 +73,22 @@ void printMessageData() {
 
 void transmit() {
       MSG_ID++;
-      //uint8_t msg_len = sizeof(Message);
-      //struct Message *msg = (struct Message*)msgBytes;
-      //Serial.println("CLEAR MSG");
-      //clearMessage(msgBytes, msgLen);
-      //Serial.print("Set ver: "); Serial.println(VERSION);
-      //Serial.println( (uint16_t)(roundf(VERSION * 100)) );
       clearBuffer();
       msg->ver_100 = (uint16_t)(roundf(VERSION * 100));
-      //Serial.println("Set net");
       msg->net = NETWORK_ID;
-      //Serial.println("Set node");
       msg->snd = NODE_ID;
-      //Serial.println("Set orig");
       msg->orig = NODE_ID;
-      //Serial.println("Set msg id");
       msg->id = MSG_ID;
-      //Serial.println("Set bat");
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
-      //Serial.println("Set hour");
       msg->hour = GPS.hour;
-      //Serial.println("Set minute");
       msg->minute = GPS.minute;
-      //Serial.println("Set secs");
       msg->seconds = GPS.seconds;
-      //Serial.println("Set year");
       msg->year = GPS.year;
-      //Serial.println("Set month");
       msg->month = GPS.month;
-      //Serial.println("Set day");
       msg->day = GPS.day;
-      //Serial.println("Set fix");
       msg->fix = GPS.fix;
-      //Serial.println("Set lat");
       msg->lat_1000 = (int32_t)(roundf(GPS.latitudeDegrees * 1000));
-      //Serial.println("Set lon");
       msg->lon_1000 = (int32_t)(roundf(GPS.longitudeDegrees * 1000));
-      //Serial.println("Set sats");
       msg->sats = GPS.satellites;
       Serial.println("print message data");
       printMessageData();
@@ -176,8 +137,6 @@ static void _receive() {
         Serial.print(F(")"));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.println(rf95.lastRssi(), DEC);
-        //Serial.println(charBuf);
-        //Serial.println(buf[1]);
         printMessageData();
 
         flashLED(1, HIGH);

@@ -9,16 +9,6 @@ Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
-//uint8_t msgBytes[sizeof(Message)];
-//uint8_t msgLen = sizeof(msgBytes);
-//struct Message *msg = (struct Message*)msgBytes;
-
-//union {
-//  struct Message newMsgStruct;
-//  uint8_t newMsgBytes[sizeof(Message)];
-//} newMsg;
-
-//struct Message newMsg;
 bool WiFiPresent = false;
 
 void setup() {
