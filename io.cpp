@@ -62,12 +62,17 @@ void printMessageData() {
     Serial.print(F("; lat: ")); Serial.print((float)msg->lat_1000/1000);
     Serial.print(F("; lon: ")); Serial.print((float)msg->lon_1000/1000);
     Serial.print(F("; sats: ")); Serial.println(msg->sats);
-    Serial.print(F("    Temp: ")); Serial.print((float)msg->data[TEMPERATURE_100]/100);
-    Serial.print(F("; Humid: ")); Serial.println((float)msg->data[HUMIDITY_100]/100);
-    Serial.print(F("    Dust: ")); Serial.println((float)msg->data[DUST_100]/100);
-    Serial.print(F("    Vis: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
-    Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
-    Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
+    Serial.println(F("Data:"));
+    Serial.print(F("    [0] ")); Serial.print(msg->data[0]);
+    Serial.print(F("    [1] ")); Serial.print(msg->data[1]);
+    Serial.print(F("    [2] ")); Serial.print(msg->data[2]);
+    Serial.print(F("    [3] ")); Serial.print(msg->data[3]);
+    Serial.print(F("    [4] ")); Serial.print(msg->data[4]);
+    Serial.print(F("    [5] ")); Serial.print(msg->data[5]);
+    Serial.print(F("    [6] ")); Serial.print(msg->data[6]);
+    Serial.print(F("    [7] ")); Serial.print(msg->data[7]);
+    Serial.print(F("    [8] ")); Serial.print(msg->data[8]);
+    Serial.print(F("    [9] ")); Serial.println(msg->data[9]);
 }
 
 
@@ -126,13 +131,7 @@ void transmit() {
 
 
 static void _receive() {
-    //struct Message *msg = (struct Message*)msgBytes;
-    //uint8_t msgLen = sizeof(Message);
-    //clearMessage();
-    //clearBuffer();
-    //uint8_t buf[sizeof(Message)];
     if (rf95.recv(buf, &msgLen)) {
-        //memcpy(&message, buf, msgLen);
         Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
         Serial.print(F(")"));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
