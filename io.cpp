@@ -95,8 +95,6 @@ void transmit() {
       msg->lat_1000 = (int32_t)(roundf(GPS.latitudeDegrees * 1000));
       msg->lon_1000 = (int32_t)(roundf(GPS.longitudeDegrees * 1000));
       msg->sats = GPS.satellites;
-      Serial.println("print message data");
-      printMessageData();
 
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
@@ -121,6 +119,7 @@ void transmit() {
           Serial.print(F("DUST: ")); Serial.println((float)msg->data[DUST_100]/100);
       #endif
 
+      printMessageData();
       if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, charBuf, msgLen)) {
           sendCurrentMessage();
           Serial.println(F("!TX"));
