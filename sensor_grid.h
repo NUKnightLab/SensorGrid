@@ -26,6 +26,23 @@ enum ERRORS {
 #include "io.h"
 #include <KnightLab_GPS.h>
 
+#if defined(__AVR_ATmega32U4__)
+typedef struct Message {
+    uint16_t ver_100;
+    uint16_t net;
+    uint16_t snd;
+    uint16_t orig;
+    uint32_t id;
+    uint16_t bat_100;
+    uint8_t year, month, day, hour, minute, seconds;
+    bool fix;
+    uint8_t _padding1, _padding2, _padding3;
+    int32_t lat_1000, lon_1000;
+    uint8_t sats;
+    uint8_t _padding4, _padding5, _padding6;
+    int32_t data[10]; /* -2147483648 through 2147483647 */
+};
+#elif defined(ARDUINO_ARCH_SAMD)
 typedef struct Message {
     uint16_t ver_100;
     uint16_t net;
@@ -39,6 +56,9 @@ typedef struct Message {
     uint8_t sats;
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
+#else
+    #error Unsupported architecture
+#endif
 extern bool WiFiPresent;
 
 
