@@ -178,7 +178,6 @@ void receive() {
     // randomized receive cycle to avoid loop sync across nodes
     clearBuffer();
     int delta = 5000 + rand() % 5000;
-    Serial.print("rand val: "); Serial.println(delta);
     Serial.print(F("NODE ")); Serial.print(NODE_ID);
     Serial.print(F(" LISTEN: ")); Serial.print(delta);
     Serial.println(F("ms"));

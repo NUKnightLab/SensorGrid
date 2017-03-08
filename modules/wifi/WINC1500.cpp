@@ -83,9 +83,10 @@ bool setupWiFi() {
     #if defined(__AVR_ATmega32U4__)
         Serial.println(F(" ..Not Supported on 32u4 devices"));
     #elif defined(ARDUINO_ARCH_SAMD)
-        WiFi.setPins(10,11,12); // Adafruit uses 8,7,4 in tutorials, but these are used by LoRa
+        WiFi.setPins(6,11,12); // Adafruit uses 8,7,4 in tutorials, but these are used by LoRa
+                                // Adalogger uses 10
     if (WiFi.status() == WL_NO_SHIELD) {
-        Serial.print(F(" ..Not detected"));
+        Serial.println(F(" ..Not detected"));
     } else {
         WiFiPresent = true;
         Serial.println(F(" ..Detected"));

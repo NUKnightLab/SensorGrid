@@ -1,5 +1,7 @@
 #include "sensor_grid.h"
 
+uint32_t NETWORK_ID;
+
 /* Modules */
 
 unsigned long lastTransmit = 0;
@@ -13,6 +15,15 @@ bool WiFiPresent = false;
 
 void setup() {
 
+    Serial.begin(9600);
+    while (!Serial) {
+        ; // wait for serial port to connect. Needed for native USB port only
+    }
+    readSDConfig(CONFIG_FILE);
+    Serial.print("Getting Network ID: "); Serial.println(getConfig("NETWORK_ID"));
+    NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
+    Serial.print("Cast Network ID: "); Serial.println(NETWORK_ID);
+
     #ifdef DEBUG
         while (!Serial); // only do this if connected to USB
     #endif
@@ -20,7 +31,7 @@ void setup() {
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
     flashLED(2, HIGH);
-    
+
     #if DUST_SENSOR
         //setupDustSensor();
     #endif

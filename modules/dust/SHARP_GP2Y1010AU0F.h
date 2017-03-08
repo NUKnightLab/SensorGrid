@@ -1,10 +1,6 @@
 #ifndef SHARP_GP2Y1010AU0F_H
 #define SHARP_GP2Y1010AU0F_H
 
-/* Adapted from:
-	http://arduinodev.woofex.net/2012/12/01/standalone-sharp-dust-sensor/
-	& http://www.howmuchsnow.com/arduino/airquality/
-*/
 
 //#include <Arduino.h>
 #include "../../sensor_grid.h"

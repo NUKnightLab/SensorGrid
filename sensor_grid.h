@@ -1,6 +1,8 @@
 #ifndef SENSORGRID_H
 #define SENSORGRID_H
 
+#include <KnightLab_SDConfig.h>
+#define CONFIG_FILE "TEST.TXT"
 
 #define NONE 0
 
@@ -10,7 +12,10 @@
 
 // Dust sensors
 #define SHARP_GP2Y1010AU0F 1
+
 #include "config.h"
+
+extern uint32_t NETWORK_ID;
 
 enum ERRORS {
      NO_ERR,
