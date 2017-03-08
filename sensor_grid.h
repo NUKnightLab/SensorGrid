@@ -2,7 +2,7 @@
 #define SENSORGRID_H
 
 #include <KnightLab_SDConfig.h>
-#define CONFIG_FILE "TEST.TXT"
+#define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
 
 #define NONE 0
 
@@ -16,13 +16,15 @@
 #include "config.h"
 
 extern uint32_t NETWORK_ID;
+extern uint32_t NODE_ID;
 
 enum ERRORS {
      NO_ERR,
      MESSAGE_STRUCT_TOO_LARGE,
      LORA_INIT_FAIL,
      LORA_FREQ_FAIL,
-     WIFI_MODULE_NOT_DETECTED
+     WIFI_MODULE_NOT_DETECTED,
+     FAILED_CONFIG_FILE_READ
 };
 
 #include "Adafruit_SI1145.h"

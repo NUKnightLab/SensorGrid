@@ -1,6 +1,7 @@
 #include "sensor_grid.h"
 
 uint32_t NETWORK_ID;
+uint32_t NODE_ID;
 
 /* Modules */
 
@@ -19,10 +20,16 @@ void setup() {
     while (!Serial) {
         ; // wait for serial port to connect. Needed for native USB port only
     }
-    readSDConfig(CONFIG_FILE);
-    Serial.print("Getting Network ID: "); Serial.println(getConfig("NETWORK_ID"));
-    NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
-    Serial.print("Cast Network ID: "); Serial.println(NETWORK_ID);
+    #if defined(__AVR_ATmega32U4__)
+        #include "config.h"
+        NETWORK_ID = CONFIG__NETWORK_ID;
+        NODE_ID = CONFIG__NODE_ID;
+    #elif defined(ARDUINO_ARCH_SAMD)
+        if (readSDConfig(CONFIG_FILE) > 0)
+            fail(FAILED_CONFIG_FILE_READ);
+        NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
+        NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
+    #endif
 
     #ifdef DEBUG
         while (!Serial); // only do this if connected to USB
