@@ -120,7 +120,9 @@ void transmit() {
       #endif
 
       printMessageData();
-      if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, charBuf, msgLen)) {
+      if (!WiFiPresent || !postToAPI(
+            getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 
+            getConfig("API_HOST"), atoi(getConfig("API_PORT")), charBuf, msgLen)) {
           sendCurrentMessage();
           Serial.println(F("!TX"));
       }
@@ -160,7 +162,9 @@ static void _receive() {
                 }
             } else {
                 msg->snd = NODE_ID;
-                if (!WiFiPresent || !postToAPI(WIFI_SSID, WIFI_PASS, API_SERVER, API_HOST, API_PORT, charBuf, msgLen)) {
+                if (!WiFiPresent || !postToAPI(
+                      getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 
+                      getConfig("API_HOST"), atoi(getConfig("API_PORT")), charBuf, msgLen)) {
                     delay(1000); // needed for sending radio to receive the bounce
                     Serial.print(F("RETRANSMITTING ..."));
                     Serial.print(F("  snd: ")); Serial.print(msg->snd);

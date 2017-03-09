@@ -16,10 +16,13 @@ bool WiFiPresent = false;
 
 void setup() {
 
+    #ifdef DEBUG
+        while (!Serial); // only do this if connected to USB
+    #endif
     Serial.begin(9600);
-    while (!Serial) {
-        ; // wait for serial port to connect. Needed for native USB port only
-    }
+    Serial.println(F("SRL RDY"));
+    flashLED(2, HIGH);
+
     #if defined(__AVR_ATmega32U4__)
         #include "config.h"
         NETWORK_ID = CONFIG__NETWORK_ID;
@@ -30,14 +33,6 @@ void setup() {
         NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
         NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
     #endif
-
-    #ifdef DEBUG
-        while (!Serial); // only do this if connected to USB
-    #endif
-
-    Serial.begin(9600);
-    Serial.println(F("SRL RDY"));
-    flashLED(2, HIGH);
 
     #if DUST_SENSOR
         //setupDustSensor();
