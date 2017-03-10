@@ -26,5 +26,6 @@ void printMessageData();
 bool postToAPI();
 void transmit();
 void receive();
+void writeToSD(char* filename, char* str);
 
 #endif

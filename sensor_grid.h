@@ -17,6 +17,7 @@
 
 extern uint32_t NETWORK_ID;
 extern uint32_t NODE_ID;
+extern char* LOGFILE;
 
 enum ERRORS {
      NO_ERR,

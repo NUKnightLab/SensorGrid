@@ -1,6 +1,13 @@
 #include "sensor_grid.h"
 #include "io.h"
 
+#include <SPI.h>
+//#include <SD.h>
+#include <SdFat.h>
+static SdFat SD;
+
+#define SD_CHIP_SELECT_PIN 10
+
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
 static int maxIDs[5] = {0};
 static uint32_t MSG_ID = 0;
@@ -76,6 +83,17 @@ void printMessageData() {
 }
 
 
+static char* logline() {
+    char str[80];
+    sprintf(str, "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+        msg->ver_100, msg->net, msg->snd, msg->orig, msg->id, msg->bat_100,
+        msg->hour, msg->minute, msg->seconds, msg->year, msg->month, msg->day,
+        msg->fix, msg->lat_1000, msg->lon_1000, msg->sats,
+        msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
+        msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
+    return str;
+}
+
 void transmit() {
       MSG_ID++;
       clearBuffer();
@@ -120,6 +138,12 @@ void transmit() {
       #endif
 
       printMessageData();
+
+      char* line = logline();
+      Serial.print("LOGLINE ("); Serial.print(strlen(line)); Serial.println("):");
+      Serial.println(line);
+      writeToSD(LOGFILE, line);
+      
       if (!WiFiPresent || !postToAPI(
             getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 
             getConfig("API_HOST"), atoi(getConfig("API_PORT")), charBuf, msgLen)) {
@@ -192,4 +216,21 @@ void receive() {
     }
 }
 
+void _writeToSD(char* filename, char* str) {
+  Serial.print("Init SD card ..");
+  if (!SD.begin(10)) {
+        Serial.println(" .. SD card init failed!");
+        return;
+  }
+  Serial.println(" .. done");
+  File file;
+  file = SD.open(filename, O_WRITE|O_APPEND|O_CREAT);
+  file.println(str);
+  file.close();
+}
 
+void writeToSD(char* filename, char* str) {
+  digitalWrite(8, HIGH);
+  _writeToSD(filename, str);
+  digitalWrite(8, LOW);
+}

@@ -2,6 +2,7 @@
 
 uint32_t NETWORK_ID;
 uint32_t NODE_ID;
+char* LOGFILE;
 
 /* Modules */
 
@@ -22,18 +23,20 @@ void setup() {
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
     flashLED(2, HIGH);
-
+    
     #if defined(__AVR_ATmega32U4__)
         #include "config.h"
         NETWORK_ID = CONFIG__NETWORK_ID;
         NODE_ID = CONFIG__NODE_ID;
+        LOGFILE = CONFIG__LOGFILE
     #elif defined(ARDUINO_ARCH_SAMD)
         if (readSDConfig(CONFIG_FILE) > 0)
             fail(FAILED_CONFIG_FILE_READ);
         NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
         NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
+        LOGFILE = getConfig("LOGFILE");
     #endif
-
+    
     #if DUST_SENSOR
         //setupDustSensor();
     #endif
