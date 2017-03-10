@@ -142,7 +142,10 @@ void transmit() {
       char* line = logline();
       Serial.print("LOGLINE ("); Serial.print(strlen(line)); Serial.println("):");
       Serial.println(line);
-      writeToSD(LOGFILE, line);
+      /*
+      if (LOGFILE) {
+          writeToSD(LOGFILE, line);
+      } */
       
       if (!WiFiPresent || !postToAPI(
             getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 

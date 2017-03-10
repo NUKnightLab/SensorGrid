@@ -14,6 +14,9 @@
 #define SHARP_GP2Y1010AU0F 1
 
 #include "config.h"
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include <RTClib.h>
 
 extern uint32_t NETWORK_ID;
 extern uint32_t NODE_ID;
@@ -51,6 +54,9 @@ typedef struct Message {
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
 #elif defined(ARDUINO_ARCH_SAMD)
+
+extern Adafruit_SSD1306 display;
+
 typedef struct Message {
     uint16_t ver_100;
     uint16_t net;
@@ -82,6 +88,10 @@ If the address is $2000000 or larger, its in SRAM. If the address is between $00
 */
 
 #define LED 13
+#define BUTTON_A 9
+#define BUTTON_B 6
+#define BUTTON_C 5
+
 #if defined(__AVR_ATmega32U4__)
     #define VBATPIN A9
 #elif defined(ARDUINO_ARCH_SAMD)

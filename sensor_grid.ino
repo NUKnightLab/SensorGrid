@@ -1,4 +1,5 @@
 #include "sensor_grid.h"
+#include "display.h"
 
 uint32_t NETWORK_ID;
 uint32_t NODE_ID;
@@ -12,6 +13,10 @@ Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
+
+#if defined(ARDUINO_ARCH_SAMD)
+Adafruit_SSD1306 display = Adafruit_SSD1306();
+#endif
 
 bool WiFiPresent = false;
 
@@ -35,6 +40,33 @@ void setup() {
         NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
         NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
         LOGFILE = getConfig("LOGFILE");
+
+        #if (SSD1306_LCDHEIGHT != 32)
+          #error("Height incorrect, please fix Adafruit_SSD1306.h!");
+        #endif
+        display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+        display.display();
+        delay(1000);
+        display.clearDisplay();
+        display.display();
+        pinMode(BUTTON_A, INPUT_PULLUP);
+        //pinMode(BUTTON_B, INPUT_PULLUP);
+        pinMode(BUTTON_C, INPUT_PULLUP);
+        display.setTextSize(1);
+        display.setTextColor(WHITE);
+        display.setCursor(0,0);
+        display.println("KnightLab SensorGrid .");
+        display.display();
+        for (int i=0; i<3; i++) {
+          display.print(" .");
+          display.display();
+        }
+        delay(2000);
+        display.clearDisplay();
+        display.display();
+
+        setDate();
+
     #endif
     
     #if DUST_SENSOR
@@ -106,4 +138,6 @@ void loop() {
         lastTransmit = millis();
         Serial.println(F("***"));
     }
+
+    displayCurrentRTCDateTime();
 }

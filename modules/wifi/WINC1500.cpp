@@ -22,8 +22,10 @@ static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass) {
                 // why we are even having to reconnect for every request
     Serial.println("Connecting ...");
     if (WiFi.status() != WL_CONNECTED) {
+        Serial.print("WiFi Status: "); Serial.println(WiFi.status());
         Serial.print(F("CON SSID: "));
         Serial.println(wifi_ssid);
+        Serial.print(F("CON PASS: ")); Serial.println(wifi_pass);
         // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
         //WIFI_STATUS = WiFi.begin(WIFI_SSID, WIFI_PASS);
         WiFi.begin(wifi_ssid, wifi_pass);
