@@ -1,6 +1,8 @@
 #include "sensor_grid.h"
 #include "display.h"
 
+static RTC_PCF8523 rtc;
+
 uint32_t NETWORK_ID;
 uint32_t NODE_ID;
 char* LOGFILE;
@@ -27,6 +29,17 @@ void setup() {
     #endif
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
+
+    if (! rtc.begin()) {
+        Serial.println("Couldn't find RTC");
+        while (1);
+    }
+    if (! rtc.initialized()) {
+        Serial.println("Init RTC to compile time");
+        // following line sets the RTC to the date & time this sketch was compiled
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    }
+
     flashLED(2, HIGH);
     
     #if defined(__AVR_ATmega32U4__)

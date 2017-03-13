@@ -57,6 +57,7 @@ typedef struct Message {
 
 extern Adafruit_SSD1306 display;
 
+
 typedef struct Message {
     uint16_t ver_100;
     uint16_t net;

@@ -1,6 +1,6 @@
 #include "display.h"
 
-static RTC_Millis rtc;
+static RTC_PCF8523 rtc;
 
 void displayCurrentRTCDate() {
     DateTime now = rtc.now();
@@ -21,10 +21,6 @@ void displayCurrentRTCDateTime() {
 }
 
 void _setDate() {
-    //rtc.begin(DateTime(F(__DATE__), F(__TIME__)));
-    // This line sets the RTC with an explicit date & time, for example to set
-    // January 21, 2014 at 3am you would call:
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
     DateTime now = rtc.now();
     Serial.print(now.year(), DEC);
     Serial.print('/');
@@ -102,6 +98,7 @@ void setDate() {
     display.setCursor(0, 8);
     display.print("OK? (A=Yes / C=No)");
     display.display();
+    int startTime = millis();
     while (true) {
         if (! digitalRead(BUTTON_A)) {
             displayCurrentRTCDateTime();
@@ -109,7 +106,11 @@ void setDate() {
         }
         if (! digitalRead(BUTTON_C)) return setDate();
         delay(100);
+        if (millis() - startTime > 10*1000) break;
         yield();
     }
+    display.clearDisplay();
+    displayCurrentRTCDateTime();
+    display.display();
 }
 
