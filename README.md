@@ -4,6 +4,15 @@
 
 SensorGrid is Knight Lab's experimental DIY prototyping system for ad hoc sensor network deployment. Designed around Adafruit's Atmel-based Feather prototyping ecosystem, SensorGrid is modular, extensible, and open source all the way down to its core components
 
+SensorGrid's primary goals include:
+  * ease of deployment
+  * modularity
+  * adaptability
+  * openness
+
+SensorGrid is designed to quickly and easily deploy a wireless network of environmental data collection. The primary use case is environmental data collection around a campus area for use by students and researchers for environmental data reporting classes and projects. We hope to expand these use cases as we build out SensorGrid's capabilities and test its limititations.
+
+
 ## Should I use it?
 
 If you can answer yes to these questions:
@@ -18,8 +27,8 @@ If you can answer yes to these questions:
 
 See these additional docs:
 
-  * Planning guide
-  * Configurations guide. An attempt to tabulate configurations. Might go away
+  * [Planning guide](https://github.com/NUKnightLab/SensorGrid/blob/master/PLANNING.md)
+  * [Configurations guide](https://github.com/NUKnightLab/SensorGrid/blob/master/CONFIGURATIONS.md) An attempt to tabulate configurations. Might go away
 
 
 ## Some notes
