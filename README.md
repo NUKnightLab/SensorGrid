@@ -29,6 +29,7 @@ See these additional docs:
 
   * [Planning guide](https://github.com/NUKnightLab/SensorGrid/blob/master/PLANNING.md)
   * [Configurations guide](https://github.com/NUKnightLab/SensorGrid/blob/master/CONFIGURATIONS.md) An attempt to tabulate configurations. Might go away
+  * [Building guide](https://github.com/NUKnightLab/SensorGrid/blob/master/BUILD.md)
 
 
 ## Some notes
