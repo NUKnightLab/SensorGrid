@@ -70,3 +70,5 @@ Buttons:
   * 9 OLED Button A
   * 6 OLED Button B
   * 5 OLED Button C
+  * 12 Dust Sensor LED power
+  * A0 Dust Sensor Read
