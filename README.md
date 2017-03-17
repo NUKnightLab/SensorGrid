@@ -56,3 +56,17 @@ Buttons:
  * Button B #6 (has 100K pullup)
  * Button C #5
 
+
+## Pinouts
+13 Red LED on main Feather board (LoRa)
+6, 1, 12 Used by WiFi WINC1500 Module
+8 RFM95 Chip select (Must be HIGH during Adalogger read/write)
+4 RFM95 Reset
+7 RFM95 Interrupt (32u4)
+3 RFM95 Interrup (M0)
+10 SD Chip select
+A9 Battery read on 32u4
+A7 Battery read on M0
+9 OLED Button A
+6 OLED Button B
+5 OLED Button C
