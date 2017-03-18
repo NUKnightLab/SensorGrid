@@ -4,6 +4,15 @@
 
 SensorGrid is Knight Lab's experimental DIY prototyping system for ad hoc sensor network deployment. Designed around Adafruit's Atmel-based Feather prototyping ecosystem, SensorGrid is modular, extensible, and open source all the way down to its core components
 
+SensorGrid's primary goals include:
+  * ease of deployment
+  * modularity
+  * adaptability
+  * openness
+
+SensorGrid is designed to quickly and easily deploy a wireless network of environmental data collection. The primary use case is environmental data collection around a campus area for use by students and researchers for environmental data reporting classes and projects. We hope to expand these use cases as we build out SensorGrid's capabilities and test its limititations.
+
+
 ## Should I use it?
 
 If you can answer yes to these questions:
@@ -18,8 +27,11 @@ If you can answer yes to these questions:
 
 See these additional docs:
 
-  * Planning guide
-  * Configurations guide. An attempt to tabulate configurations. Might go away
+  * [Planning guide](https://github.com/NUKnightLab/SensorGrid/blob/master/PLANNING.md)
+  * [Configurations guide](https://github.com/NUKnightLab/SensorGrid/blob/master/CONFIGURATIONS.md) An attempt to tabulate configurations. Might go away
+  * [Building guide](https://github.com/NUKnightLab/SensorGrid/blob/master/BUILD.md)
+  * (TBD) WiFi building tutorial
+  * (TBD) Sensor integration tutorial
 
 
 ## Some notes
@@ -44,3 +56,19 @@ Buttons:
  * Button B #6 (has 100K pullup)
  * Button C #5
 
+
+## Pinouts
+  * 13 Red LED on main Feather board (LoRa)
+  * 6, 1, 12 Used by WiFi WINC1500 Module
+  * 8 RFM95 Chip select (Must be HIGH during Adalogger read/write)
+  * 4 RFM95 Reset
+  * 7 RFM95 Interrupt (32u4)
+  * 3 RFM95 Interrup (M0)
+  * 10 SD Chip select
+  * A9 Battery read on 32u4
+  * A7 Battery read on M0
+  * 9 OLED Button A
+  * 6 OLED Button B
+  * 5 OLED Button C
+  * 12 Dust Sensor LED power
+  * A0 Dust Sensor Read
