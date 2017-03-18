@@ -6,11 +6,13 @@
 #include <SdFat.h>
 static SdFat SD;
 
+
 #define SD_CHIP_SELECT_PIN 10
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
-static int maxIDs[5] = {0};
+static int maxIDs[MAX_NETWORK_SIZE] = {0};
 static uint32_t MSG_ID = 0;
+static uint32_t lastAck = 0;
 static uint8_t msgLen = sizeof(Message);
 
 static uint8_t buf[sizeof(Message)] = {0};
@@ -97,7 +99,12 @@ static char* logline() {
 void transmit() {
       MSG_ID++;
       clearBuffer();
-      msg->ver_100 = (uint16_t)(roundf(VERSION * 100));
+      uint16_t ver = (uint16_t)(roundf(VERSION * 100));
+      if (ver != 11) {
+        Serial.println(F("Skipping message with incorrect version"));
+        return;
+      }
+      msg->ver_100 = ver;
       msg->net = NETWORK_ID;
       msg->snd = NODE_ID;
       msg->orig = NODE_ID;
@@ -146,15 +153,15 @@ void transmit() {
       if (LOGFILE) {
           writeToSD(LOGFILE, line);
       } */
-      
+  
       if (!WiFiPresent || !postToAPI(
             getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 
             getConfig("API_HOST"), atoi(getConfig("API_PORT")), charBuf, msgLen)) {
+          flashLED(3, HIGH);
           sendCurrentMessage();
-          Serial.println(F("!TX"));
       }
 
-      flashLED(3, HIGH);
+ 
 }
 
 
@@ -164,42 +171,49 @@ static void _receive() {
         Serial.print(F(")"));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.println(rf95.lastRssi(), DEC);
+        uint16_t ver = (uint16_t)(roundf(VERSION * 100));
+        if (msg->ver_100 != ver) {
+            Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100/100);
+            return;
+        }
+        if (NETWORK_ID > 0 && msg->net != NETWORK_ID) {
+            Serial.println(F("SKIP: out-of-network msg"));
+            return;
+        }
+        if ( msg->orig == NODE_ID) {
+            Serial.print(F("SKIP: own msg from: ")); Serial.println(msg->snd);
+            Serial.print(F("LOST ACK: ")); Serial.println(msg->id - (lastAck+1));
+            lastAck = msg->id;
+            return;
+        }
         printMessageData();
-
         flashLED(1, HIGH);
-
-        if ( msg->orig == NODE_ID ) {
-            Serial.print(F("NO-OP. OWN MSG: ")); Serial.println(msg->id);
+        if (msg->id <= maxIDs[msg->orig]) {
+            Serial.print(F("Ignore old Msg: "));
+            Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
+            Serial.print(F(" (Current Max: ")); Serial.print(maxIDs[msg->orig]);
+            Serial.println(F(")"));
+            if (maxIDs[msg->orig] - msg->id > 5) {
+                // Large spread of current max from received ID is indicative of a
+                // node reset. TODO: Can we store the last ID in EEPROM and continue?
+                // EEPROM on M0 Feather boards may be complex (if available at all?). See:
+                // https://forums.adafruit.com/viewtopic.php?f=22&t=88272
+                Serial.print(F("Reset Max ID. Node: "));
+                Serial.println(msg->orig);
+                maxIDs[msg->orig] = 0;
+            }
         } else {
-            if (msg->id <= maxIDs[msg->orig]) {
-                Serial.print(F("Ignore old Msg: "));
-                Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
-                Serial.print(F("(Current Max: ")); Serial.print(maxIDs[msg->orig]);
-                Serial.println(F(")"));
-                if (maxIDs[msg->orig] - msg->id > 5) {
-                    // Crude handling of node reset will drop some packets but eventually
-                    // start again. TODO: A better approach would be for each node to store
-                    // its Max ID in EEPROM and get rid of this reset - but EEPROM on
-                    // M0 Feather boards is complex (if available at all?). See:
-                    // https://forums.adafruit.com/viewtopic.php?f=22&t=88272
-                    //
-                    Serial.println(F("Reset Max ID. Node: "));
-                    Serial.println(msg->orig);
-                    maxIDs[msg->orig] = 0;
-                }
-            } else {
-                msg->snd = NODE_ID;
-                if (!WiFiPresent || !postToAPI(
-                      getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 
-                      getConfig("API_HOST"), atoi(getConfig("API_PORT")), charBuf, msgLen)) {
-                    delay(1000); // needed for sending radio to receive the bounce
-                    Serial.print(F("RETRANSMITTING ..."));
-                    Serial.print(F("  snd: ")); Serial.print(msg->snd);
-                    Serial.print(F("; orig: ")); Serial.print(msg->orig);
-                    sendCurrentMessage();
-                    maxIDs[msg->orig] = msg->id;
-                    Serial.println(F("  ...RETRANSMITTED"));
-                }
+            msg->snd = NODE_ID;
+            if (!WiFiPresent || !postToAPI(
+                  getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 
+                  getConfig("API_HOST"), atoi(getConfig("API_PORT")), charBuf, msgLen)) {
+                delay(RETRANSMIT_DELAY);
+                Serial.print(F("RETRANSMITTING ..."));
+                Serial.print(F("  snd: ")); Serial.print(msg->snd);
+                Serial.print(F("; orig: ")); Serial.print(msg->orig);
+                sendCurrentMessage();
+                maxIDs[msg->orig] = msg->id;
+                Serial.println(F("  ...RETRANSMITTED"));
             }
         }
     }

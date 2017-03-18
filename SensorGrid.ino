@@ -10,11 +10,14 @@ char* LOGFILE;
 /* Modules */
 
 unsigned long lastTransmit = 0;
+unsigned long oledTimeout;
+bool oledActive = true;
 
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
+
 
 #if defined(ARDUINO_ARCH_SAMD)
 Adafruit_SSD1306 display = Adafruit_SSD1306();
@@ -30,18 +33,41 @@ void setup() {
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
 
-    if (! rtc.begin()) {
-        Serial.println("Couldn't find RTC");
-        while (1);
-    }
+    /* The Adafruit RTCLib API and related tutorials are quite misleading here.
+     * ::begin() simply calls Wire.begin() and returns true. See:
+     * https://github.com/adafruit/RTClib/blob/e03a97139e285eeb4a5a3c052ab421f53a88031c/RTClib.cpp#L355
+     *
+     * rtc.begin() will not work (will hang) if RTC is not connected. To make
+     * logger optional (not sure if this is really a goal), would need to provide
+     * alt begin. E.g. from bhelterline https://github.com/adafruit/RTClib/issues/64
+
+     boolean RTC_DS1307::begin(void) {
+         Wire.begin();
+         Wire.beginTransmission(DS1307_ADDRESS);
+         Wire._I2C_WRITE((byte)0);
+         if ( Wire.endTransmission() == 0 ) {
+             return true;
+         }
+         return false;
+     }
+
+     * But with PCF8523. However note that this example, and general RTC
+     * library code uses Wire1
+     */
+    Serial.println(F("Starting RTC"));
+    rtc.begin();
     if (! rtc.initialized()) {
-        Serial.println("Init RTC to compile time");
-        // following line sets the RTC to the date & time this sketch was compiled
+        /*
+         * Compiled time, thus compile and upload immediately. Arduino IDE
+         * generally re-compiles for an upload anyway.
+         * Pull battery to reset the clock
+         */
+        Serial.println("Init RTC to compile time: ");
         rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     }
 
     flashLED(2, HIGH);
-    
+
     #if defined(__AVR_ATmega32U4__)
         #include "config.h"
         NETWORK_ID = CONFIG__NETWORK_ID;
@@ -81,7 +107,7 @@ void setup() {
         setDate();
 
     #endif
-    
+
     #if DUST_SENSOR
         //setupDustSensor();
     #endif
@@ -125,9 +151,14 @@ void setup() {
         fail(MESSAGE_STRUCT_TOO_LARGE);
     }
     Serial.println(F("OK!"));
+
+    pinMode(8, OUTPUT);
+    digitalWrite(8, HIGH);
 }
 
 void loop() {
+    Serial.println(F("****"));
+    printRam();
 
     if (CHARGE_ONLY) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
@@ -135,22 +166,24 @@ void loop() {
       return;
     }
 
-    if (RECEIVE) {
-        Serial.println("RX");
-        printRam();
-        Serial.println(F("---"));
-        receive();
-        Serial.println(F("***"));
-    }
-
     if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 10) {
-        Serial.println("TX");
-        printRam();
+        Serial.println(F("***\nTX"));
         Serial.println(F("---"));
         transmit();
         lastTransmit = millis();
-        Serial.println(F("***"));
+    }
+    // RX as soon as possible after TX to catch ack of sent msg
+    if (RECEIVE) {
+        Serial.println("***\nRX");
+        receive();
     }
 
-    displayCurrentRTCDateTime();
+    if (millis() - oledTimeout > 1000L) {
+        oledActive = false;
+        display.clearDisplay();
+    }
+    if (oledActive)
+        displayCurrentRTCDateTime();
+
+
 }
