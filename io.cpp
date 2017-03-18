@@ -176,7 +176,7 @@ static void _receive() {
             Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100/100);
             return;
         }
-        if (NETWORK_ID > 0 && msg->net != NETWORK_ID) {
+        if (msg->net > 0 && msg->net != NETWORK_ID) {
             Serial.println(F("SKIP: out-of-network msg"));
             return;
         }
