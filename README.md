@@ -73,3 +73,20 @@ Buttons:
   * 13 Red LED on main Feather board (LoRa)
   * A0 (proposed) Dust Sensor Read
   * A7 Battery read on M0
+  
+### Adalogger pins
+  * 3.3V & GND: used for both SD and RTC
+  
+  #### RTC
+  * SCL: RTC -- I2C clock pin, connect to your microcontrollers I2C clock line. This pin has a 10K pullup resistor to 3.3V
+  * SDA: RTC -- I2C data pin, connect to your microcontrollers I2C data line. This pin has a 10K pullup resistor to 3.3V
+  
+  NOTE: You MUST have a coin cell installed for the RTC to work, if there is no coin cell, it will act strangely and possibly hang the Arduino when you try to use it, so ALWAYS make SURE there's a battery installed, even if it's a dead battery.
+  
+  #### SD Card
+  * SPI Clock (SCK) - output from feather to wing
+  * SPI Master Out Slave In (MOSI) - output from feather to wing
+  * SPI Master In Slave Out (MISO) - input from wing to feather
+  * The SDCS pin is the chip select line. GPIO 10 on Atmel M0 or 32u4 (can be changed by cutting the trace and hard-wiring)
+
+When the SD card is not inserted, these pins are completely free. MISO is tri-stated whenever the SD CS pin is pulled high
