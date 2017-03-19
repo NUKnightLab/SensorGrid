@@ -114,3 +114,8 @@ From https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module
   * A0 - This pin is analog input A0 but is also an analog output due to having a DAC (digital-to-analog converter). You can set the raw voltage to anything from 0 to 3.3V, unlike PWM outputs this is a true analog output
   * A1 thru A5 - These are each analog input as well as digital I/O pins.
   * SCK/MOSI/MISO (GPIO 24/23/22)- These are the hardware SPI pins, you can use them as everyday GPIO pins (but recommend keeping them free as they are best used for hardware SPI connections for high speed.
+  
+  #### Radio control pins:
+  * #8 - used as the radio CS (chip select) pin
+  * #3 - used as the radio GPIO0 / IRQ (interrupt request) pin.
+  * #4 - used as the radio Reset pin
