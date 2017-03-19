@@ -119,3 +119,7 @@ From https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module
   * #8 - used as the radio CS (chip select) pin
   * #3 - used as the radio GPIO0 / IRQ (interrupt request) pin.
   * #4 - used as the radio Reset pin
+
+There are also breakouts for 3 of the RFM's GPIO pins (IO1, IO2, IO3 and IO5). You probably wont need these for most uses of the Feather but they are available in case you need 'em!
+
+The CS pin (#8) does not have a pullup built in so be sure to set this pin HIGH when not using the radio!
