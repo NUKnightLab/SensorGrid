@@ -4,9 +4,11 @@
 #include <KnightLab_SDConfig.h>
 #define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
 
-#define NONE 0
+//#define NONE 0
 #define MAX_NETWORK_SIZE 100
 #define RETRANSMIT_DELAY 1000 // ms. Needed for TX node to receive re-TX as ACK
+#define OLED_TIMEOUT 60 // seconds
+#define DEBUG
 
 /* Module defs */
 #include "modules/wifi/WINC1500.h"
@@ -17,6 +19,7 @@
 #include "config.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Adafruit_FeatherOLED.h>
 #include <RTClib.h>
 
 extern uint32_t NETWORK_ID;
@@ -56,8 +59,8 @@ typedef struct Message {
 };
 #elif defined(ARDUINO_ARCH_SAMD)
 
-extern Adafruit_SSD1306 display;
-
+//extern Adafruit_SSD1306 display;
+extern Adafruit_FeatherOLED display;
 
 typedef struct Message {
     uint16_t ver_100;

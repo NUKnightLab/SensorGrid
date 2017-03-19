@@ -10,17 +10,17 @@ char* LOGFILE;
 /* Modules */
 
 unsigned long lastTransmit = 0;
-unsigned long oledTimeout;
-bool oledActive = true;
+bool oledOn;
+unsigned long oledActivated = 0;
 
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 
-
 #if defined(ARDUINO_ARCH_SAMD)
-Adafruit_SSD1306 display = Adafruit_SSD1306();
+//Adafruit_SSD1306 display = Adafruit_SSD1306();
+Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 #endif
 
 bool WiFiPresent = false;
@@ -55,7 +55,7 @@ void setup() {
      * library code uses Wire1
      */
     Serial.println(F("Starting RTC"));
-    rtc.begin();
+    rtc.begin(); // Always true. Don't check as per Adafruit tutorials
     if (! rtc.initialized()) {
         /*
          * Compiled time, thus compile and upload immediately. Arduino IDE
@@ -68,45 +68,13 @@ void setup() {
 
     flashLED(2, HIGH);
 
-    #if defined(__AVR_ATmega32U4__)
-        #include "config.h"
-        NETWORK_ID = CONFIG__NETWORK_ID;
-        NODE_ID = CONFIG__NODE_ID;
-        LOGFILE = CONFIG__LOGFILE
-    #elif defined(ARDUINO_ARCH_SAMD)
-        if (readSDConfig(CONFIG_FILE) > 0)
-            fail(FAILED_CONFIG_FILE_READ);
-        NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
-        NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
-        LOGFILE = getConfig("LOGFILE");
-
-        #if (SSD1306_LCDHEIGHT != 32)
-          #error("Height incorrect, please fix Adafruit_SSD1306.h!");
-        #endif
-        display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-        display.display();
-        delay(1000);
-        display.clearDisplay();
-        display.display();
-        pinMode(BUTTON_A, INPUT_PULLUP);
-        //pinMode(BUTTON_B, INPUT_PULLUP);
-        pinMode(BUTTON_C, INPUT_PULLUP);
-        display.setTextSize(1);
-        display.setTextColor(WHITE);
-        display.setCursor(0,0);
-        display.println("KnightLab SensorGrid .");
-        display.display();
-        for (int i=0; i<3; i++) {
-          display.print(" .");
-          display.display();
-        }
-        delay(2000);
-        display.clearDisplay();
-        display.display();
-
-        setDate();
-
-    #endif
+    if (readSDConfig(CONFIG_FILE) > 0)
+        fail(FAILED_CONFIG_FILE_READ);
+    NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
+    NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
+    LOGFILE = getConfig("LOGFILE");
+    setupDisplay();
+    oledOn = true;
 
     #if DUST_SENSOR
         //setupDustSensor();
@@ -127,9 +95,7 @@ void setup() {
 
     setupGPS();
     setupRadio();
-    #if defined(ARDUINO_ARCH_SAMD)
-      WiFiPresent = setupWiFi();
-    #endif
+    WiFiPresent = setupWiFi();
 
     Serial.print(F("Si7021 "));
     if (sensorSi7021TempHumidity.begin()) {
@@ -159,6 +125,28 @@ void setup() {
 void loop() {
     Serial.println(F("****"));
     printRam();
+    if (oledOn) {
+        display.setBattery(batteryLevel());
+        display.renderBattery();
+    }
+    if ( oledOn && ((millis() - oledActivated) > (OLED_TIMEOUT * 1000L)) ) {
+        oledOn = false;
+        Serial.println("Clearing display");
+        display.clearDisplay();
+        display.clearMsgArea();
+        display.display();
+    }
+    if (oledOn) {
+        updateDateTimeDisplay();
+    } else {
+        if (! digitalRead(BUTTON_C)) { // there seems to be a conflict on button A (pin 9)
+            oledOn = true;
+            oledActivated = millis();
+            display.setBattery(batteryLevel());
+            display.renderBattery();
+            displayCurrentRTCDateTime();
+        }
+    }
 
     if (CHARGE_ONLY) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
@@ -167,23 +155,13 @@ void loop() {
     }
 
     if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 10) {
-        Serial.println(F("***\nTX"));
-        Serial.println(F("---"));
+        Serial.println(F("***\nTX\n---"));
         transmit();
         lastTransmit = millis();
     }
     // RX as soon as possible after TX to catch ack of sent msg
     if (RECEIVE) {
-        Serial.println("***\nRX");
+        Serial.println("***\nRX\n---");
         receive();
     }
-
-    if (millis() - oledTimeout > 1000L) {
-        oledActive = false;
-        display.clearDisplay();
-    }
-    if (oledActive)
-        displayCurrentRTCDateTime();
-
-
 }

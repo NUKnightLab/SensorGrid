@@ -3,7 +3,11 @@
 
 #include "sensor_grid.h"
 
+
 void displayCurrentRTCDateTime();
 void setDate();
+void setupDisplay();
+void displayBatteryLevel();
+void updateDateTimeDisplay();
 
 #endif

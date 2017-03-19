@@ -1,23 +1,35 @@
 #include "display.h"
 
 static RTC_PCF8523 rtc;
+uint8_t lastMinute;
 
 void displayCurrentRTCDate() {
     DateTime now = rtc.now();
-    display.clearDisplay();
-    display.setCursor(0,0);
+    display.clearMsgArea();
+    display.setCursor(0,8);
     display.print(now.month(), DEC); display.print('/');
     display.print(now.day(), DEC); display.print('/');
     display.print(now.year(), DEC);
 }
 
-void displayCurrentRTCDateTime() {
-    displayCurrentRTCDate();
-    display.print(' ');
+void displayCurrentRTCTime() {
+    display.setCursor(0,16);
     DateTime now = rtc.now();
     display.print(now.hour(), DEC); display.print(':');
     display.print(now.minute(), DEC);
+}
+
+void displayCurrentRTCDateTime() {
+    displayCurrentRTCDate();
+    displayCurrentRTCTime();
+    lastMinute = rtc.now().minute();
     display.display();
+}
+
+void updateDateTimeDisplay() {
+    if (rtc.now().minute() != lastMinute) {
+        displayCurrentRTCDateTime();
+    }
 }
 
 void _setDate() {
@@ -112,5 +124,42 @@ void setDate() {
     display.clearDisplay();
     displayCurrentRTCDateTime();
     display.display();
+}
+
+void displayBatteryLevel() {
+    display.setBattery(batteryLevel());
+    //display.renderBattery();
+    display.display();
+}
+
+void setupDisplay() {
+    /*
+    #if (SSD1306_LCDHEIGHT != 32)
+      #error("Height incorrect, please fix Adafruit_SSD1306.h!");
+    #endif
+    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+    display.display();
+    delay(1000);
+    display.clearDisplay();
+    display.display();
+    pinMode(BUTTON_A, INPUT_PULLUP);
+    //pinMode(BUTTON_B, INPUT_PULLUP);
+    pinMode(BUTTON_C, INPUT_PULLUP);
+    display.setTextSize(2);
+    display.setTextColor(WHITE);
+    display.setCursor(0,0);
+    display.println("KnightLab SensorGrid");
+    display.display();
+    delay(2000);
+    display.clearDisplay();
+    display.display();
+    */
+    display.init();
+    pinMode(BUTTON_A, INPUT_PULLUP);
+    pinMode(BUTTON_C, INPUT_PULLUP);
+    display.setBatteryIcon(true);
+    display.setBattery(batteryLevel());
+    display.renderBattery();
+    displayCurrentRTCDateTime();
 }
 
