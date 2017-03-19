@@ -20,7 +20,6 @@ static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
 static char* charBuf = (char*)buf;
 
-
 static void clearMessage() {
     message = {0};
 }
@@ -160,10 +159,7 @@ void transmit() {
           flashLED(3, HIGH);
           sendCurrentMessage();
       }
-
- 
 }
-
 
 static void _receive() {
     if (rf95.recv(buf, &msgLen)) {

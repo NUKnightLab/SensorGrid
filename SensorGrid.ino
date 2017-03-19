@@ -6,6 +6,7 @@ static RTC_PCF8523 rtc;
 uint32_t NETWORK_ID;
 uint32_t NODE_ID;
 char* LOGFILE;
+uint32_t DISPLAY_TIMEOUT;
 
 /* Modules */
 
@@ -73,6 +74,8 @@ void setup() {
     NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
     NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
     LOGFILE = getConfig("LOGFILE");
+    DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
+    Serial.print("Display timeout set to: "); Serial.println(DISPLAY_TIMEOUT);
     setupDisplay();
     oledOn = true;
 
@@ -129,7 +132,7 @@ void loop() {
         display.setBattery(batteryLevel());
         display.renderBattery();
     }
-    if ( oledOn && ((millis() - oledActivated) > (OLED_TIMEOUT * 1000L)) ) {
+    if ( (DISPLAY_TIMEOUT > 0) && oledOn && ((millis() - oledActivated) > (OLED_TIMEOUT * 1000L)) ) {
         oledOn = false;
         Serial.println("Clearing display");
         display.clearDisplay();
