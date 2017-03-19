@@ -58,17 +58,18 @@ Buttons:
 
 
 ## Pinouts
-  * 13 Red LED on main Feather board (LoRa)
-  * 6, 1, 12 Used by WiFi WINC1500 Module
-  * 8 RFM95 Chip select (Must be HIGH during Adalogger read/write)
-  * 4 RFM95 Reset
-  * 7 RFM95 Interrupt (32u4)
+  * 1 (also 6 & 12) Used by WiFi WINC1500 Module
   * 3 RFM95 Interrup (M0)
-  * 10 SD Chip select
-  * A9 Battery read on 32u4
-  * A7 Battery read on M0
-  * 9 OLED Button A
-  * 6 OLED Button B
+  * 4 RFM95 Reset
   * 5 OLED Button C
-  * 12 Dust Sensor LED power
-  * A0 Dust Sensor Read
+  * 6 OLED Button B
+  * 6 (also 1 & 12) Used by WiFi WINC1500 Module
+  * 7 RFM95 Interrupt (32u4)
+  * 8 RFM95 Chip select (Must be HIGH during Adalogger read/write)
+  * 9 OLED Button A
+  * 10 SD Chip select
+  * 12 (proposed) Dust Sensor LED power
+  * 12 (also 1 & 6) Used by WiFi WINC1500 Module
+  * 13 Red LED on main Feather board (LoRa)
+  * A0 (proposed) Dust Sensor Read
+  * A7 Battery read on M0
