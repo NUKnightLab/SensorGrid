@@ -91,6 +91,8 @@ Buttons:
 
 When the SD card is not inserted, these pins are completely free. MISO is tri-stated whenever the SD CS pin is pulled high
 
+Be sure pin #8 is HIGH when reading/writing SD card
+
 ### LoRa Feather pins
 
 From https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module?view=all
@@ -116,7 +118,7 @@ From https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module
   * SCK/MOSI/MISO (GPIO 24/23/22)- These are the hardware SPI pins, you can use them as everyday GPIO pins (but recommend keeping them free as they are best used for hardware SPI connections for high speed.
   
   #### Radio control pins:
-  * #8 - used as the radio CS (chip select) pin
+  * #8 - used as the radio CS (chip select) pin (pull HIGH when not using radio!! Must be HIGH during Adalogger read/writes)
   * #3 - used as the radio GPIO0 / IRQ (interrupt request) pin.
   * #4 - used as the radio Reset pin
 
