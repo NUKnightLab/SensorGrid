@@ -7,7 +7,8 @@ from struct import *
 history = []
 
 PROTOCOL_VERSIONS = {
-    '0.11': '<HHHHIHIBBBBBB?xxxiiBxxx10i'
+    #'0.11': '<HHHHIHIBBBBBB?xxxiiBxxx10i'
+    '0.11': '<HHHHIHxxIBBBBBB?xiiBxxx10i'
 }
 PROTOCOL = PROTOCOL_VERSIONS['0.11']
 
@@ -43,8 +44,13 @@ def data():
         'bat': bat,
         'timestamp': timestamp,
         'datetime': str(datetime.datetime.fromtimestamp(timestamp)),
+        'fix': fix,
+        'lat': lat,
+        'lon': lon,
+        'sats': sats,
         'data': str(data)
     })
+    #print(history[-1])
     history = history[-30:]
     return 'OK'
 
@@ -52,8 +58,8 @@ def data():
 @app.route('/report')
 def report():
     return '<br/>'.join(
-        ['%s:: %s %sv %s %s %s' % (r['dt'], r['orig'], r['bat'], r['timestamp'], r['datetime'], r['data']) for r in reversed(history)])
+        ['%s:: %s %sv %s %s (%s %s,%s %s) %s' % (r['dt'], r['orig'], r['bat'], r['timestamp'], r['datetime'], r['fix'], r['lat'], r['lon'], r['sats'], r['data']) for r in reversed(history)])
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0', port=9022)

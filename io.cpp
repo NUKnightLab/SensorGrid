@@ -121,6 +121,23 @@ void transmit() {
       msg->lat_1000 = (int32_t)(roundf(GPS.latitudeDegrees * 1000));
       msg->lon_1000 = (int32_t)(roundf(GPS.longitudeDegrees * 1000));
       msg->sats = GPS.satellites;
+
+
+      msg->fix = true;
+      msg->lat_1000 = 1111;
+      msg->lon_1000 = 2222;
+      msg->sats = 33;
+      msg->data[0] = 1010101;
+      msg->data[1] = 111111;
+      msg->data[2] = 222222;
+      msg->data[3] = 333333;
+      msg->data[4] = 444444;
+      msg->data[5] = 555555;
+      msg->data[6] = 666666;
+      msg->data[7] = 777777;
+      msg->data[8] = 888888;
+      msg->data[9] = 999999;
+
       
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
