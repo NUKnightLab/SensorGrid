@@ -22,6 +22,11 @@ If you can answer yes to these questions:
   * Is your data slow changing and does it have relatively low sampling-period requirements (minutes & hours rather than milliseconds or seconds)
   * Is your data concentrated over a small geographic area (e.g. a campus or neighborhood. Not distributed over a city or county)?
   * Are you ready to roll up your sleeves and bust out the soldering iron?
+  
+# Dependencies
+
+  * SDFat https://github.com/greiman/SdFat
+  * WiFi101 https://github.com/arduino-libraries/WiFi101
 
 # Documentation
 
@@ -73,3 +78,87 @@ Buttons:
   * 13 Red LED on main Feather board (LoRa)
   * A0 (proposed) Dust Sensor Read
   * A7 Battery read on M0
+  
+### Adalogger pins
+  * 3.3V & GND: used for both SD and RTC
+  
+  #### RTC
+  * SCL: RTC -- I2C clock pin, connect to your microcontrollers I2C clock line. This pin has a 10K pullup resistor to 3.3V
+  * SDA: RTC -- I2C data pin, connect to your microcontrollers I2C data line. This pin has a 10K pullup resistor to 3.3V
+  
+  NOTE: You MUST have a coin cell installed for the RTC to work, if there is no coin cell, it will act strangely and possibly hang the Arduino when you try to use it, so ALWAYS make SURE there's a battery installed, even if it's a dead battery.
+  
+  #### SD Card
+  * SPI Clock (SCK) - output from feather to wing
+  * SPI Master Out Slave In (MOSI) - output from feather to wing
+  * SPI Master In Slave Out (MISO) - input from wing to feather
+  * The SDCS pin is the chip select line. GPIO 10 on Atmel M0 or 32u4 (can be changed by cutting the trace and hard-wiring)
+
+When the SD card is not inserted, these pins are completely free. MISO is tri-stated whenever the SD CS pin is pulled high
+
+Be sure pin #8 is HIGH when reading/writing SD card
+
+
+### LoRa Feather pins
+
+From https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module?view=all
+
+  * GND - this is the common ground for all power and logic
+  * BAT - this is the positive voltage to/from the JST jack for the optional Lipoly battery
+  * USB - this is the positive voltage to/from the micro USB jack if connected
+  * EN - this is the 3.3V regulator's enable pin. It's pulled up, so connect to ground to disable the 3.3V regulator
+  * 3V - this is the output from the 3.3V regulator, it can supply 500mA peak
+  * #0 / RX - GPIO #0, also receive (input) pin for Serial1 (hardware UART), also can be analog input
+  * #1 / TX - GPIO #1, also transmit (output) pin for Serial1, also can be analog input 
+  * #20 / SDA - GPIO #20, also the I2C (Wire) data pin. There's no pull up on this pin by default so when using with I2C, you may need a 2.2K-10K pullup.
+  * #21 / SCL - GPIO #21, also the I2C (Wire) clock pin. There's no pull up on this pin by default so when using with I2C, you may need a 2.2K-10K pullup.
+  * #5 - GPIO #5
+  * #6 - GPIO #6
+  * #9 - GPIO #9, also analog input A7. This analog input is connected to a voltage divider for the lipoly battery so be aware that this pin naturally 'sits' at around 2VDC due to the resistor divider
+  * #10 - GPIO #10
+  * #11 - GPIO #11
+  * #12 - GPIO #12
+  * #13 - GPIO #13 and is connected to the red LED next to the USB jack
+  * A0 - This pin is analog input A0 but is also an analog output due to having a DAC (digital-to-analog converter). You can set the raw voltage to anything from 0 to 3.3V, unlike PWM outputs this is a true analog output
+  * A1 thru A5 - These are each analog input as well as digital I/O pins.
+  * SCK/MOSI/MISO (GPIO 24/23/22)- These are the hardware SPI pins, you can use them as everyday GPIO pins (but recommend keeping them free as they are best used for hardware SPI connections for high speed.
+  
+  #### Radio control pins:
+  * #8 - used as the radio CS (chip select) pin (pull HIGH when not using radio!! Must be HIGH during Adalogger read/writes)
+  * #3 - used as the radio GPIO0 / IRQ (interrupt request) pin.
+  * #4 - used as the radio Reset pin
+
+There are also breakouts for 3 of the RFM's GPIO pins (IO1, IO2, IO3 and IO5). You probably wont need these for most uses of the Feather but they are available in case you need 'em!
+
+The CS pin (#8) does not have a pullup built in so be sure to set this pin HIGH when not using the radio!
+
+
+### Feather WINC1500 (Currently not supported)
+
+  * GND - this is the common ground for all power and logic
+  * BAT - this is the positive voltage to/from the JST jack for the optional Lipoly battery
+  * USB - this is the positive voltage to/from the micro USB jack if connected
+  * EN - this is the 3.3V regulator's enable pin. It's pulled up, so connect to ground to disable the 3.3V regulator
+  * 3V - this is the output from the 3.3V regulator, it can supply 600mA peak
+  * #0 / RX - GPIO #0, also receive (input) pin for Serial1 (hardware UART), also can be analog input
+  * #1 / TX - GPIO #1, also transmit (output) pin for Serial1, also can be analog input 
+  * #20 / SDA - GPIO #20, also the I2C (Wire) data pin. There's no pull up on this pin by default so when using with I2C, you may need a 2.2K-10K pullup.
+  * #21 / SCL - GPIO #21, also the I2C (Wire) clock pin. There's no pull up on this pin by default so when using with I2C, you may need a 2.2K-10K pullup.
+  * #5 - GPIO #5
+  * #6 - GPIO #6
+  * #9 - GPIO #9, also analog input A7. This analog input is connected to a voltage divider for the lipoly battery so be aware that this pin naturally 'sits' at around 2VDC due to the resistor divider
+  * #10 - GPIO #10
+  * #11 - GPIO #11
+  * #12 - GPIO #12
+  * #13 - GPIO #13 and is connected to the red LED next to the USB jack
+  * A0 - This pin is analog input A0 but is also an analog output due to having a DAC (digital-to-analog converter). You can set the raw voltage to anything from 0 to 3.3V, unlike PWM outputs this is a true analog output
+  * A1 thru A5 - These are each analog input as well as digital I/O pins.
+  * SCK/MOSI/MISO (GPIO 24/23/22)- These are the hardware SPI pins, you can use them as everyday GPIO pins (but recommend keeping them free as they are best used for hardware SPI connections for high speed)
+  * #2 - used as the ENable pin for the WiFi module, by default pulled down low, set HIGH to enable WiFi
+  * #4 - used as the Reset pin for the WiFi module, controlled by the library
+  * #7 - used as the IRQ interrupt request pin for the WiFi module, controlled by the library
+  * #8 - used as the Chip Select pin for the WiFi module, used to select it for SPI data transfer
+  * MOSI / MISO /SCK - the SPI pins are also used for WiFi module communication
+  * Green LED - the top LED, in green, will light when the module has connected to an SSID
+  * Yellow LED - the bottom LED, in yellow, will blink during data transfer
+  
