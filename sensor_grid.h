@@ -41,24 +41,7 @@ enum ERRORS {
 #include "io.h"
 #include <KnightLab_GPS.h>
 
-#if defined(__AVR_ATmega32U4__)
-typedef struct Message {
-    uint16_t ver_100;
-    uint16_t net;
-    uint16_t snd;
-    uint16_t orig;
-    uint32_t id;
-    uint16_t bat_100;
-    uint32_t timestamp; /* 2106 datepocalypse */
-    uint8_t year, month, day, hour, minute, seconds;
-    bool fix;
-    uint8_t _padding1, _padding2, _padding3;
-    int32_t lat_1000, lon_1000;
-    uint8_t sats;
-    uint8_t _padding4, _padding5, _padding6;
-    int32_t data[10]; /* -2147483648 through 2147483647 */
-};
-#elif defined(ARDUINO_ARCH_SAMD)
+#if defined(ARDUINO_ARCH_SAMD)
 
 //extern Adafruit_SSD1306 display;
 extern Adafruit_FeatherOLED display;
@@ -71,10 +54,6 @@ typedef struct Message {
     uint32_t id;
     uint16_t bat_100;
     uint32_t timestamp;
-    uint8_t year, month, day, hour, minute, seconds;
-    bool fix;
-    int32_t lat_1000, lon_1000;
-    uint8_t sats;
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
 #else
@@ -104,13 +83,6 @@ If the address is $2000000 or larger, its in SRAM. If the address is between $00
 #elif defined(ARDUINO_ARCH_SAMD)
     #define VBATPIN A7
 #endif
-
-/*
-#if defined(ARDUINO_SAMD_ZERO) && defined(SERIAL_PORT_USBVIRTUAL)
-    // Required for Serial on Zero based boards
-    #define Serial SERIAL_PORT_USBVIRTUAL
-#endif
-*/
 
 class __FlashStringHelper;
 #define F(string_literal) (reinterpret_cast<const __FlashStringHelper*>(PSTR(string_literal)))

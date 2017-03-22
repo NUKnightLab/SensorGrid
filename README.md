@@ -22,7 +22,7 @@ If you can answer yes to these questions:
   * Is your data slow changing and does it have relatively low sampling-period requirements (minutes & hours rather than milliseconds or seconds)
   * Is your data concentrated over a small geographic area (e.g. a campus or neighborhood. Not distributed over a city or county)?
   * Are you ready to roll up your sleeves and bust out the soldering iron?
-  
+
 # Dependencies
 
   * SDFat https://github.com/greiman/SdFat
@@ -38,6 +38,22 @@ See these additional docs:
   * (TBD) WiFi building tutorial
   * (TBD) Sensor integration tutorial
 
+
+## Module Incompatibilities!!
+
+Not everything plays together nicely in the Feather ecosystem. Here are some specific known issues to keep in mind when planning your SensorGrid nodes
+
+  * **Adalogger SD card writing and Ultimate GPS incompatible**
+
+While, theoretically, these should work together, we are seeing lockup after writing log lines to the SD card when a GPS is attached. This problem should be solvable, but in the mean time, **turn off logging** nodes with GPS
+
+  * **Adalogger and WINC1500 WiFi unable to share SPI bus**
+
+We have yet to figure out how to get these two to share the bus nicely. It seems that the WINC1500 does not like losing access to the bus, and even trying full WiFi setup after the fact does not manage the issue. For the time being, if the current node has WiFi, the log file will not be written. No additional configuration or changes are required.
+
+  * **Possible conflict between WiFi and GPS reliability**
+
+Need to test this out some more, but some early indications that we are not get good GPS data when there is a WiFi module attached. It may be necessary to avoid having WiFi nodes with GPS.
 
 ## Some notes
 TODO: Move these to a module notes doc

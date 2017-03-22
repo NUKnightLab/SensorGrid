@@ -7,12 +7,9 @@ uint32_t NETWORK_ID;
 uint32_t NODE_ID;
 char* LOGFILE;
 uint32_t DISPLAY_TIMEOUT;
-
-/* Modules */
-
-unsigned long lastTransmit = 0;
+uint32_t lastTransmit = 0;
+uint32_t oledActivated = 0;
 bool oledOn;
-unsigned long oledActivated = 0;
 
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
@@ -59,7 +56,7 @@ void setup() {
          * generally re-compiles for an upload anyway.
          * Pull battery to reset the clock
          */
-        Serial.println("Init RTC to compile time: ");
+        Serial.println(F("Init RTC to compile time: "));
         rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     }
 
@@ -73,7 +70,7 @@ void setup() {
     LOGFILE = getConfig("LOGFILE");
     DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
 
-    Serial.print("Display timeout set to: "); Serial.println(DISPLAY_TIMEOUT);
+    Serial.print(F("Display timeout set to: ")); Serial.println(DISPLAY_TIMEOUT);
     setupDisplay();
     oledOn = true;
 
@@ -130,7 +127,6 @@ void loop() {
     }
     if ( (DISPLAY_TIMEOUT > 0) && oledOn && ((millis() - oledActivated) > (OLED_TIMEOUT * 1000L)) ) {
         oledOn = false;
-        Serial.println("Clearing display");
         display.clearDisplay();
         display.clearMsgArea();
         display.display();
@@ -156,11 +152,12 @@ void loop() {
     if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 10) {
         Serial.println(F("***\nTX\n---"));
         transmit();
+        Serial.println(F("Transmitted"));
         lastTransmit = millis();
     }
     // RX as soon as possible after TX to catch ack of sent msg
     if (RECEIVE) {
-        Serial.println("***\nRX\n---");
+        Serial.println(F("***\nRX\n---"));
         receive();
     }
 }

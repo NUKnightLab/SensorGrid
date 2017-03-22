@@ -60,17 +60,6 @@ void printMessageData() {
     Serial.print(F("; ID: ")); Serial.println(msg->id);
     Serial.print(F("BAT: ")); Serial.println((float)msg->bat_100/100);
     Serial.print(F("TS: ")); Serial.println(msg->timestamp);
-    Serial.print(F("; DT: "));
-    Serial.print(msg->year); Serial.print(F("-"));
-    Serial.print(msg->month); Serial.print(F("-"));
-    Serial.print(msg->day); Serial.print(F("T"));
-    Serial.print(msg->hour); Serial.print(F(":"));
-    Serial.print(msg->minute); Serial.print(F(":"));
-    Serial.println(msg->seconds);
-    Serial.print(F("    fix: ")); Serial.print(msg->fix);
-    Serial.print(F("; lat: ")); Serial.print((float)msg->lat_1000/1000);
-    Serial.print(F("; lon: ")); Serial.print((float)msg->lon_1000/1000);
-    Serial.print(F("; sats: ")); Serial.println(msg->sats);
     Serial.println(F("Data:"));
     Serial.print(F("    [0] ")); Serial.print(msg->data[0]);
     Serial.print(F("    [1] ")); Serial.print(msg->data[1]);
@@ -87,23 +76,34 @@ void printMessageData() {
 
 static char* logline() {
     char str[80];
-    sprintf(str, "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+    sprintf(str, 
+        "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
         msg->ver_100, msg->net, msg->snd, msg->orig, msg->id, msg->bat_100, msg->timestamp,
-        msg->hour, msg->minute, msg->seconds, msg->year, msg->month, msg->day,
-        msg->fix, msg->lat_1000, msg->lon_1000, msg->sats,
         msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
         msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
     return str;
 }
 
-void transmit() {
-      MSG_ID++;
+static uint32_t getRegisterData(char* registerName, char* defaultConfig) {
+    char* conf = getConfig(registerName);
+    if (!conf) {
+        conf = defaultConfig;
+    }
+    Serial.print("Getting data for register: "); Serial.println(conf);
+    if (conf == "GPS_FIX") return GPS.fix;
+    if (conf == "GPS_SATS") return GPS.satellites;
+    if (conf == "GPS_SATFIX") {
+        if (GPS.fix) return GPS.satellites;
+        return -1 * GPS.satellites;
+    }
+    if (conf == "GPS_LAT_DEG") return (int32_t)(roundf(GPS.latitudeDegrees * 1000));
+    if (conf == "GPS_LON_DEG") return (int32_t)(roundf(GPS.longitudeDegrees * 1000));
+    return 0;
+}
+
+static void fillCurrentMessageData() {
       clearBuffer();
       uint16_t ver = (uint16_t)(roundf(VERSION * 100));
-      if (ver != 11) {
-        Serial.println(F("Skipping message with incorrect version"));
-        return;
-      }
       msg->ver_100 = ver;
       msg->net = NETWORK_ID;
       msg->snd = NODE_ID;
@@ -111,25 +111,15 @@ void transmit() {
       msg->id = MSG_ID;
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
       msg->timestamp = rtc.now().unixtime();
-      msg->hour = GPS.hour;
-      msg->minute = GPS.minute;
-      msg->seconds = GPS.seconds;
-      msg->year = GPS.year;
-      msg->month = GPS.month;
-      msg->day = GPS.day;
-      msg->fix = GPS.fix;
-      msg->lat_1000 = (int32_t)(roundf(GPS.latitudeDegrees * 1000));
-      msg->lon_1000 = (int32_t)(roundf(GPS.longitudeDegrees * 1000));
-      msg->sats = GPS.satellites;
 
-
-      msg->fix = true;
-      msg->lat_1000 = 1111;
-      msg->lon_1000 = 2222;
-      msg->sats = 33;
-      msg->data[0] = 1010101;
-      msg->data[1] = 111111;
-      msg->data[2] = 222222;
+      /** 
+       * TODO: get rid of these defaults. Most units will not have GPS, so only get GPS data
+       * if configured to do so
+       */
+      msg->data[0] = getRegisterData("DATA_0", "GPS_SATFIX");
+      msg->data[1] = getRegisterData("DATA_1", "GPS_LAT_DEG");
+      msg->data[2] = getRegisterData("DATA_2", "GPS_LON_DEG");
+ 
       msg->data[3] = 333333;
       msg->data[4] = 444444;
       msg->data[5] = 555555;
@@ -138,6 +128,11 @@ void transmit() {
       msg->data[8] = 888888;
       msg->data[9] = 999999;
 
+}
+
+void transmit() {
+      MSG_ID++;
+      fillCurrentMessageData();
       
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
@@ -164,10 +159,6 @@ void transmit() {
 
       printMessageData();
 
-      char* line = logline();
-      Serial.print("LOGLINE ("); Serial.print(strlen(line)); Serial.println("):");
-      Serial.println(line);
-
       /**
        * Unable to get WINC1500 and Adalogger to share SPI bus for logger writes.
        * WiFi does not want to reconnect after losing the SPI. Things tried:
@@ -188,9 +179,16 @@ void transmit() {
        * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
        */
       if (!WiFiPresent && LOGFILE) {
+          char* line = logline();
+          Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
+          Serial.println(line);
           digitalWrite(SD_CHIP_SELECT_PIN, LOW);
           writeToSD(LOGFILE, line);
           digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+          /**
+           * !!! A conflict between the GPS wing and Adalogger is causing lockup around this
+           * point. Until this is sorted out, do not use SD log writing on nodes with GPS
+           */
       }
 
       if (!WiFiPresent || !postToAPI(
@@ -198,6 +196,7 @@ void transmit() {
             getConfig("API_HOST"), atoi(getConfig("API_PORT")),
             charBuf, msgLen)) {
           flashLED(3, HIGH);
+          Serial.println("Sending current message");
           sendCurrentMessage();
       }
 }
@@ -258,7 +257,9 @@ static void _receive() {
 }
 
 void receive() {
-    // randomized receive cycle to avoid loop sync across nodes
+    /**
+     * Randomized receive cycle to avoid loop sync across nodes
+     */
     clearBuffer();
     int delta = 1000 + rand() % 1000;
     Serial.print(F("NODE ")); Serial.print(NODE_ID);
@@ -272,18 +273,24 @@ void receive() {
 }
 
 void _writeToSD(char* filename, char* str) {
-  Serial.print("Init SD card ..");
+  Serial.print(F("Init SD card .."));
   if (!SD.begin(10)) {
-        Serial.println(" .. SD card init failed!");
+        Serial.println(F(" .. SD card init failed!"));
         return;
   }
-  Serial.println(" .. done");
+  if (false) {  // true to check available SD filespace
+      Serial.print("SD free: ");
+      uint32_t volFree = SD.vol()->freeClusterCount();
+      float fs = 0.000512*volFree*SD.vol()->blocksPerCluster();
+      Serial.println(fs);
+  }
   File file;
-  Serial.print("Writing to "); Serial.print(filename);
-  Serial.print(": "); Serial.println(str);
+  Serial.print(F("Writing to ")); Serial.print(filename);
+  Serial.print(F(": ")); Serial.println(str);
   file = SD.open(filename, O_WRITE|O_APPEND|O_CREAT);
   file.println(str);
   file.close();
+  Serial.println("File closed");
 }
 
 void writeToSD(char* filename, char* str) {

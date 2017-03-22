@@ -42,6 +42,12 @@ static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass) {
 	return true;
 }
 
+extern "C" char *sbrk(int i);
+static int _freeRam() {
+  char stack_dummy = 0;
+  return &stack_dummy - sbrk(0);
+}
+
 static bool _postToAPI(const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
     if (WIFI_CLIENT.connect(apiServer, apiPort)) {
         Serial.println(F("API:"));
@@ -60,6 +66,8 @@ static bool _postToAPI(const char* apiServer, const char* apiHost, const int api
         WIFI_CLIENT.println();
         WIFI_CLIENT.write(msg, msgLen);
         WIFI_CLIENT.println();
+        Serial.println(F("Completed post to API"));
+        Serial.println(_freeRam());
         return true;
     } else {
         return false;
