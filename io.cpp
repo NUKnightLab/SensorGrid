@@ -6,7 +6,6 @@
 #include <SdFat.h>
 static SdFat SD;
 
-
 #define SD_CHIP_SELECT_PIN 10
 
 RH_RF95 rf95(RFM95_CS, RFM95_INT);
@@ -148,14 +147,36 @@ void transmit() {
       char* line = logline();
       Serial.print("LOGLINE ("); Serial.print(strlen(line)); Serial.println("):");
       Serial.println(line);
-      /*
-      if (LOGFILE) {
+
+      /**
+       * Unable to get WINC1500 and Adalogger to share SPI bus for logger writes.
+       * WiFi does not want to reconnect after losing the SPI. Things tried:
+       *
+       * Setting Chip select pin modes (WiFi CS HIGH during logger write, logger LOW with
+       *     reset to WiFi LOW after write)
+       * WIFI_CLIENT.stop() ... begin()
+       * WiFi.end()
+       * WiFi.refresh()
+       * SPI.endTransaction()
+       * SPI.end() .. begin()
+       * various time delays
+       *
+       * In the end, unable to get WiFi to continue after writing to the SD card.
+       * For now settle with incompatibility between logging and WiFi API posts.
+       * SD card read for configs still seems to be ok.
+       *
+       * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
+       */
+      if (!WiFiPresent && LOGFILE) {
+          digitalWrite(SD_CHIP_SELECT_PIN, LOW);
           writeToSD(LOGFILE, line);
-      } */
-  
+          digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+      }
+
       if (!WiFiPresent || !postToAPI(
-            getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 
-            getConfig("API_HOST"), atoi(getConfig("API_PORT")), charBuf, msgLen)) {
+            getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
+            getConfig("API_HOST"), atoi(getConfig("API_PORT")),
+            charBuf, msgLen)) {
           flashLED(3, HIGH);
           sendCurrentMessage();
       }
@@ -201,8 +222,9 @@ static void _receive() {
         } else {
             msg->snd = NODE_ID;
             if (!WiFiPresent || !postToAPI(
-                  getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"), 
-                  getConfig("API_HOST"), atoi(getConfig("API_PORT")), charBuf, msgLen)) {
+                  getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
+                  getConfig("API_HOST"), atoi(getConfig("API_PORT")),
+                  charBuf, msgLen)) {
                 delay(RETRANSMIT_DELAY);
                 Serial.print(F("RETRANSMITTING ..."));
                 Serial.print(F("  snd: ")); Serial.print(msg->snd);
@@ -237,6 +259,8 @@ void _writeToSD(char* filename, char* str) {
   }
   Serial.println(" .. done");
   File file;
+  Serial.print("Writing to "); Serial.print(filename);
+  Serial.print(": "); Serial.println(str);
   file = SD.open(filename, O_WRITE|O_APPEND|O_CREAT);
   file.println(str);
   file.close();

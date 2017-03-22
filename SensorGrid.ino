@@ -18,11 +18,7 @@ Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
-
-#if defined(ARDUINO_ARCH_SAMD)
-//Adafruit_SSD1306 display = Adafruit_SSD1306();
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
-#endif
 
 bool WiFiPresent = false;
 
@@ -69,12 +65,14 @@ void setup() {
 
     flashLED(2, HIGH);
 
+
     if (readSDConfig(CONFIG_FILE) > 0)
         fail(FAILED_CONFIG_FILE_READ);
     NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
     NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
     LOGFILE = getConfig("LOGFILE");
     DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
+
     Serial.print("Display timeout set to: "); Serial.println(DISPLAY_TIMEOUT);
     setupDisplay();
     oledOn = true;
@@ -98,7 +96,7 @@ void setup() {
 
     setupGPS();
     setupRadio();
-    WiFiPresent = setupWiFi();
+    WiFiPresent = setupWiFi(getConfig("WIFI_SSID"), getConfig("WIFI_PASS"));
 
     Serial.print(F("Si7021 "));
     if (sensorSi7021TempHumidity.begin()) {
@@ -120,14 +118,12 @@ void setup() {
         fail(MESSAGE_STRUCT_TOO_LARGE);
     }
     Serial.println(F("OK!"));
-
-    pinMode(8, OUTPUT);
-    digitalWrite(8, HIGH);
 }
 
 void loop() {
     Serial.println(F("****"));
     printRam();
+
     if (oledOn) {
         display.setBattery(batteryLevel());
         display.renderBattery();

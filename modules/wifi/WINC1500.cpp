@@ -1,10 +1,7 @@
 #include "WINC1500.h"
 
 static bool WiFiPresent = false;
-//static uint8_t msgLen = sizeof(Message);
-//static char* buf = char[sizeof(Message)];
 
-#if defined(ARDUINO_ARCH_SAMD)
 WiFiClient WIFI_CLIENT;
 
 void printWifiStatus() {
@@ -18,9 +15,9 @@ void printWifiStatus() {
 }
 
 static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass) {
-    WiFi.end(); // This is here to make the keep-alive work, but not sure
-                // why we are even having to reconnect for every request
-    Serial.println("Connecting ...");
+    //WiFi.end(); // This is here to make the keep-alive work, but not sure
+                  // why we are even having to reconnect for every request
+    Serial.println("Checking connection ...");
     if (WiFi.status() != WL_CONNECTED) {
         Serial.print("WiFi Status: "); Serial.println(WiFi.status());
         Serial.print(F("CON SSID: "));
@@ -28,6 +25,7 @@ static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass) {
         Serial.print(F("CON PASS: ")); Serial.println(wifi_pass);
         // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
         //WIFI_STATUS = WiFi.begin(WIFI_SSID, WIFI_PASS);
+        Serial.println("Connecting ..");
         WiFi.begin(wifi_ssid, wifi_pass);
         uint8_t timeout = 10;
         while (timeout && (WiFi.status() != WL_CONNECTED)) {
@@ -44,11 +42,7 @@ static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass) {
 	return true;
 }
 
-//bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
-bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
-	if (!WiFiPresent || !connectWiFi(wifi_ssid, wifi_pass)) {
-	   return false;
-	}
+static bool _postToAPI(const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
     if (WIFI_CLIENT.connect(apiServer, apiPort)) {
         Serial.println(F("API:"));
         Serial.print(F("    CON: "));
@@ -68,23 +62,36 @@ bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServ
         WIFI_CLIENT.println();
         return true;
     } else {
-      Serial.println(F("FAIL: API CON"));
+        return false;
+    }
+}
+
+//bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
+bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
+	if (!WiFiPresent || !connectWiFi(wifi_ssid, wifi_pass)) {
+	   return false;
+	}
+    if (_postToAPI(apiServer, apiHost, apiPort, msg, msgLen)) {
+        return true;
+    } else {
+      Serial.println(F("FAIL: API CON. RETRY .."));
+      WiFi.end();
+      if (connectWiFi(wifi_ssid, wifi_pass)) {
+          _postToAPI(apiServer, apiHost, apiPort, msg, msgLen);
+      }
     }
     return false;
 }
-#else
-//bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
-bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
-    return false;
-}
 
-#endif
-
-bool setupWiFi() {
+bool setupWiFi(const char* wifi_ssid, const char* wifi_pass) {
     Serial.print(F("WiFi Module.. "));
-    #if defined(__AVR_ATmega32U4__)
-        Serial.println(F(" ..Not Supported on 32u4 devices"));
-    #elif defined(ARDUINO_ARCH_SAMD)
+    #if defined(ARDUINO_ARCH_SAMD)
+        /**
+         * void setPins(int8_t cs, int8_t irq, int8_t rst, int8_t en = -1)
+         *
+         * cs: pull down during rx/tx
+         *
+         */
         WiFi.setPins(6,11,12); // Adafruit uses 8,7,4 in tutorials, but these are used by LoRa
                                 // Adalogger uses 10
     if (WiFi.status() == WL_NO_SHIELD) {
@@ -92,6 +99,8 @@ bool setupWiFi() {
     } else {
         WiFiPresent = true;
         Serial.println(F(" ..Detected"));
+        Serial.println(F("Connecting to WiFi.."));
+        connectWiFi(wifi_ssid, wifi_pass);
     }
     #else
         #error Unsupported architecture
