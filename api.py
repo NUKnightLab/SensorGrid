@@ -51,7 +51,7 @@ def data():
 @app.route('/report')
 def report():
     return '<br/>'.join(
-        ['%s - %s %sv %s' % (r['dt'], r['orig'], r['bat'], r['timestamp'], r['data']) for r in reversed(history)])
+        ['%s - %s %sv %s %s' % (r['dt'], r['orig'], r['bat'], r['timestamp'], r['data']) for r in reversed(history)])
 
 
 if __name__ == '__main__':
