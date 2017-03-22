@@ -5,6 +5,7 @@
 //#include <SD.h>
 #include <SdFat.h>
 static SdFat SD;
+static RTC_PCF8523 rtc;
 
 #define SD_CHIP_SELECT_PIN 10
 
@@ -58,6 +59,7 @@ void printMessageData() {
     Serial.print(F("; ORIG: ")); Serial.print(msg->orig);
     Serial.print(F("; ID: ")); Serial.println(msg->id);
     Serial.print(F("BAT: ")); Serial.println((float)msg->bat_100/100);
+    Serial.print(F("TS: ")); Serial.println(msg->timestamp);
     Serial.print(F("; DT: "));
     Serial.print(msg->year); Serial.print(F("-"));
     Serial.print(msg->month); Serial.print(F("-"));
@@ -85,8 +87,8 @@ void printMessageData() {
 
 static char* logline() {
     char str[80];
-    sprintf(str, "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
-        msg->ver_100, msg->net, msg->snd, msg->orig, msg->id, msg->bat_100,
+    sprintf(str, "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+        msg->ver_100, msg->net, msg->snd, msg->orig, msg->id, msg->bat_100, msg->timestamp,
         msg->hour, msg->minute, msg->seconds, msg->year, msg->month, msg->day,
         msg->fix, msg->lat_1000, msg->lon_1000, msg->sats,
         msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
@@ -108,6 +110,7 @@ void transmit() {
       msg->orig = NODE_ID;
       msg->id = MSG_ID;
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
+      msg->timestamp = rtc.now().unixtime();
       msg->hour = GPS.hour;
       msg->minute = GPS.minute;
       msg->seconds = GPS.seconds;
@@ -118,7 +121,7 @@ void transmit() {
       msg->lat_1000 = (int32_t)(roundf(GPS.latitudeDegrees * 1000));
       msg->lon_1000 = (int32_t)(roundf(GPS.longitudeDegrees * 1000));
       msg->sats = GPS.satellites;
-
+      
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
           msg->data[TEMPERATURE_100] = (int32_t)(sensorSi7021TempHumidity.readTemperature()*100);

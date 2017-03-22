@@ -49,6 +49,7 @@ typedef struct Message {
     uint16_t orig;
     uint32_t id;
     uint16_t bat_100;
+    uint32_t timestamp; /* 2106 datepocalypse */
     uint8_t year, month, day, hour, minute, seconds;
     bool fix;
     uint8_t _padding1, _padding2, _padding3;
@@ -69,6 +70,7 @@ typedef struct Message {
     uint16_t orig;
     uint32_t id;
     uint16_t bat_100;
+    uint32_t timestamp;
     uint8_t year, month, day, hour, minute, seconds;
     bool fix;
     int32_t lat_1000, lon_1000;

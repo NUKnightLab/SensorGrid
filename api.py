@@ -7,7 +7,7 @@ from struct import *
 history = []
 
 PROTOCOL_VERSIONS = {
-    '0.11': '<HHHHIHBBBBBB?xxxiiBxxx10i'
+    '0.11': '<HHHHIHIBBBBBB?xxxiiBxxx10i'
 }
 PROTOCOL = PROTOCOL_VERSIONS['0.11']
 
@@ -24,7 +24,7 @@ def data():
     message = request.get_data(cache=False)
     #print('-'*30)
     #print("REC'd message len: %d" % len(message))
-    ver_100, net, snd, orig, msg_id, bat_100, year, month, day, hour, minute, seconds, \
+    ver_100, net, snd, orig, msg_id, bat_100, timestamp, year, month, day, hour, minute, seconds, \
         fix, lat_1000, lon_1000, sats, \
         *data = unpack(PROTOCOL, message)
     ver = ver_100 / 100.0
@@ -41,6 +41,7 @@ def data():
         'dt': datetime.datetime.now(),
         'orig': orig,
         'bat': bat,
+        'timestamp': timestamp,
         'data': str(data)
     })
     history = history[-30:]
@@ -50,7 +51,7 @@ def data():
 @app.route('/report')
 def report():
     return '<br/>'.join(
-        ['%s - %s %sv %s' % (r['dt'], r['orig'], r['bat'], r['data']) for r in reversed(history)])
+        ['%s - %s %sv %s' % (r['dt'], r['orig'], r['bat'], r['timestamp'], r['data']) for r in reversed(history)])
 
 
 if __name__ == '__main__':
