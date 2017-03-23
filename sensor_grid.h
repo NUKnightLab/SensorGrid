@@ -25,6 +25,7 @@
 extern uint32_t NETWORK_ID;
 extern uint32_t NODE_ID;
 extern char* LOGFILE;
+extern char* GPS_MODULE;
 
 enum ERRORS {
      NO_ERR,

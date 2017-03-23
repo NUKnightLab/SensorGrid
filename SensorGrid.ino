@@ -6,6 +6,7 @@ static RTC_PCF8523 rtc;
 uint32_t NETWORK_ID;
 uint32_t NODE_ID;
 char* LOGFILE;
+char* GPS_MODULE;
 uint32_t DISPLAY_TIMEOUT;
 uint32_t lastTransmit = 0;
 uint32_t oledActivated = 0;
@@ -69,6 +70,7 @@ void setup() {
     NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
     LOGFILE = getConfig("LOGFILE");
     DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
+    GPS_MODULE = getConfig("GPS_MODULE");
 
     Serial.print(F("Display timeout set to: ")); Serial.println(DISPLAY_TIMEOUT);
     setupDisplay();
@@ -91,7 +93,11 @@ void setup() {
     pinMode(RFM95_RST, OUTPUT);
     digitalWrite(RFM95_RST, HIGH);
 
-    setupGPS();
+    if (GPS_MODULE) {
+        setupGPS();
+    } else {
+        Serial.println(F("No GPS_MODULE specified in config .. Skipping GPS setup"));
+    }
     setupRadio();
     WiFiPresent = setupWiFi(getConfig("WIFI_SSID"), getConfig("WIFI_PASS"));
 

@@ -76,7 +76,7 @@ void printMessageData() {
 
 static char* logline() {
     char str[80];
-    sprintf(str, 
+    sprintf(str,
         "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
         msg->ver_100, msg->net, msg->snd, msg->orig, msg->id, msg->bat_100, msg->timestamp,
         msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
@@ -84,21 +84,83 @@ static char* logline() {
     return str;
 }
 
-static uint32_t getRegisterData(char* registerName, char* defaultConfig) {
-    char* conf = getConfig(registerName);
-    if (!conf) {
-        conf = defaultConfig;
+
+static void warnNoGPSConfig() {
+    Serial.println(F("WARNING! GPS data specified in data registers, but no GPS_MODULE in config"));
+}
+
+
+static uint32_t getDataByTypeName(char* type) {
+    Serial.print("Getting data for type: "); Serial.println(type);
+    if (!strcmp(type, "GPS_FIX")) {
+        if (!GPS_MODULE) warnNoGPSConfig();
+        return GPS.fix;
     }
-    Serial.print("Getting data for register: "); Serial.println(conf);
-    if (conf == "GPS_FIX") return GPS.fix;
-    if (conf == "GPS_SATS") return GPS.satellites;
-    if (conf == "GPS_SATFIX") {
+    if (!strcmp(type, "GPS_SATS")) {
+        if (!GPS_MODULE) warnNoGPSConfig();
+        return GPS.satellites;
+    }
+    if (!strcmp(type, "GPS_SATFIX")) {
+        if (!GPS_MODULE) warnNoGPSConfig();
         if (GPS.fix) return GPS.satellites;
         return -1 * GPS.satellites;
     }
-    if (conf == "GPS_LAT_DEG") return (int32_t)(roundf(GPS.latitudeDegrees * 1000));
-    if (conf == "GPS_LON_DEG") return (int32_t)(roundf(GPS.longitudeDegrees * 1000));
+    if (!strcmp(type, "GPS_LAT_DEG")){
+        if (!GPS_MODULE) warnNoGPSConfig();
+        Serial.println(GPS.lastNMEA());
+        Serial.print("LATITUDE "); Serial.println(GPS.latitudeDegrees, DEC);
+        return (int32_t)(roundf(GPS.latitudeDegrees * 1000));
+    }
+    if (!strcmp(type, "GPS_LON_DEG")) {
+        if (!GPS_MODULE) warnNoGPSConfig();
+        Serial.println(GPS.lastNMEA()); // These are looking pretty ugly. Looks like a bad
+                                        // overwrite of NMEA is corrupting the string from
+                                        // around the end of the longitude field on GPGGA strings
+        Serial.print("LONGITUDE "); Serial.println(GPS.longitudeDegrees, DEC);
+        return (int32_t)(roundf(GPS.longitudeDegrees * 1000));
+    }
+    if (!strcmp(type, "FAKE_3")) {
+        return 3333333;
+    }
+    if (!strcmp(type, "FAKE_4")) {
+        return 4444444;
+    }
+    if (!strcmp(type, "FAKE_5")) {
+        return 5555555;
+    }
+    if (!strcmp(type, "FAKE_6")) {
+        return 6666666;
+    }
+    if (!strcmp(type, "FAKE_7")) {
+        return 7777777;
+    }
+    if (!strcmp(type, "FAKE_8")) {
+        return 8888888;
+    }
+    if (!strcmp(type, "FAKE_9")) {
+        return 9999999;
+    }
+    Serial.print(F("WARNING! Unknown named data type: ")); Serial.println(type);
     return 0;
+}
+
+static uint32_t getRegisterData(char* registerName, char* defaultType) {
+    char* type = getConfig(registerName);
+    if (!type) {
+        type = defaultType;
+    }
+    return getDataByTypeName(type);
+}
+
+static uint32_t getRegisterData(char* registerName) {
+    char* type = getConfig(registerName);
+    if (type) {
+        return getDataByTypeName(type);
+    } else {
+        Serial.print(F("Data register ")); Serial.print(registerName);
+        Serial.println(F(" not configured"));
+        return 0;
+    }
 }
 
 static void fillCurrentMessageData() {
@@ -112,28 +174,32 @@ static void fillCurrentMessageData() {
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
       msg->timestamp = rtc.now().unixtime();
 
-      /** 
-       * TODO: get rid of these defaults. Most units will not have GPS, so only get GPS data
-       * if configured to do so
-       */
-      msg->data[0] = getRegisterData("DATA_0", "GPS_SATFIX");
-      msg->data[1] = getRegisterData("DATA_1", "GPS_LAT_DEG");
-      msg->data[2] = getRegisterData("DATA_2", "GPS_LON_DEG");
- 
-      msg->data[3] = 333333;
-      msg->data[4] = 444444;
-      msg->data[5] = 555555;
-      msg->data[6] = 666666;
-      msg->data[7] = 777777;
-      msg->data[8] = 888888;
-      msg->data[9] = 999999;
+      if (GPS_MODULE) {
+          /* If GPS_MODULE is set in config file, these data will default to the first
+           *  3 data registers, but other configs can be set in the config file.
+           */
+          msg->data[0] = getRegisterData("DATA_0", "GPS_SATFIX");
+          msg->data[1] = getRegisterData("DATA_1", "GPS_LAT_DEG");
+          msg->data[2] = getRegisterData("DATA_2", "GPS_LON_DEG");
+      } else {
+          msg->data[0] = getRegisterData("DATA_0");
+          msg->data[1] = getRegisterData("DATA_1");
+          msg->data[2] = getRegisterData("DATA_2");
+      }
+      msg->data[3] = getRegisterData("DATA_3");
+      msg->data[4] = getRegisterData("DATA_4");
+      msg->data[5] = getRegisterData("DATA_5");
+      msg->data[6] = getRegisterData("DATA_6");
+      msg->data[7] = getRegisterData("DATA_7");
+      msg->data[8] = getRegisterData("DATA_8");
+      msg->data[9] = getRegisterData("DATA_9");
 
 }
 
 void transmit() {
       MSG_ID++;
       fillCurrentMessageData();
-      
+
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
           msg->data[TEMPERATURE_100] = (int32_t)(sensorSi7021TempHumidity.readTemperature()*100);
@@ -178,7 +244,8 @@ void transmit() {
        *
        * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
        */
-      if (!WiFiPresent && LOGFILE) {
+
+      if (!GPS_MODULE && !WiFiPresent && LOGFILE) {
           char* line = logline();
           Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
           Serial.println(line);
@@ -187,7 +254,11 @@ void transmit() {
           digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
           /**
            * !!! A conflict between the GPS wing and Adalogger is causing lockup around this
-           * point. Until this is sorted out, do not use SD log writing on nodes with GPS
+           * point. Until this is sorted out, do not use SD log writing on nodes configured for GPS.
+           * The above !GPS_MODULE check prevents the log writing (and resulting lockup) if
+           * GPS is configured
+           *
+           * Note: pausing GPS during log writes does not prevent lockup
            */
       }
 
@@ -286,7 +357,7 @@ void _writeToSD(char* filename, char* str) {
   }
   File file;
   Serial.print(F("Writing to ")); Serial.print(filename);
-  Serial.print(F(": ")); Serial.println(str);
+  Serial.println(F(":")); Serial.println(str);
   file = SD.open(filename, O_WRITE|O_APPEND|O_CREAT);
   file.println(str);
   file.close();
