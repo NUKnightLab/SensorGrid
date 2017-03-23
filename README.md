@@ -38,6 +38,15 @@ See these additional docs:
   * (TBD) WiFi building tutorial
   * (TBD) Sensor integration tutorial
 
+## Warning about GPS!!
+
+Besides module incompatibilities with the GPS module (see below), for the time being, the GPS is considered generally unusable. We are seeing corrupted NMEA strings like the following:
+
+$GPGGA,163232.000,4203.0383,N,08740.4182$0,A$GPGGA,163233.000,4203.0383,N,08740.,33,.$GPGGA,163234.000,4203.0383,N,087
+$GPGGA,164328.000,4203.0390,N,08740.40,0.1$GPGGA,164329.000,4203.0390,N,08740.4132$0,*$GPGGA,164330.000,4203.0390,N,08
+$GPGGA,164846.000,4203.0380,N,08740.41W.48,$GPGGA,164847.000,4203.0380,N,08740.41W488,$GPGGA,164848.000,4203.0380,N,08
+
+One immediate side effect is the parsing out of these longitude values into the wrong E/W hemisphere. There are likely other major issues given the weirdness of these NMEA. It appears as though one string is being over-written by another at an offset. It is not clear if this is something in the current code base or in the KnightLab_GPS library. In general we do not recommend using GPS for the time being.
 
 ## Module Incompatibilities!!
 
@@ -53,7 +62,7 @@ We have yet to figure out how to get these two to share the bus nicely. It seems
 
   * **Possible conflict between WiFi and GPS reliability**
 
-Need to test this out some more, but some early indications that we are not get good GPS data when there is a WiFi module attached. It may be necessary to avoid having WiFi nodes with GPS.
+Need to test this out some more, but some early indications that we are not get good (any?) GPS data when there is a WiFi module attached. It may be necessary to avoid having WiFi nodes with GPS. This should be tested only after resolving the issue of corrupted NMEA strings noted above.
 
 ## Some notes
 TODO: Move these to a module notes doc
