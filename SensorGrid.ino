@@ -143,8 +143,22 @@ void loop() {
         }
         if (oledOn) {
             updateDateTimeDisplay();
-        } else {
-            if (! digitalRead(BUTTON_C)) { // there seems to be a conflict on button A (pin 9)
+        }
+        if (! digitalRead(BUTTON_C)) { // there seems to be a conflict on button A (pin 9)
+            if (oledOn) { // wait for possible shutdown request
+                long start = millis();
+                while (!digitalRead(BUTTON_C)) {
+                    if ( (millis() - start) < 3000) {
+                        display.clearDisplay();
+                        display.clearMsgArea();
+                        display.setCursor(0,16);
+                        display.print("Shutdown OK");
+                        display.display();
+                        while(1);
+                    }
+                    delay(500);
+                }
+            } else {
                 oledOn = true;
                 oledActivated = millis();
                 display.setBattery(batteryLevel());
@@ -152,6 +166,7 @@ void loop() {
                 displayCurrentRTCDateTime();
             }
         }
+        
     }
 
     if (CHARGE_ONLY) {
