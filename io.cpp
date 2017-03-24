@@ -293,6 +293,20 @@ static void _receive() {
         }
         printMessageData();
         flashLED(1, HIGH);
+        if (oledOn) {
+            display.setCursor(50, 16);
+            display.setTextColor(BLACK);
+            display.print("            ");
+            display.display();
+            display.setTextColor(WHITE);
+            display.setCursor(50, 16);
+            display.print(msg->snd); display.print(":");
+            display.print(msg->orig); display.print(".");
+            display.print(msg->id);
+            display.print(" (");display.print(rf95.lastRssi());
+            display.print(")");
+            display.display();
+        }
         if (msg->id <= maxIDs[msg->orig]) {
             Serial.print(F("Ignore old Msg: "));
             Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
