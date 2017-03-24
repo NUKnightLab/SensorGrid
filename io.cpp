@@ -20,10 +20,6 @@ static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
 static char* charBuf = (char*)buf;
 
-static void clearMessage() {
-    message = {0};
-}
-
 static void clearBuffer() {
     memset(buf, 0, msgLen);
 }
@@ -73,9 +69,8 @@ void printMessageData() {
     Serial.print(F("    [9] ")); Serial.println(msg->data[9]);
 }
 
-
 static char* logline() {
-    char str[80];
+    char str[200]; // 155+16 is current theoretical max
     sprintf(str,
         "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
         msg->ver_100, msg->net, msg->snd, msg->orig, msg->id, msg->bat_100, msg->timestamp,
@@ -83,7 +78,6 @@ static char* logline() {
         msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
     return str;
 }
-
 
 static void warnNoGPSConfig() {
     Serial.println(F("WARNING! GPS data specified in data registers, but no GPS_MODULE in config"));
@@ -173,6 +167,7 @@ static void fillCurrentMessageData() {
       msg->id = MSG_ID;
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
       msg->timestamp = rtc.now().unixtime();
+      memcpy(msg->data, {0}, sizeof(msg->data));
 
       if (GPS_MODULE) {
           /* If GPS_MODULE is set in config file, these data will default to the first
@@ -259,6 +254,9 @@ void transmit() {
            * GPS is configured
            *
            * Note: pausing GPS during log writes does not prevent lockup
+           * 
+           * It is possible this lockup was due to (now fixed) insufficient length of logging string. Need
+           * to check if GPS and logger are working together.
            */
       }
 

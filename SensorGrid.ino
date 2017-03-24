@@ -10,6 +10,7 @@ char* GPS_MODULE;
 uint32_t DISPLAY_TIMEOUT;
 uint32_t lastTransmit = 0;
 uint32_t oledActivated = 0;
+bool USE_OLED = true;
 bool oledOn;
 
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
@@ -72,9 +73,11 @@ void setup() {
     DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
     GPS_MODULE = getConfig("GPS_MODULE");
 
-    Serial.print(F("Display timeout set to: ")); Serial.println(DISPLAY_TIMEOUT);
-    setupDisplay();
-    oledOn = true;
+    if (USE_OLED) {
+        Serial.print(F("Display timeout set to: ")); Serial.println(DISPLAY_TIMEOUT);
+        setupDisplay();
+        oledOn = true;
+    }
 
     #if DUST_SENSOR
         //setupDustSensor();
@@ -127,25 +130,27 @@ void loop() {
     Serial.println(F("****"));
     printRam();
 
-    if (oledOn) {
-        display.setBattery(batteryLevel());
-        display.renderBattery();
-    }
-    if ( (DISPLAY_TIMEOUT > 0) && oledOn && ((millis() - oledActivated) > (OLED_TIMEOUT * 1000L)) ) {
-        oledOn = false;
-        display.clearDisplay();
-        display.clearMsgArea();
-        display.display();
-    }
-    if (oledOn) {
-        updateDateTimeDisplay();
-    } else {
-        if (! digitalRead(BUTTON_C)) { // there seems to be a conflict on button A (pin 9)
-            oledOn = true;
-            oledActivated = millis();
+    if (USE_OLED) {
+        if (oledOn) {
             display.setBattery(batteryLevel());
             display.renderBattery();
-            displayCurrentRTCDateTime();
+        }
+        if ( (DISPLAY_TIMEOUT > 0) && oledOn && ((millis() - oledActivated) > (OLED_TIMEOUT * 1000L)) ) {
+            oledOn = false;
+            display.clearDisplay();
+            display.clearMsgArea();
+            display.display();
+        }
+        if (oledOn) {
+            updateDateTimeDisplay();
+        } else {
+            if (! digitalRead(BUTTON_C)) { // there seems to be a conflict on button A (pin 9)
+                oledOn = true;
+                oledActivated = millis();
+                display.setBattery(batteryLevel());
+                display.renderBattery();
+                displayCurrentRTCDateTime();
+            }
         }
     }
 
