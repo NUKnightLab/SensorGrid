@@ -25,8 +25,11 @@ If you can answer yes to these questions:
 
 # Dependencies
 
+  * RadioHead http://www.airspayce.com/mikem/arduino/RadioHead/
   * SDFat https://github.com/greiman/SdFat
   * WiFi101 https://github.com/arduino-libraries/WiFi101
+  * KnightLab_SDConfig https://github.com/NUKnightLab/KnightLab_SDConfig
+  * KnightLab_GPS https://github.com/NUKnightLab/KnightLab_GPS
 
 # Documentation
 
