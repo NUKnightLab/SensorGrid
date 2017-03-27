@@ -283,17 +283,16 @@ static void _receive() {
         printMessageData();
         flashLED(1, HIGH);
         if (oledOn) {
-            display.setCursor(50, 16);
+            display.setCursor(42, 16);
             display.setTextColor(BLACK);
-            display.print("            ");
+            display.print("               ");
             display.display();
             display.setTextColor(WHITE);
-            display.setCursor(50, 16);
+            display.setCursor(42, 16);
             display.print(msg->snd); display.print(":");
             display.print(msg->orig); display.print(".");
             display.print(msg->id);
-            display.print(" (");display.print(rf95.lastRssi());
-            display.print(")");
+            display.print(" ");display.print(rf95.lastRssi());
             display.display();
         }
         if (msg->id <= maxIDs[msg->orig]) {
