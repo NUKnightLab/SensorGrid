@@ -240,24 +240,13 @@ void transmit() {
        * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
        */
 
-      if (!GPS_MODULE && !WiFiPresent && LOGFILE) {
+      if (!WiFiPresent && LOGFILE) {
           char* line = logline();
           Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
           Serial.println(line);
           digitalWrite(SD_CHIP_SELECT_PIN, LOW);
           writeToSD(LOGFILE, line);
           digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
-          /**
-           * !!! A conflict between the GPS wing and Adalogger is causing lockup around this
-           * point. Until this is sorted out, do not use SD log writing on nodes configured for GPS.
-           * The above !GPS_MODULE check prevents the log writing (and resulting lockup) if
-           * GPS is configured
-           *
-           * Note: pausing GPS during log writes does not prevent lockup
-           * 
-           * It is possible this lockup was due to (now fixed) insufficient length of logging string. Need
-           * to check if GPS and logger are working together.
-           */
       }
 
       if (!WiFiPresent || !postToAPI(
