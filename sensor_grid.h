@@ -8,7 +8,6 @@
 #define MAX_NETWORK_SIZE 100
 #define RETRANSMIT_DELAY 1000 // ms. Needed for TX node to receive re-TX as ACK
 #define OLED_TIMEOUT 60 // seconds
-#define NODEBUG  // DEBUG only if connected to serial
 
 /* Module defs */
 #include "modules/wifi/WINC1500.h"

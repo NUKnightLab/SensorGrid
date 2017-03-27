@@ -283,12 +283,10 @@ static void _receive() {
         printMessageData();
         flashLED(1, HIGH);
         if (oledOn) {
-            display.setCursor(42, 16);
-            display.setTextColor(BLACK);
-            display.print("               ");
+            display.fillRect(35, 16, 128, 32, BLACK);
             display.display();
             display.setTextColor(WHITE);
-            display.setCursor(42, 16);
+            display.setCursor(35, 16);
             display.print(msg->snd); display.print(":");
             display.print(msg->orig); display.print(".");
             display.print(msg->id);

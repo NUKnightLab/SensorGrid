@@ -23,9 +23,9 @@ bool WiFiPresent = false;
 
 void setup() {
 
-    #ifdef DEBUG
+    if (false) {
         while (!Serial); // only do this if connected to USB
-    #endif
+    }
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
 
