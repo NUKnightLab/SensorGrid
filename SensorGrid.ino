@@ -5,6 +5,9 @@ static RTC_PCF8523 rtc;
 
 uint32_t NETWORK_ID;
 uint32_t NODE_ID;
+float RF95_FREQ;
+uint8_t TX_POWER;
+float VERSION;
 char* LOGFILE;
 char* GPS_MODULE;
 uint32_t DISPLAY_TIMEOUT;
@@ -12,6 +15,10 @@ uint32_t lastTransmit = 0;
 uint32_t oledActivated = 0;
 bool USE_OLED = true;
 bool oledOn;
+
+bool CHARGE_ONLY = false;
+bool TRANSMIT = true;
+bool RECEIVE = true;
 
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
@@ -69,6 +76,9 @@ void setup() {
         fail(FAILED_CONFIG_FILE_READ);
     NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
     NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
+    RF95_FREQ = (float)(atof(getConfig("RF95_FREQ")));
+    TX_POWER = (uint8_t)(atoi(getConfig("TX_POWER")));
+    VERSION = (float)(atof(getConfig("VERSION")));
     LOGFILE = getConfig("LOGFILE");
     DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
     GPS_MODULE = getConfig("GPS_MODULE");

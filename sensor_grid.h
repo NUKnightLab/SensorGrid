@@ -15,7 +15,6 @@
 // Dust sensors
 #define SHARP_GP2Y1010AU0F 1
 
-#include "config.h"
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_FeatherOLED.h>
@@ -23,6 +22,9 @@
 
 extern uint32_t NETWORK_ID;
 extern uint32_t NODE_ID;
+extern float RF95_FREQ;
+extern uint8_t TX_POWER;
+extern float VERSION;
 extern char* LOGFILE;
 extern char* GPS_MODULE;
 extern bool oledOn;

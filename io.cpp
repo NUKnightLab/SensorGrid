@@ -195,14 +195,16 @@ void transmit() {
       MSG_ID++;
       fillCurrentMessageData();
 
+      /* TODO:
       if (sensorSi7021Module) {
           Serial.println(F("TEMP/HUMIDITY:"));
           msg->data[TEMPERATURE_100] = (int32_t)(sensorSi7021TempHumidity.readTemperature()*100);
           msg->data[HUMIDITY_100] = (int32_t)(sensorSi7021TempHumidity.readHumidity()*100);
           Serial.print(F("    TEMP: ")); Serial.print(msg->data[TEMPERATURE_100]);
           Serial.print(F("; HUMID: ")); Serial.println(msg->data[HUMIDITY_100]);
-      }
+      } */
 
+      /* TODO:
       if (sensorSi1145Module) {
           Serial.println(F("Vis/IR/UV:"));
           msg->data[VISIBLE_LIGHT] = (int32_t)sensorSi1145UV.readVisible();
@@ -211,7 +213,7 @@ void transmit() {
           Serial.print(F("    VIS: ")); Serial.print(msg->data[VISIBLE_LIGHT]);
           Serial.print(F("; IR: ")); Serial.print(msg->data[IR_LIGHT]);
           Serial.print(F("; UV: ")); Serial.println(msg->data[UV_LIGHT]);
-      }
+      } */
 
       #if DUST_SENSOR
           //msg->data[DUST_100] = (int32_t)(readDustSensor()*100);
