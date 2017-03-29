@@ -133,29 +133,8 @@ void displayBatteryLevel() {
 }
 
 void setupDisplay() {
-    /*
-    #if (SSD1306_LCDHEIGHT != 32)
-      #error("Height incorrect, please fix Adafruit_SSD1306.h!");
-    #endif
-    display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
-    display.display();
-    delay(1000);
-    display.clearDisplay();
-    display.display();
-    pinMode(BUTTON_A, INPUT_PULLUP);
-    //pinMode(BUTTON_B, INPUT_PULLUP);
-    pinMode(BUTTON_C, INPUT_PULLUP);
-    display.setTextSize(2);
-    display.setTextColor(WHITE);
-    display.setCursor(0,0);
-    display.println("KnightLab SensorGrid");
-    display.display();
-    delay(2000);
-    display.clearDisplay();
-    display.display();
-    */
     display.init();
-    pinMode(BUTTON_A, INPUT_PULLUP);
+    pinMode(BUTTON_A, INPUT_PULLUP); // we may be having conflicts with this button
     pinMode(BUTTON_C, INPUT_PULLUP);
     display.setBatteryIcon(true);
     display.setBattery(batteryLevel());

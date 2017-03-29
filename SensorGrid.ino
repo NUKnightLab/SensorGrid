@@ -13,7 +13,7 @@ char* GPS_MODULE;
 uint32_t DISPLAY_TIMEOUT;
 uint32_t lastTransmit = 0;
 uint32_t oledActivated = 0;
-bool USE_OLED = true;
+uint8_t OLED;
 bool oledOn;
 
 bool CHARGE_ONLY = false;
@@ -27,6 +27,7 @@ char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
 char* DEFAULT_TX_POWER = "10";
 char* DEFAULT_VERSION = "0.11";
 char* DEFAULT_DISPLAY_TIMEOUT = "60";
+char* DEFAULT_OLED = "0";
 
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
@@ -89,6 +90,7 @@ void setup() {
         LOGFILE = getConfig("LOGFILE");
         DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
         GPS_MODULE = getConfig("GPS_MODULE");
+        OLED = (uint8_t)(atoi(getConfig("OLED")));
     } else {
         Serial.println(F("Using default configs"));
         NETWORK_ID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
@@ -97,9 +99,10 @@ void setup() {
         TX_POWER = (uint8_t)(atoi(DEFAULT_TX_POWER));
         VERSION = (float)(atof(DEFAULT_VERSION));
         DISPLAY_TIMEOUT = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
+        OLED = (uint8_t)(atoi(DEFAULT_OLED));
     }
 
-    if (USE_OLED) {
+    if (OLED) {
         Serial.print(F("Display timeout set to: ")); Serial.println(DISPLAY_TIMEOUT);
         setupDisplay();
         oledOn = true;
@@ -156,7 +159,7 @@ void loop() {
     Serial.println(F("****"));
     printRam();
 
-    if (USE_OLED) {
+    if (OLED) {
         if (oledOn) {
             display.setBattery(batteryLevel());
             display.renderBattery();
