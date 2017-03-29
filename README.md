@@ -38,6 +38,7 @@ See these additional docs:
   * [Planning guide](https://github.com/NUKnightLab/SensorGrid/blob/master/PLANNING.md)
   * [Configurations guide](https://github.com/NUKnightLab/SensorGrid/blob/master/CONFIGURATIONS.md) An attempt to tabulate configurations. Might go away
   * [Building guide](https://github.com/NUKnightLab/SensorGrid/blob/master/BUILD.md)
+  * [Module guide](https://github.com/NUKnightLab/SensorGrid/blob/master/MODULES.md) overview of the parts that makeup nodes
   * (TBD) WiFi building tutorial
   * (TBD) Sensor integration tutorial
 
