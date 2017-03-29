@@ -20,6 +20,14 @@ bool CHARGE_ONLY = false;
 bool TRANSMIT = true;
 bool RECEIVE = true;
 
+/* Config defaults are strings so they can be passed to getConfig */
+char* DEFAULT_NETWORK_ID = "1";
+char* DEFAULT_NODE_ID = "1";
+char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
+char* DEFAULT_TX_POWER = "10";
+char* DEFAULT_VERSION = "0.11";
+char* DEFAULT_DISPLAY_TIMEOUT = "60";
+
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
@@ -72,16 +80,24 @@ void setup() {
     flashLED(2, HIGH);
 
 
-    if (readSDConfig(CONFIG_FILE) > 0)
-        fail(FAILED_CONFIG_FILE_READ);
-    NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
-    NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
-    RF95_FREQ = (float)(atof(getConfig("RF95_FREQ")));
-    TX_POWER = (uint8_t)(atoi(getConfig("TX_POWER")));
-    VERSION = (float)(atof(getConfig("VERSION")));
-    LOGFILE = getConfig("LOGFILE");
-    DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
-    GPS_MODULE = getConfig("GPS_MODULE");
+    if (!readSDConfig(CONFIG_FILE)) {
+        NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
+        NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
+        RF95_FREQ = (float)(atof(getConfig("RF95_FREQ")));
+        TX_POWER = (uint8_t)(atoi(getConfig("TX_POWER")));
+        VERSION = (float)(atof(getConfig("VERSION")));
+        LOGFILE = getConfig("LOGFILE");
+        DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
+        GPS_MODULE = getConfig("GPS_MODULE");
+    } else {
+        Serial.println(F("Using default configs"));
+        NETWORK_ID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
+        NODE_ID = (uint32_t)(atoi(DEFAULT_NODE_ID));
+        RF95_FREQ = (float)(atof(DEFAULT_RF95_FREQ));
+        TX_POWER = (uint8_t)(atoi(DEFAULT_TX_POWER));
+        VERSION = (float)(atof(DEFAULT_VERSION));
+        DISPLAY_TIMEOUT = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
+    }
 
     if (USE_OLED) {
         Serial.print(F("Display timeout set to: ")); Serial.println(DISPLAY_TIMEOUT);
