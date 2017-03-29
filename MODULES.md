@@ -23,8 +23,8 @@ The configuration file on the SD card is the key component to making SensorGrid 
 
 **Required:** No, but strongly recommended (particularly for logging nodes)
 
-The OLED displays some useful information including battery level, date/time, and last-message info. In order to save battery life, the display times out and is normally off. Hold the C button to turn it back on. Hold the C button longer to enter shutdown mode before turning off the node.
+The OLED display shows some useful information including battery level, date/time, and last-message info. In order to save battery life, the display times out and is normally off. Hold the C button to turn it back on. Hold the C button longer to enter shutdown mode before turning off the node.
 
-The OLED configuration defaults to 0. Be sure to set it to 1 in the config file for the OLED to work. Note: a node will not work correctly if OLED is set to 1 but no OLED is present.
+The DISPLAY configuration defaults to 0. Be sure to set it to 1 in the config file for the OLED display to work. Note: a node will not work correctly if DISPLAY is set to 1 but no OLED is present.
 
 Important: There is no available shutdown function if no OLED is intalled and configured. There is a chance of logfile corruption when turning off a node without using the C-button shutdown feature.

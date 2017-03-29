@@ -90,7 +90,7 @@ void setup() {
         LOGFILE = getConfig("LOGFILE");
         DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
         GPS_MODULE = getConfig("GPS_MODULE");
-        OLED = (uint8_t)(atoi(getConfig("OLED")));
+        OLED = (uint8_t)(atoi(getConfig("DISPLAY")));
     } else {
         Serial.println(F("Using default configs"));
         NETWORK_ID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
