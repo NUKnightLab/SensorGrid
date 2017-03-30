@@ -1,6 +1,6 @@
 /* Adapted from:
-	http://arduinodev.woofex.net/2012/12/01/standalone-sharp-dust-sensor/
-	& http://www.howmuchsnow.com/arduino/airquality/
+    http://arduinodev.woofex.net/2012/12/01/standalone-sharp-dust-sensor/
+    & http://www.howmuchsnow.com/arduino/airquality/
 */
 #include "SHARP_GP2Y1010AU0F.h"
 
@@ -9,9 +9,7 @@ float dustSenseCalcVoltage = 0;
 float dustDensity = 0;
 
 void setupDustSensor() {
-    #ifdef DEBUG
-		Serial.println(F("Setting up Dust Sensor"));
-    #endif
+    Serial.println(F("Setting up Dust Sensor"));
     pinMode(DUST_SENSOR_LED_POWER,OUTPUT);
     pinMode(DUST_SENSOR_READ, INPUT);
 }
@@ -25,13 +23,11 @@ float readDustSensor() {
     delayMicroseconds(DUST_SENSOR_SLEEP_TIME);
     dustSenseCalcVoltage = dustSenseVoMeasured * (DUST_SENSOR_VCC / 1024);
     dustDensity = 0.17 * dustSenseCalcVoltage - 0.1;
-    #ifdef DEBUG
-    	Serial.print(F("Raw Signal Value (0-1023): "));
-    	Serial.print(dustSenseVoMeasured);
-    	Serial.print(F(" - Voltage: "));
-    	Serial.print(dustSenseCalcVoltage);
-    	Serial.print(F(" - Dust Density: "));
-    	Serial.println(dustDensity);
-    #endif
-	return dustDensity;
+    Serial.print(F("Raw Signal Value (0-1023): "));
+    Serial.print(dustSenseVoMeasured);
+    Serial.print(F(" - Voltage: "));
+    Serial.print(dustSenseCalcVoltage);
+    Serial.print(F(" - Dust Density: "));
+    Serial.println(dustDensity);
+    return dustDensity;
 }

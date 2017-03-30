@@ -1,8 +1,6 @@
 #ifndef SHARP_GP2Y1010AU0F_H
 #define SHARP_GP2Y1010AU0F_H
 
-
-//#include <Arduino.h>
 #include "../../sensor_grid.h"
 
 #define DUST_SENSOR_LED_POWER 12
