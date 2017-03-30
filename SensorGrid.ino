@@ -108,10 +108,6 @@ void setup() {
         oledOn = true;
     }
 
-    #if DUST_SENSOR
-        //setupDustSensor();
-    #endif
-
     Serial.print(F("BAT: "));
     if (VBATPIN == A7) {
         Serial.println(F("A7"));
