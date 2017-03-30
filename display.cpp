@@ -1,6 +1,5 @@
 #include "display.h"
 
-static RTC_PCF8523 rtc;
 uint8_t lastMinute;
 
 void displayCurrentRTCDate() {

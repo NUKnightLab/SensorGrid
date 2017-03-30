@@ -1,34 +1,35 @@
 #include "SensorGrid.h"
 #include "display.h"
 
-static RTC_PCF8523 rtc;
+/* Config defaults are strings so they can be passed to getConfig */
+static const char* DEFAULT_NETWORK_ID = "1";
+static const char* DEFAULT_NODE_ID = "1";
+static const char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
+static const char* DEFAULT_TX_POWER = "10";
+static const char* DEFAULT_PROTOCOL_VERSION = "0.11";
+static const char* DEFAULT_DISPLAY_TIMEOUT = "60";
+static const char* DEFAULT_OLED = "0";
 
-uint32_t NETWORK_ID;
-uint32_t NODE_ID;
-float RF95_FREQ;
-uint8_t TX_POWER;
-float VERSION;
-char* LOGFILE;
-char* GPS_MODULE;
-uint32_t DISPLAY_TIMEOUT;
+static const bool CHARGE_ONLY = false;
+static const bool TRANSMIT = true;
+static const bool RECEIVE = true;
+
+/* vars set by config file */
+uint32_t networkID;
+uint32_t nodeID;
+float rf95Freq;
+uint8_t txPower;
+float protocolVersion;
+char* logfile;
+char* gpsModule;
+uint32_t displayTimeout;
+uint8_t hasOLED;
+
 uint32_t lastTransmit = 0;
 uint32_t oledActivated = 0;
-uint8_t OLED;
 bool oledOn;
 
-bool CHARGE_ONLY = false;
-bool TRANSMIT = true;
-bool RECEIVE = true;
-
-/* Config defaults are strings so they can be passed to getConfig */
-char* DEFAULT_NETWORK_ID = "1";
-char* DEFAULT_NODE_ID = "1";
-char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
-char* DEFAULT_TX_POWER = "10";
-char* DEFAULT_VERSION = "0.11";
-char* DEFAULT_DISPLAY_TIMEOUT = "60";
-char* DEFAULT_OLED = "0";
-
+RTC_PCF8523 rtc;
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
 bool sensorSi7021Module = false;
@@ -82,28 +83,28 @@ void setup() {
 
 
     if (!readSDConfig(CONFIG_FILE)) {
-        NETWORK_ID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
-        NODE_ID = (uint32_t)(atoi(getConfig("NODE_ID")));
-        RF95_FREQ = (float)(atof(getConfig("RF95_FREQ")));
-        TX_POWER = (uint8_t)(atoi(getConfig("TX_POWER")));
-        VERSION = (float)(atof(getConfig("VERSION")));
-        LOGFILE = getConfig("LOGFILE");
-        DISPLAY_TIMEOUT = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
-        GPS_MODULE = getConfig("GPS_MODULE");
-        OLED = (uint8_t)(atoi(getConfig("DISPLAY")));
+        networkID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
+        nodeID = (uint32_t)(atoi(getConfig("NODE_ID")));
+        rf95Freq = (float)(atof(getConfig("RF95_FREQ")));
+        txPower = (uint8_t)(atoi(getConfig("TX_POWER")));
+        protocolVersion = (float)(atof(getConfig("PROTOCOL_VERSION")));
+        logfile = getConfig("LOGFILE");
+        displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
+        gpsModule = getConfig("GPS_MODULE");
+        hasOLED = (uint8_t)(atoi(getConfig("DISPLAY")));
     } else {
         Serial.println(F("Using default configs"));
-        NETWORK_ID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
-        NODE_ID = (uint32_t)(atoi(DEFAULT_NODE_ID));
-        RF95_FREQ = (float)(atof(DEFAULT_RF95_FREQ));
-        TX_POWER = (uint8_t)(atoi(DEFAULT_TX_POWER));
-        VERSION = (float)(atof(DEFAULT_VERSION));
-        DISPLAY_TIMEOUT = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
-        OLED = (uint8_t)(atoi(DEFAULT_OLED));
+        networkID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
+        nodeID = (uint32_t)(atoi(DEFAULT_NODE_ID));
+        rf95Freq = (float)(atof(DEFAULT_RF95_FREQ));
+        txPower = (uint8_t)(atoi(DEFAULT_TX_POWER));
+        protocolVersion = (float)(atof(DEFAULT_PROTOCOL_VERSION));
+        displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
+        hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
     }
 
-    if (OLED) {
-        Serial.print(F("Display timeout set to: ")); Serial.println(DISPLAY_TIMEOUT);
+    if (hasOLED) {
+        Serial.print(F("Display timeout set to: ")); Serial.println(displayTimeout);
         setupDisplay();
         oledOn = true;
     }
@@ -125,7 +126,7 @@ void setup() {
     pinMode(RFM95_RST, OUTPUT);
     digitalWrite(RFM95_RST, HIGH);
 
-    if (GPS_MODULE) {
+    if (gpsModule) {
         setupGPS();
     } else {
         Serial.println(F("No GPS_MODULE specified in config .. Skipping GPS setup"));
@@ -159,12 +160,12 @@ void loop() {
     Serial.println(F("****"));
     printRam();
 
-    if (OLED) {
+    if (hasOLED) {
         if (oledOn) {
             display.setBattery(batteryLevel());
             display.renderBattery();
         }
-        if ( (DISPLAY_TIMEOUT > 0) && oledOn && ((millis() - oledActivated) > (OLED_TIMEOUT * 1000L)) ) {
+        if ( (displayTimeout > 0) && oledOn && ((millis() - oledActivated) > (displayTimeout * 1000L)) ) {
             oledOn = false;
             display.clearDisplay();
             display.clearMsgArea();

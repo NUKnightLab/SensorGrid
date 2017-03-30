@@ -17,7 +17,7 @@
 
 #include "SHARP_GP2Y1010AU0F.h"
 
-extern RH_RF95 rf95;
+//extern RH_RF95 rf95;
 
 void setupRadio();
 void printMessageData();

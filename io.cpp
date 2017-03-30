@@ -4,11 +4,10 @@
 //#include <SD.h>
 #include <SdFat.h>
 static SdFat SD;
-static RTC_PCF8523 rtc;
 
 #define SD_CHIP_SELECT_PIN 10
 
-RH_RF95 rf95(RFM95_CS, RFM95_INT);
+static RH_RF95 rf95(RFM95_CS, RFM95_INT);
 static int maxIDs[MAX_NETWORK_SIZE] = {0};
 static uint32_t MSG_ID = 0;
 static uint32_t lastAck = 0;
@@ -33,11 +32,11 @@ void setupRadio() {
         fail(LORA_INIT_FAIL);
     }
     Serial.println(F("LoRa OK!"));
-    if (!rf95.setFrequency(RF95_FREQ)) {
+    if (!rf95.setFrequency(rf95Freq)) {
         fail(LORA_FREQ_FAIL);
     }
-    Serial.print(F("FREQ: ")); Serial.println(RF95_FREQ);
-    rf95.setTxPower(TX_POWER, false);
+    Serial.print(F("FREQ: ")); Serial.println(rf95Freq);
+    rf95.setTxPower(txPower, false);
     delay(100);
 }
 
@@ -86,26 +85,26 @@ static void warnNoGPSConfig() {
 static uint32_t getDataByTypeName(char* type) {
     Serial.print("Getting data for type: "); Serial.println(type);
     if (!strcmp(type, "GPS_FIX")) {
-        if (!GPS_MODULE) warnNoGPSConfig();
+        if (!gpsModule) warnNoGPSConfig();
         return GPS.fix;
     }
     if (!strcmp(type, "GPS_SATS")) {
-        if (!GPS_MODULE) warnNoGPSConfig();
+        if (!gpsModule) warnNoGPSConfig();
         return GPS.satellites;
     }
     if (!strcmp(type, "GPS_SATFIX")) {
-        if (!GPS_MODULE) warnNoGPSConfig();
+        if (!gpsModule) warnNoGPSConfig();
         if (GPS.fix) return GPS.satellites;
         return -1 * GPS.satellites;
     }
     if (!strcmp(type, "GPS_LAT_DEG")){
-        if (!GPS_MODULE) warnNoGPSConfig();
+        if (!gpsModule) warnNoGPSConfig();
         Serial.println(GPS.lastNMEA());
         Serial.print("LATITUDE "); Serial.println(GPS.latitudeDegrees, DEC);
         return (int32_t)(roundf(GPS.latitudeDegrees * 1000));
     }
     if (!strcmp(type, "GPS_LON_DEG")) {
-        if (!GPS_MODULE) warnNoGPSConfig();
+        if (!gpsModule) warnNoGPSConfig();
         Serial.println(GPS.lastNMEA()); // These are looking pretty ugly. Looks like a bad
                                         // overwrite of NMEA is corrupting the string from
                                         // around the end of the longitude field on GPGGA strings
@@ -173,17 +172,17 @@ static uint32_t getRegisterData(char* registerName) {
 
 static void fillCurrentMessageData() {
       clearBuffer();
-      uint16_t ver = (uint16_t)(roundf(VERSION * 100));
+      uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
       msg->ver_100 = ver;
-      msg->net = NETWORK_ID;
-      msg->snd = NODE_ID;
-      msg->orig = NODE_ID;
+      msg->net = networkID;
+      msg->snd = nodeID;
+      msg->orig = nodeID;
       msg->id = MSG_ID;
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
       msg->timestamp = rtc.now().unixtime();
       memcpy(msg->data, {0}, sizeof(msg->data));
 
-      if (GPS_MODULE) {
+      if (gpsModule) {
           /* If GPS_MODULE is set in config file, these data will default to the first
            *  3 data registers, but other configs can be set in the config file.
            */
@@ -230,12 +229,12 @@ void transmit() {
        * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
        */
 
-      if (!WiFiPresent && LOGFILE) {
+      if (!WiFiPresent && logfile) {
           char* line = logline();
           Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
           Serial.println(line);
           digitalWrite(SD_CHIP_SELECT_PIN, LOW);
-          writeToSD(LOGFILE, line);
+          writeToSD(logfile, line);
           digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
       }
 
@@ -255,16 +254,16 @@ static void _receive() {
         Serial.print(F(")"));
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.println(rf95.lastRssi(), DEC);
-        uint16_t ver = (uint16_t)(roundf(VERSION * 100));
+        uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
         if (msg->ver_100 != ver) {
             Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100/100);
             return;
         }
-        if (msg->net > 0 && msg->net != NETWORK_ID) {
+        if (msg->net > 0 && msg->net != networkID) {
             Serial.println(F("SKIP: out-of-network msg"));
             return;
         }
-        if ( msg->orig == NODE_ID) {
+        if ( msg->orig == nodeID) {
             Serial.print(F("SKIP: own msg from: ")); Serial.println(msg->snd);
             Serial.print(F("LOST ACK: ")); Serial.println(msg->id - (lastAck+1));
             lastAck = msg->id;
@@ -298,7 +297,7 @@ static void _receive() {
                 maxIDs[msg->orig] = 0;
             }
         } else {
-            msg->snd = NODE_ID;
+            msg->snd = nodeID;
             if (!WiFiPresent || !postToAPI(
                   getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
                   getConfig("API_HOST"), atoi(getConfig("API_PORT")),
@@ -321,7 +320,7 @@ void receive() {
      */
     clearBuffer();
     int delta = 1000 + rand() % 1000;
-    Serial.print(F("NODE ")); Serial.print(NODE_ID);
+    Serial.print(F("NODE ")); Serial.print(nodeID);
     Serial.print(F(" LISTEN: ")); Serial.print(delta);
     Serial.println(F("ms"));
     if (rf95.waitAvailableTimeout(delta)) {

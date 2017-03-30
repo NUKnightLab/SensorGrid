@@ -2,32 +2,42 @@
 #define SENSORGRID_H
 
 #include <KnightLab_SDConfig.h>
-#define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
-
-//#define NONE 0
-#define MAX_NETWORK_SIZE 100
-#define RETRANSMIT_DELAY 1000 // ms. Needed for TX node to receive re-TX as ACK
-#define OLED_TIMEOUT 60 // seconds
-
-/* Module defs */
-#include "modules/wifi/WINC1500.h"
-
-// Dust sensors
-#define SHARP_GP2Y1010AU0F 1
 
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_FeatherOLED.h>
 #include <RTClib.h>
+#include "Adafruit_SI1145.h"
+#include "Adafruit_Si7021.h"
+#include "io.h"
+#include <KnightLab_GPS.h>
 
-extern uint32_t NETWORK_ID;
-extern uint32_t NODE_ID;
-extern float RF95_FREQ;
-extern uint8_t TX_POWER;
-extern float VERSION;
-extern char* LOGFILE;
-extern char* GPS_MODULE;
+/* Module defs */
+#include "modules/wifi/WINC1500.h"
+
+#define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
+#define MAX_NETWORK_SIZE 100
+#define RETRANSMIT_DELAY 1000 // ms. Needed for TX node to receive re-TX as ACK
+#define LED 13
+#define VBATPIN A7
+#define BUTTON_A 9
+#define BUTTON_B 6
+#define BUTTON_C 5
+
+extern uint32_t networkID;
+extern uint32_t nodeID;
+extern float rf95Freq;
+extern uint8_t txPower;
+extern float protocolVersion;
+extern char* logfile;
+extern char* gpsModule;
 extern bool oledOn;
+extern bool WiFiPresent;
+extern Adafruit_Si7021 sensorSi7021TempHumidity;
+extern Adafruit_SI1145 sensorSi1145UV;
+extern RTC_PCF8523 rtc;
+extern bool sensorSi7021Module;
+extern bool sensorSi1145Module;
 
 enum ERRORS {
      NO_ERR,
@@ -38,15 +48,8 @@ enum ERRORS {
      FAILED_CONFIG_FILE_READ
 };
 
-#include "Adafruit_SI1145.h"
-#include "Adafruit_Si7021.h"
-
-#include "io.h"
-#include <KnightLab_GPS.h>
-
 #if defined(ARDUINO_ARCH_SAMD)
 
-//extern Adafruit_SSD1306 display;
 extern Adafruit_FeatherOLED display;
 
 typedef struct Message {
@@ -62,8 +65,6 @@ typedef struct Message {
 #else
     #error Unsupported architecture
 #endif
-extern bool WiFiPresent;
-
 
 /*
  * TODO on M0:
@@ -76,16 +77,6 @@ Serial.print("Address of str $"); Serial.println((int)&str, HEX);
 If the address is $2000000 or larger, its in SRAM. If the address is between $0000 and $3FFFF Then it is in FLASH
 */
 
-#define LED 13
-#define BUTTON_A 9
-#define BUTTON_B 6
-#define BUTTON_C 5
-
-#if defined(__AVR_ATmega32U4__)
-    #define VBATPIN A9
-#elif defined(ARDUINO_ARCH_SAMD)
-    #define VBATPIN A7
-#endif
 
 class __FlashStringHelper;
 #define F(string_literal) (reinterpret_cast<const __FlashStringHelper*>(PSTR(string_literal)))
@@ -94,10 +85,5 @@ void fail(enum ERRORS err);
 void flashLED(int times, int endState);
 float batteryLevel();
 void printRam();
-
-extern Adafruit_Si7021 sensorSi7021TempHumidity;
-extern Adafruit_SI1145 sensorSi1145UV;
-extern bool sensorSi7021Module;
-extern bool sensorSi1145Module;
 
 #endif
