@@ -1,7 +1,7 @@
 #ifndef SHARP_GP2Y1010AU0F_H
 #define SHARP_GP2Y1010AU0F_H
 
-#include "../../sensor_grid.h"
+#include "SensorGrid.h"
 
 #define DUST_SENSOR_LED_POWER 12
 #define DUST_SENSOR_READ A0

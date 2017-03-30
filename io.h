@@ -1,7 +1,7 @@
 #ifndef IO_H
 #define IO_H
 
-#include "sensor_grid.h"
+#include "SensorGrid.h"
 #include <RH_RF95.h>
 /* Modules */
 
@@ -15,9 +15,7 @@
     #define RFM95_INT 3
 #endif
 
-#if DUST_SENSOR == SHARP_GP2Y1010AU0F
-    #include "modules/dust/SHARP_GP2Y1010AU0F.h"
-#endif
+#include "SHARP_GP2Y1010AU0F.h"
 
 extern RH_RF95 rf95;
 

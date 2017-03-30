@@ -1,10 +1,10 @@
-#include "sensor_grid.h"
+#include "SensorGrid.h"
 
 #if defined(__AVR_ATmega32U4__)
 static int _freeRam () {
-  extern int __heap_start, *__brkval; 
-  int v; 
-  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval); 
+  extern int __heap_start, *__brkval;
+  int v;
+  return (int) &v - (__brkval == 0 ? (int) &__heap_start : (int) __brkval);
 }
 #elif defined(ARDUINO_ARCH_SAMD)
 extern "C" char *sbrk(int i);

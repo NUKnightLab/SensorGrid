@@ -1,4 +1,4 @@
-#include "sensor_grid.h"
+#include "SensorGrid.h"
 #include "display.h"
 
 static RTC_PCF8523 rtc;

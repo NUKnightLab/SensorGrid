@@ -1,4 +1,3 @@
-#include "sensor_grid.h"
 #include "io.h"
 
 #include <SPI.h>
@@ -209,12 +208,6 @@ static void fillCurrentMessageData() {
 void transmit() {
       MSG_ID++;
       fillCurrentMessageData();
-
-      #if DUST_SENSOR
-          //msg->data[DUST_100] = (int32_t)(readDustSensor()*100);
-          Serial.print(F("DUST: ")); Serial.println((float)msg->data[DUST_100]/100);
-      #endif
-
       printMessageData();
 
       /**

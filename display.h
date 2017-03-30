@@ -1,7 +1,7 @@
 #ifndef _DISPLAY_H
 #define _DISPLAY_H
 
-#include "sensor_grid.h"
+#include "SensorGrid.h"
 
 
 void displayCurrentRTCDateTime();
