@@ -107,16 +107,16 @@ Buttons:
   * 13 Red LED on main Feather board (LoRa)
   * A0 (proposed) Dust Sensor Read
   * A7 Battery read on M0
-  
+
 ### Adalogger pins
   * 3.3V & GND: used for both SD and RTC
-  
+
   #### RTC
   * SCL: RTC -- I2C clock pin, connect to your microcontrollers I2C clock line. This pin has a 10K pullup resistor to 3.3V
   * SDA: RTC -- I2C data pin, connect to your microcontrollers I2C data line. This pin has a 10K pullup resistor to 3.3V
-  
+
   NOTE: You MUST have a coin cell installed for the RTC to work, if there is no coin cell, it will act strangely and possibly hang the Arduino when you try to use it, so ALWAYS make SURE there's a battery installed, even if it's a dead battery.
-  
+
   #### SD Card
   * SPI Clock (SCK) - output from feather to wing
   * SPI Master Out Slave In (MOSI) - output from feather to wing
@@ -138,7 +138,7 @@ From https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module
   * EN - this is the 3.3V regulator's enable pin. It's pulled up, so connect to ground to disable the 3.3V regulator
   * 3V - this is the output from the 3.3V regulator, it can supply 500mA peak
   * #0 / RX - GPIO #0, also receive (input) pin for Serial1 (hardware UART), also can be analog input
-  * #1 / TX - GPIO #1, also transmit (output) pin for Serial1, also can be analog input 
+  * #1 / TX - GPIO #1, also transmit (output) pin for Serial1, also can be analog input
   * #20 / SDA - GPIO #20, also the I2C (Wire) data pin. There's no pull up on this pin by default so when using with I2C, you may need a 2.2K-10K pullup.
   * #21 / SCL - GPIO #21, also the I2C (Wire) clock pin. There's no pull up on this pin by default so when using with I2C, you may need a 2.2K-10K pullup.
   * #5 - GPIO #5
@@ -151,7 +151,7 @@ From https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module
   * A0 - This pin is analog input A0 but is also an analog output due to having a DAC (digital-to-analog converter). You can set the raw voltage to anything from 0 to 3.3V, unlike PWM outputs this is a true analog output
   * A1 thru A5 - These are each analog input as well as digital I/O pins.
   * SCK/MOSI/MISO (GPIO 24/23/22)- These are the hardware SPI pins, you can use them as everyday GPIO pins (but recommend keeping them free as they are best used for hardware SPI connections for high speed.
-  
+
   #### Radio control pins:
   * #8 - used as the radio CS (chip select) pin (pull HIGH when not using radio!! Must be HIGH during Adalogger read/writes)
   * #3 - used as the radio GPIO0 / IRQ (interrupt request) pin.
@@ -170,7 +170,7 @@ The CS pin (#8) does not have a pullup built in so be sure to set this pin HIGH 
   * EN - this is the 3.3V regulator's enable pin. It's pulled up, so connect to ground to disable the 3.3V regulator
   * 3V - this is the output from the 3.3V regulator, it can supply 600mA peak
   * #0 / RX - GPIO #0, also receive (input) pin for Serial1 (hardware UART), also can be analog input
-  * #1 / TX - GPIO #1, also transmit (output) pin for Serial1, also can be analog input 
+  * #1 / TX - GPIO #1, also transmit (output) pin for Serial1, also can be analog input
   * #20 / SDA - GPIO #20, also the I2C (Wire) data pin. There's no pull up on this pin by default so when using with I2C, you may need a 2.2K-10K pullup.
   * #21 / SCL - GPIO #21, also the I2C (Wire) clock pin. There's no pull up on this pin by default so when using with I2C, you may need a 2.2K-10K pullup.
   * #5 - GPIO #5
@@ -190,4 +190,4 @@ The CS pin (#8) does not have a pullup built in so be sure to set this pin HIGH 
   * MOSI / MISO /SCK - the SPI pins are also used for WiFi module communication
   * Green LED - the top LED, in green, will light when the module has connected to an SSID
   * Yellow LED - the bottom LED, in yellow, will blink during data transfer
-  
+

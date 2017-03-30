@@ -1,23 +1,13 @@
 #ifndef IO_H
 #define IO_H
 
-#include "SensorGrid.h"
 #include <RH_RF95.h>
-/* Modules */
-
-#if defined(__AVR_ATmega32U4__)
-    #define RFM95_CS 8
-    #define RFM95_RST 4
-    #define RFM95_INT 7
-#elif defined(ARDUINO_ARCH_SAMD)
-    #define RFM95_CS 8
-    #define RFM95_RST 4
-    #define RFM95_INT 3
-#endif
-
+#include "SensorGrid.h"
 #include "SHARP_GP2Y1010AU0F.h"
 
-//extern RH_RF95 rf95;
+#define RFM95_CS 8
+#define RFM95_RST 4
+#define RFM95_INT 3
 
 void setupRadio();
 void printMessageData();

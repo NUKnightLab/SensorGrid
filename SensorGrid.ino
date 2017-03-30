@@ -81,7 +81,6 @@ void setup() {
 
     flashLED(2, HIGH);
 
-
     if (!readSDConfig(CONFIG_FILE)) {
         networkID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
         nodeID = (uint32_t)(atoi(getConfig("NODE_ID")));
@@ -196,7 +195,7 @@ void loop() {
                 displayCurrentRTCDateTime();
             }
         }
-        
+
     }
 
     if (CHARGE_ONLY) {

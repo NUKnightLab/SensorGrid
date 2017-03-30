@@ -91,7 +91,7 @@ Planning your layers includes:
   1. Single-stack: Build the WiFi module on a doubler and convert to double-stack configuration
   2. Double-stack: Build the WiFi module on a doubler. This is your base
   3. Triple-stack: Build the WiFi module on a tripler. This is your base
-    - No extra proto board (single-stack) use a double-stack WiFi and convert to 
+    - No extra proto board (single-stack) use a double-stack WiFi and convert to
 
 #### 3. Choose your headers
 

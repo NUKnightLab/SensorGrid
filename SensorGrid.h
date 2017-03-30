@@ -1,16 +1,15 @@
 #ifndef SENSORGRID_H
 #define SENSORGRID_H
 
-#include <KnightLab_SDConfig.h>
-
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#include <Adafruit_SI1145.h>
+#include <Adafruit_Si7021.h>
 #include <Adafruit_FeatherOLED.h>
 #include <RTClib.h>
-#include "Adafruit_SI1145.h"
-#include "Adafruit_Si7021.h"
-#include "io.h"
+#include <KnightLab_SDConfig.h>
 #include <KnightLab_GPS.h>
+#include "io.h"
 
 /* Module defs */
 #include "modules/wifi/WINC1500.h"
@@ -76,7 +75,6 @@ You can verify where data is stored by printing out the address:
 Serial.print("Address of str $"); Serial.println((int)&str, HEX);
 If the address is $2000000 or larger, its in SRAM. If the address is between $0000 and $3FFFF Then it is in FLASH
 */
-
 
 class __FlashStringHelper;
 #define F(string_literal) (reinterpret_cast<const __FlashStringHelper*>(PSTR(string_literal)))

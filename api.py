@@ -8,7 +8,8 @@ history = []
 
 PROTOCOL_VERSIONS = {
     #'0.11': '<HHHHIHIBBBBBB?xxxiiBxxx10i'
-    '0.11': '<HHHHIHxxIBBBBBB?xiiBxxx10i'
+    #'0.11': '<HHHHIHxxIBBBBBB?xiiBxxx10i'
+    '0.11': '<HHHHIHxxI10i'
 }
 PROTOCOL = PROTOCOL_VERSIONS['0.11']
 
@@ -25,13 +26,15 @@ def data():
     message = request.get_data(cache=False)
     #print('-'*30)
     #print("REC'd message len: %d" % len(message))
-    ver_100, net, snd, orig, msg_id, bat_100, timestamp, year, month, day, hour, minute, seconds, \
-        fix, lat_1000, lon_1000, sats, \
+    #ver_100, net, snd, orig, msg_id, bat_100, timestamp, year, month, day, hour, minute, seconds, \
+    #    fix, lat_1000, lon_1000, sats, \
+    #    *data = unpack(PROTOCOL, message)
+    ver_100, net, snd, orig, msg_id, bat_100, timestamp, \
         *data = unpack(PROTOCOL, message)
     ver = ver_100 / 100.0
     bat = bat_100 / 100.0
-    lat = lat_1000 / 1000.0
-    lon = lon_1000 / 1000.0
+    #lat = lat_1000 / 1000.0
+    #lon = lon_1000 / 1000.0
     #print((ver, net, snd, orig, msg_id, bat))
     #print('%d-%d-%dT%d:%d:%d' % (year, month, day, hour, minute, seconds))
     #print((fix, lat, lon, sats))
@@ -44,10 +47,10 @@ def data():
         'bat': bat,
         'timestamp': timestamp,
         'datetime': str(datetime.datetime.fromtimestamp(timestamp)),
-        'fix': fix,
-        'lat': lat,
-        'lon': lon,
-        'sats': sats,
+        #'fix': fix,
+        #'lat': lat,
+        #'lon': lon,
+        #'sats': sats,
         'data': str(data)
     })
     #print(history[-1])
@@ -58,7 +61,7 @@ def data():
 @app.route('/report')
 def report():
     return '<br/>'.join(
-        ['%s:: %s %sv %s %s (%s %s,%s %s) %s' % (r['dt'], r['orig'], r['bat'], r['timestamp'], r['datetime'], r['fix'], r['lat'], r['lon'], r['sats'], r['data']) for r in reversed(history)])
+        ['%s:: %s %sv %s %s %s' % (r['dt'], r['orig'], r['bat'], r['timestamp'], r['datetime'], r['data']) for r in reversed(history)])
 
 
 if __name__ == '__main__':

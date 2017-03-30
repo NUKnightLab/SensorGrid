@@ -3,7 +3,6 @@
 
 #include "SensorGrid.h"
 
-
 void displayCurrentRTCDateTime();
 void setDate();
 void setupDisplay();
