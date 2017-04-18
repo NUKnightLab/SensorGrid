@@ -29,7 +29,19 @@ If you can answer yes to these questions:
   * SDFat https://github.com/greiman/SdFat
   * WiFi101 https://github.com/arduino-libraries/WiFi101
   * KnightLab_SDConfig https://github.com/NUKnightLab/KnightLab_SDConfig
+  * AdaFruit_GPS https://github.com/adafruit/Adafruit_GPS
   * KnightLab_GPS https://github.com/NUKnightLab/KnightLab_GPS
+  * AdaFruit-GFX-Library https://github.com/adafruit/Adafruit-GFX-Library
+  * AdaFruit_SSD1306 https://github.com/adafruit/Adafruit_SSD1306
+  * AdaFruit Feather_OLED https://github.com/adafruit/Adafruit_FeatherOLED
+  * AdaFruit RTCLib https://github.com/adafruit/RTClib
+  
+TODO: is it possible to make these optional?:
+  * WiFi101
+  * AdaFruit_GPS
+  * KnightLab_GPS
+  * AdaFruit_SSD1306
+  
 
 # Documentation
 
