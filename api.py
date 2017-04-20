@@ -7,8 +7,6 @@ from struct import *
 history = []
 
 PROTOCOL_VERSIONS = {
-    #'0.11': '<HHHHIHIBBBBBB?xxxiiBxxx10i'
-    #'0.11': '<HHHHIHxxIBBBBBB?xiiBxxx10i'
     '0.11': '<HHHHIHxxI10i'
 }
 PROTOCOL = PROTOCOL_VERSIONS['0.11']
@@ -23,22 +21,21 @@ def main():
 def data():
     # we should be checking data length. See Flask docs:
     # http://werkzeug.pocoo.org/docs/0.11/wrappers/#werkzeug.wrappers.BaseRequest.get_data
-    message = request.get_data(cache=False)
-    #print('-'*30)
-    #print("REC'd message len: %d" % len(message))
-    #ver_100, net, snd, orig, msg_id, bat_100, timestamp, year, month, day, hour, minute, seconds, \
-    #    fix, lat_1000, lon_1000, sats, \
-    #    *data = unpack(PROTOCOL, message)
-    ver_100, net, snd, orig, msg_id, bat_100, timestamp, \
-        *data = unpack(PROTOCOL, message)
-    ver = ver_100 / 100.0
-    bat = bat_100 / 100.0
-    #lat = lat_1000 / 1000.0
-    #lon = lon_1000 / 1000.0
-    #print((ver, net, snd, orig, msg_id, bat))
-    #print('%d-%d-%dT%d:%d:%d' % (year, month, day, hour, minute, seconds))
-    #print((fix, lat, lon, sats))
-    #print(data)
+    if request.json.get('ver') == '0.11':
+        # json encoded message
+        msg = request.json
+        ( ver, net, snd, orig, msg_id, bat, timestamp, data) = (
+            float(msg['ver']), int(msg['net']), int(msg['snd']),
+            int(msg['orig']), int(msg['id']),
+            float(msg['bat']), int(msg['timestamp']),
+            [int(d) for d in msg['data']])
+    else:
+        # raw struct message
+        msg = request.get_data(cache=False)
+        ver_100, net, snd, orig, msg_id, bat_100, timestamp, \
+            *data = unpack(PROTOCOL, msg)
+        ver = ver_100 / 100.0
+        bat = bat_100 / 100.0
     sys.stdout.flush()
     global history
     history.append({
@@ -47,13 +44,8 @@ def data():
         'bat': bat,
         'timestamp': timestamp,
         'datetime': str(datetime.datetime.fromtimestamp(timestamp)),
-        #'fix': fix,
-        #'lat': lat,
-        #'lon': lon,
-        #'sats': sats,
         'data': str(data)
     })
-    #print(history[-1])
     history = history[-30:]
     return 'OK'
 

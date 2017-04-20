@@ -70,8 +70,8 @@ void printMessageData() {
 static char* logline() {
     char str[200]; // 155+16 is current theoretical max
     sprintf(str,
-        "%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
-        msg->ver_100, msg->net, msg->snd, msg->orig, msg->id, msg->bat_100, msg->timestamp,
+        "%4.2f,%i,%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+        (float)(msg->ver_100)/100, msg->net, msg->snd, msg->orig, msg->id, (float)(msg->bat_100)/100, msg->timestamp,
         msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
         msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
     return str;
