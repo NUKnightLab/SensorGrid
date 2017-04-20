@@ -12,7 +12,7 @@
 #include "io.h"
 
 /* Module defs */
-#include "modules/wifi/WINC1500.h"
+#include "WINC1500.h"
 
 #define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
 #define MAX_NETWORK_SIZE 100
