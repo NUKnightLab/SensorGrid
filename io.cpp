@@ -126,8 +126,11 @@ static uint32_t getDataByTypeName(char* type) {
     if (!strcmp(type, "SI1145_UV")) {
         return (int32_t)sensorSi1145UV.readUV();
     }
-    if (!strcmp(type, "FAKE_3")) {
-        return 3333333;
+    // if (!strcmp(type, "FAKE_3")) {
+    //     return 3333333;
+    // }
+    if (!strcmp(type, "SHARP_GP2Y1010AU0F_DUST")) {
+        return (int32_t)(readDustSensor()*100);
     }
     if (!strcmp(type, "FAKE_4")) {
         return 4444444;

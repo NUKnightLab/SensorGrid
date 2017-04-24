@@ -40,7 +40,7 @@ bool WiFiPresent = false;
 
 void setup() {
 
-    if (false) {
+    if (true) {
         while (!Serial); // only do this if connected to USB
     }
     Serial.begin(9600);
@@ -127,7 +127,14 @@ void setup() {
         Serial.println(F("No GPS_MODULE specified in config .. Skipping GPS setup"));
     }
     setupRadio();
-    WiFiPresent = setupWiFi(getConfig("WIFI_SSID"), getConfig("WIFI_PASS"));
+    char* ssid = getConfig("WIFI_SSID");
+    if (ssid) {
+      Serial.println(F("ssid is valid"));
+      WiFiPresent = setupWiFi(getConfig("WIFI_SSID", ""), getConfig("WIFI_PASS", ""));
+    } else {
+      Serial.println(F("ssid is null"));
+      WiFiPresent = false;
+    }
 
     Serial.print(F("Si7021 "));
     if (sensorSi7021TempHumidity.begin()) {
