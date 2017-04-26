@@ -9,6 +9,8 @@ static const char* DEFAULT_TX_POWER = "10";
 static const char* DEFAULT_PROTOCOL_VERSION = "0.11";
 static const char* DEFAULT_DISPLAY_TIMEOUT = "60";
 static const char* DEFAULT_OLED = "0";
+static char* DEFAULT_LOG_FILE = "sensorgrid.log";
+static char* DEFAULT_LOG_MODE = "NODE"; // NONE, NODE, NETWORK, ALL
 
 static const bool CHARGE_ONLY = false;
 static const bool TRANSMIT = true;
@@ -21,6 +23,7 @@ float rf95Freq;
 uint8_t txPower;
 float protocolVersion;
 char* logfile;
+char* logMode;
 char* gpsModule;
 uint32_t displayTimeout;
 uint8_t hasOLED;
@@ -40,7 +43,7 @@ bool WiFiPresent = false;
 
 void setup() {
 
-    if (true) {
+    if (false) {
         while (!Serial); // only do this if connected to USB
     }
     Serial.begin(9600);
@@ -87,7 +90,8 @@ void setup() {
         rf95Freq = (float)(atof(getConfig("RF95_FREQ")));
         txPower = (uint8_t)(atoi(getConfig("TX_POWER")));
         protocolVersion = (float)(atof(getConfig("PROTOCOL_VERSION")));
-        logfile = getConfig("LOGFILE");
+        logfile = getConfig("LOGFILE", DEFAULT_LOG_FILE);
+        logMode = getConfig("LOGMODE", DEFAULT_LOG_MODE);
         displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
         gpsModule = getConfig("GPS_MODULE");
         hasOLED = (uint8_t)(atoi(getConfig("DISPLAY")));
@@ -98,6 +102,8 @@ void setup() {
         rf95Freq = (float)(atof(DEFAULT_RF95_FREQ));
         txPower = (uint8_t)(atoi(DEFAULT_TX_POWER));
         protocolVersion = (float)(atof(DEFAULT_PROTOCOL_VERSION));
+        logfile = DEFAULT_LOG_FILE;
+        logMode = DEFAULT_LOG_MODE;
         displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
         hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
     }

@@ -29,6 +29,7 @@ extern float rf95Freq;
 extern uint8_t txPower;
 extern float protocolVersion;
 extern char* logfile;
+extern char* logMode;
 extern char* gpsModule;
 extern bool oledOn;
 extern bool WiFiPresent;

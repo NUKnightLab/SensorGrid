@@ -77,6 +77,15 @@ static char* logline() {
     return str;
 }
 
+static void writeLogLine() {
+    char* line = logline();
+    Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
+    Serial.println(line);
+    digitalWrite(SD_CHIP_SELECT_PIN, LOW);
+    writeToSD(logfile, line);
+    digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+}
+
 static void warnNoGPSConfig() {
     Serial.println(F("WARNING! GPS data specified in data registers, but no GPS_MODULE in config"));
 }
@@ -232,13 +241,11 @@ void transmit() {
        * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
        */
 
-      if (!WiFiPresent && logfile) {
-          char* line = logline();
-          Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
-          Serial.println(line);
-          digitalWrite(SD_CHIP_SELECT_PIN, LOW);
-          writeToSD(logfile, line);
-          digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+      if ( logfile && (
+           !strcmp(logMode, "NODE")
+           || !strcmp(logMode, "NETWORK")
+           || !strcmp(logMode, "ALL")) ) {
+         writeLogLine();
       }
 
       if (!WiFiPresent || !postToAPI(
@@ -261,6 +268,11 @@ static void _receive() {
         if (msg->ver_100 != ver) {
             Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100/100);
             return;
+        }
+        if ( logfile && msg->orig != nodeID && (
+             (!strcmp(logMode, "NETWORK") && msg->net == networkID)
+             || !strcmp(logMode, "ALL") )) {
+           writeLogLine();
         }
         if (msg->net > 0 && msg->net != networkID) {
             Serial.println(F("SKIP: out-of-network msg"));
