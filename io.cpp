@@ -16,6 +16,7 @@ static uint8_t msgLen = sizeof(Message);
 static uint8_t buf[sizeof(Message)] = {0};
 static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
+static struct Message history[10];
 static char* charBuf = (char*)buf;
 
 static void clearBuffer() {
@@ -37,13 +38,43 @@ void setupRadio() {
     }
     Serial.print(F("FREQ: ")); Serial.println(rf95Freq);
     rf95.setTxPower(txPower, false);
+    for (int i=0; i<10; i++) {
+      history[i] = {0};
+    }
     delay(100);
+}
+
+static void printHistory() {
+    Serial.print("HISTORY: ");
+    for(int i=0; i<10; i++) {
+        Serial.print(history[i].orig); Serial.print("."); Serial.print(history[i].id); Serial.print(";");
+    }
+    Serial.println("");
 }
 
 static void sendCurrentMessage() {
     rf95.send((const uint8_t*)buf, msgLen);
     rf95.waitPacketSent();
     flashLED(3, HIGH);
+    bool inHistory = false;
+    int emptyIndex = 9;
+    for (int i=0; i<10; i++) {
+        if (history[i].orig == 0) {
+            emptyIndex = i;
+        }
+        if (history[i].orig == msg->orig && history[i].id == msg->id) {
+            inHistory = true;
+        }
+        //if (history[i].orig == 0) {
+        //    Serial.print("set hist: "); Serial.print(i); Serial.print("To orig: "); Serial.println(msg->orig);
+        //    memcpy(&history[i], buf, msgLen);
+        //    break;
+        //}
+    }
+    if (!inHistory) {
+        memcpy(&history[emptyIndex], buf, msgLen);
+    }
+    printHistory();
 }
 
 void printMessageData() {
@@ -184,6 +215,7 @@ static uint32_t getRegisterData(char* registerName) {
     }
 }
 
+
 static void fillCurrentMessageData() {
       clearBuffer();
       uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
@@ -216,6 +248,19 @@ static void fillCurrentMessageData() {
       msg->data[8] = getRegisterData("DATA_8");
       msg->data[9] = getRegisterData("DATA_9");
 
+}
+
+void reTransmitOldestHistory() {
+    for (int i=0; i<10; i++) {
+        if (history[i].orig != 0) {  // TODO: this is not really the oldest
+            Serial.print("Re-transmit: "); Serial.print(history[i].orig); Serial.println(history[i].id);
+            clearBuffer();
+            memcpy(buf, &history[i], msgLen);
+            break;
+        }
+    }
+    printMessageData();
+    sendCurrentMessage();
 }
 
 void transmit() {
@@ -282,8 +327,17 @@ static void _receive() {
         }
         if ( msg->orig == nodeID) {
             Serial.print(F("SKIP: own msg from: ")); Serial.println(msg->snd);
-            Serial.print(F("LOST ACK: ")); Serial.println(msg->id - (lastAck+1));
-            lastAck = msg->id;
+            // remove it from history
+            for (int i=0; i<10; i++) {
+              if (history[i].orig == msg->orig && history[i].id == msg->id) {
+                Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
+                history[i] = {0};
+                break;
+              }
+            }
+            printHistory();
+            //Serial.print(F("LOST ACK: ")); Serial.println(msg->id - (lastAck+1));
+            //lastAck = msg->id;
             return;
         }
         printMessageData();
@@ -304,6 +358,15 @@ static void _receive() {
             Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
             Serial.print(F(" (Current Max: ")); Serial.print(maxIDs[msg->orig]);
             Serial.println(F(")"));
+            // Ignore the message, but clear it out of history
+            for (int i=0; i<10; i++) {
+              if (history[i].orig == msg->orig && history[i].id == msg->id) {
+                Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
+                history[i] = {0};
+                break;
+              }
+            }
+            printHistory();
             if (maxIDs[msg->orig] - msg->id > 5) {
                 // Large spread of current max from received ID is indicative of a
                 // node reset. TODO: Can we store the last ID in EEPROM and continue?

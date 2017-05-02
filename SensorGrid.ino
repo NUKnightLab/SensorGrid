@@ -31,6 +31,7 @@ uint32_t displayTimeout;
 uint8_t hasOLED;
 
 uint32_t lastTransmit = 0;
+uint32_t lastReTransmit = 0;
 uint32_t oledActivated = 0;
 bool oledOn;
 
@@ -229,7 +230,12 @@ void loop() {
       return;
     }
 
-    if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 10) {
+    if ( TRANSMIT && (millis() - lastReTransmit) > 1000 * 10) {
+         Serial.println(F("***\nRE-TX\n---"));
+         reTransmitOldestHistory();
+         Serial.println(F("Transmitted"));
+         lastReTransmit = millis();
+    } else if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 30) {     
         Serial.println(F("***\nTX\n---"));
         transmit();
         Serial.println(F("Transmitted"));

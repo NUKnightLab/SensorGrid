@@ -12,6 +12,7 @@ void setupRadio();
 void printMessageData();
 bool postToAPI();
 void transmit();
+void reTransmitOldestHistory();
 void receive();
 void writeToSD(char* filename, char* str);
 
