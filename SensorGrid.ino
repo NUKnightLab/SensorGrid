@@ -11,6 +11,7 @@ static const char* DEFAULT_DISPLAY_TIMEOUT = "60";
 static const char* DEFAULT_OLED = "0";
 static char* DEFAULT_LOG_FILE = "sensorgrid.log";
 static char* DEFAULT_LOG_MODE = "NODE"; // NONE, NODE, NETWORK, ALL
+uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 
 static const bool CHARGE_ONLY = false;
 static const bool TRANSMIT = true;
@@ -48,6 +49,8 @@ void setup() {
     }
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
+
+
 
     /* The Adafruit RTCLib API and related tutorials are quite misleading here.
      * ::begin() simply calls Wire.begin() and returns true. See:
@@ -95,6 +98,7 @@ void setup() {
         displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
         gpsModule = getConfig("GPS_MODULE");
         hasOLED = (uint8_t)(atoi(getConfig("DISPLAY")));
+        SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN", "14")));;
     } else {
         Serial.println(F("Using default configs"));
         networkID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
@@ -106,6 +110,7 @@ void setup() {
         logMode = DEFAULT_LOG_MODE;
         displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
         hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
+        SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi("14"));
     }
 
     if (hasOLED) {
@@ -162,6 +167,8 @@ void setup() {
         fail(MESSAGE_STRUCT_TOO_LARGE);
     }
     Serial.println(F("OK!"));
+
+    setupDustSensor();
 }
 
 void loop() {
