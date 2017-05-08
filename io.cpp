@@ -6,6 +6,7 @@
 static SdFat SD;
 
 #define SD_CHIP_SELECT_PIN 10
+#define HISTORY_SIZE 30
 
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
 static int maxIDs[MAX_NETWORK_SIZE] = {0};
@@ -16,7 +17,7 @@ static uint8_t msgLen = sizeof(Message);
 static uint8_t buf[sizeof(Message)] = {0};
 static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
-static struct Message history[10];
+static struct Message history[HISTORY_SIZE];
 static char* charBuf = (char*)buf;
 
 static void clearBuffer() {
@@ -38,7 +39,7 @@ void setupRadio() {
     }
     Serial.print(F("FREQ: ")); Serial.println(rf95Freq);
     rf95.setTxPower(txPower, false);
-    for (int i=0; i<10; i++) {
+    for (int i=0; i<HISTORY_SIZE; i++) {
       history[i] = {0};
     }
     delay(100);
@@ -46,7 +47,7 @@ void setupRadio() {
 
 static void printHistory() {
     Serial.print("HISTORY: ");
-    for(int i=0; i<10; i++) {
+    for(int i=0; i<HISTORY_SIZE; i++) {
         Serial.print(history[i].orig); Serial.print("."); Serial.print(history[i].id); Serial.print(";");
     }
     Serial.println("");
@@ -57,10 +58,24 @@ static void sendCurrentMessage() {
     rf95.waitPacketSent();
     flashLED(3, HIGH);
     bool inHistory = false;
-    int emptyIndex = 9;
-    for (int i=0; i<10; i++) {
+    int emptyIndex = -1;
+    uint32_t oldestTimestamp = 0;
+    int oldestIndex = -1;
+
+    for (int i=0; i<HISTORY_SIZE; i++) {
+        Serial.println(history[i].timestamp);
+        if (history[i].orig !=0
+            && (oldestTimestamp == 0 || history[i].timestamp < oldestTimestamp) ) {
+              oldestTimestamp = history[i].timestamp;
+              oldestIndex = i;
+        }
+    }
+    for (int i=0; i<HISTORY_SIZE; i++) {
         if (history[i].orig == 0) {
             emptyIndex = i;
+        } else if (oldestTimestamp == 0 || history[i].timestamp < oldestTimestamp) {
+            oldestTimestamp = history[i].timestamp;
+            oldestIndex = i;
         }
         if (history[i].orig == msg->orig && history[i].id == msg->id) {
             inHistory = true;
@@ -72,7 +87,19 @@ static void sendCurrentMessage() {
         //}
     }
     if (!inHistory) {
-        memcpy(&history[emptyIndex], buf, msgLen);
+        if (emptyIndex < 0) {
+            Serial.println("WARNING: FULL HISTORY QUEUE!!!"); // TODO: manage full history case
+            if (oldestIndex >= 0) {
+                Serial.print("DROPPING OLDEST HISTORICAL MESSAGE: ");
+                Serial.print(history[oldestIndex].orig); Serial.print("."); Serial.println(history[oldestIndex].id);
+                history[oldestIndex] = {0};
+                memcpy(&history[oldestIndex], buf, msgLen);
+            } else {
+                Serial.println("ERROR: Invalid state. Oldest historical index not found!!!");
+            }
+        }  else {
+            memcpy(&history[emptyIndex], buf, msgLen);
+        }
     }
     printHistory();
 }
@@ -251,16 +278,23 @@ static void fillCurrentMessageData() {
 }
 
 void reTransmitOldestHistory() {
-    for (int i=0; i<10; i++) {
-        if (history[i].orig != 0) {  // TODO: this is not really the oldest
-            Serial.print("Re-transmit: "); Serial.print(history[i].orig); Serial.println(history[i].id);
-            clearBuffer();
-            memcpy(buf, &history[i], msgLen);
-            break;
+    uint32_t oldestTimestamp = 0;
+    int idx = -1;
+    Serial.println("************ RE-TX OLDEST IN HISTORY **********");    
+    for (int i=0; i<HISTORY_SIZE; i++) {
+        if (history[i].orig !=0
+            && (oldestTimestamp == 0 || history[i].timestamp < oldestTimestamp) ) {
+              oldestTimestamp = history[i].timestamp;
+              idx = i;
         }
     }
-    printMessageData();
-    sendCurrentMessage();
+    if (idx >= 0) {
+        Serial.print("Re-transmit: "); Serial.print(history[idx].orig); Serial.print("."); Serial.println(history[idx].id);
+        clearBuffer();
+        memcpy(buf, &history[idx], msgLen);
+        printMessageData();
+        sendCurrentMessage();
+    }
 }
 
 void transmit() {
@@ -328,7 +362,7 @@ static void _receive() {
         if ( msg->orig == nodeID) {
             Serial.print(F("SKIP: own msg from: ")); Serial.println(msg->snd);
             // remove it from history
-            for (int i=0; i<10; i++) {
+            for (int i=0; i<HISTORY_SIZE; i++) {
               if (history[i].orig == msg->orig && history[i].id == msg->id) {
                 Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
                 history[i] = {0};
@@ -359,7 +393,7 @@ static void _receive() {
             Serial.print(F(" (Current Max: ")); Serial.print(maxIDs[msg->orig]);
             Serial.println(F(")"));
             // Ignore the message, but clear it out of history
-            for (int i=0; i<10; i++) {
+            for (int i=0; i<HISTORY_SIZE; i++) {
               if (history[i].orig == msg->orig && history[i].id == msg->id) {
                 Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
                 history[i] = {0};
