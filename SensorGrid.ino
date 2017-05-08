@@ -12,6 +12,7 @@ static const char* DEFAULT_OLED = "0";
 static char* DEFAULT_LOG_FILE = "sensorgrid.log";
 static char* DEFAULT_LOG_MODE = "NODE"; // NONE, NODE, NETWORK, ALL
 uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
+uint8_t GROVE_AIR_QUALITY_1_3_PIN;
 
 static const bool CHARGE_ONLY = false;
 static const bool TRANSMIT = true;
@@ -98,7 +99,8 @@ void setup() {
         displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
         gpsModule = getConfig("GPS_MODULE");
         hasOLED = (uint8_t)(atoi(getConfig("DISPLAY")));
-        SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN", "14")));;
+        SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
+        GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
     } else {
         Serial.println(F("Using default configs"));
         networkID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
@@ -110,7 +112,6 @@ void setup() {
         logMode = DEFAULT_LOG_MODE;
         displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
         hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
-        SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi("14"));
     }
 
     if (hasOLED) {
@@ -163,12 +164,20 @@ void setup() {
         Serial.println(F("Not Found"));
     }
 
+    if (SHARP_GP2Y1010AU0F_DUST_PIN) {
+        setupDustSensor();
+    }
+
+    if (GROVE_AIR_QUALITY_1_3_PIN) {
+        setupGroveAirQualitySensor();
+    }
+
     if (sizeof(Message) > RH_RF95_MAX_MESSAGE_LEN) {
         fail(MESSAGE_STRUCT_TOO_LARGE);
     }
     Serial.println(F("OK!"));
 
-    setupDustSensor();
+
 }
 
 void loop() {
@@ -231,4 +240,6 @@ void loop() {
         Serial.println(F("***\nRX\n---"));
         receive();
     }
+
+    Serial.print("GAS: "); Serial.println(analogRead(14));
 }

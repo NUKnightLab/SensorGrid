@@ -3,7 +3,6 @@
 
 #include <RH_RF95.h>
 #include "SensorGrid.h"
-#include "SHARP_GP2Y1010AU0F.h"
 
 #define RFM95_CS 8
 #define RFM95_RST 4

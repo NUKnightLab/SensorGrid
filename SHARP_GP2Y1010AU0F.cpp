@@ -9,8 +9,9 @@ float dustSenseCalcVoltage = 0;
 float dustDensity = 0;
 
 void setupDustSensor() {
-    Serial.println(F("Setting up Dust Sensor"));
-    pinMode(DUST_SENSOR_LED_POWER,OUTPUT);
+    Serial.print(F("Setting Sharp GP2Y1010AU0F pin to: "));
+    Serial.println(SHARP_GP2Y1010AU0F_DUST_PIN);
+    pinMode(DUST_SENSOR_LED_POWER, OUTPUT);
     pinMode(SHARP_GP2Y1010AU0F_DUST_PIN, INPUT);
 }
 

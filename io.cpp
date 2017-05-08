@@ -90,7 +90,6 @@ static void warnNoGPSConfig() {
     Serial.println(F("WARNING! GPS data specified in data registers, but no GPS_MODULE in config"));
 }
 
-
 static uint32_t getDataByTypeName(char* type) {
     Serial.print("Getting data for type: "); Serial.println(type);
     if (!strcmp(type, "GPS_FIX")) {
@@ -135,11 +134,14 @@ static uint32_t getDataByTypeName(char* type) {
     if (!strcmp(type, "SI1145_UV")) {
         return (int32_t)sensorSi1145UV.readUV();
     }
-    // if (!strcmp(type, "FAKE_3")) {
-    //     return 3333333;
-    // }
     if (!strcmp(type, "SHARP_GP2Y1010AU0F_DUST")) {
         return (int32_t)(readDustSensor()*100);
+    }
+    if (!strcmp(type, "GROVE_AIR_QUALITY_1_3")) {
+        return (int32_t)(readGroveAirQualitySensor()*100);
+    }
+    if (!strcmp(type, "FAKE_3")) {
+        return 3333333;
     }
     if (!strcmp(type, "FAKE_4")) {
         return 4444444;

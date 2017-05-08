@@ -9,10 +9,13 @@
 #include <RTClib.h>
 #include <KnightLab_SDConfig.h>
 #include <KnightLab_GPS.h>
+#include "SHARP_GP2Y1010AU0F.h"
+#include "GroveAirQuality.h"
 #include "io.h"
 
 /* Module defs */
 #include "WINC1500.h"
+
 
 #define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
 #define MAX_NETWORK_SIZE 100
