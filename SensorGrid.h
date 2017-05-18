@@ -36,6 +36,7 @@ extern char* logMode;
 extern char* gpsModule;
 extern bool oledOn;
 extern bool WiFiPresent;
+extern uint8_t doTransmit;
 extern Adafruit_Si7021 sensorSi7021TempHumidity;
 extern Adafruit_SI1145 sensorSi1145UV;
 extern RTC_PCF8523 rtc;

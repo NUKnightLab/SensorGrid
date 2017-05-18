@@ -8,14 +8,14 @@ static const char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
 static const char* DEFAULT_TX_POWER = "10";
 static const char* DEFAULT_PROTOCOL_VERSION = "0.11";
 static const char* DEFAULT_DISPLAY_TIMEOUT = "60";
-static const char* DEFAULT_OLED = "0";
+static char* DEFAULT_OLED = "0";
 static char* DEFAULT_LOG_FILE = "sensorgrid.log";
+static char* DEFAULT_TRANSMIT = "1";
 static char* DEFAULT_LOG_MODE = "NODE"; // NONE, NODE, NETWORK, ALL
 uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 uint8_t GROVE_AIR_QUALITY_1_3_PIN;
 
 static const bool CHARGE_ONLY = false;
-static const bool TRANSMIT = true;
 static const bool RECEIVE = true;
 
 /* vars set by config file */
@@ -29,6 +29,7 @@ char* logMode;
 char* gpsModule;
 uint32_t displayTimeout;
 uint8_t hasOLED;
+uint8_t doTransmit;
 
 uint32_t lastTransmit = 0;
 uint32_t lastReTransmit = 0;
@@ -99,7 +100,8 @@ void setup() {
         logMode = getConfig("LOGMODE", DEFAULT_LOG_MODE);
         displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
         gpsModule = getConfig("GPS_MODULE");
-        hasOLED = (uint8_t)(atoi(getConfig("DISPLAY")));
+        hasOLED = (uint8_t)(atoi(getConfig("DISPLAY", DEFAULT_OLED)));
+        doTransmit = (uint8_t)(atoi(getConfig("TRANSMIT", DEFAULT_TRANSMIT)));
         SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
     } else {
@@ -113,6 +115,7 @@ void setup() {
         logMode = DEFAULT_LOG_MODE;
         displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
         hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
+        doTransmit = (uint8_t)(atoi(DEFAULT_TRANSMIT));
     }
 
     if (hasOLED) {
@@ -230,12 +233,12 @@ void loop() {
       return;
     }
 
-    if ( TRANSMIT && (millis() - lastReTransmit) > 1000 * 10) {
+    if ( doTransmit && (millis() - lastReTransmit) > 1000 * 10) {
          Serial.println(F("***\nRE-TX\n---"));
          reTransmitOldestHistory();
          Serial.println(F("Transmitted"));
          lastReTransmit = millis();
-    } else if ( TRANSMIT && (millis() - lastTransmit) > 1000 * 30) {     
+    } else if ( doTransmit && (millis() - lastTransmit) > 1000 * 30) {     
         Serial.println(F("***\nTX\n---"));
         transmit();
         Serial.println(F("Transmitted"));
@@ -247,5 +250,5 @@ void loop() {
         receive();
     }
 
-    Serial.print("GAS: "); Serial.println(analogRead(14));
+    //Serial.print("GAS: "); Serial.println(analogRead(14));
 }

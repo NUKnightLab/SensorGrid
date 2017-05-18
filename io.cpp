@@ -9,7 +9,7 @@ static SdFat SD;
 #define HISTORY_SIZE 30
 
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
-static int maxIDs[MAX_NETWORK_SIZE] = {0};
+static uint32_t maxTimestamps[MAX_NETWORK_SIZE] = {0};
 static uint32_t MSG_ID = 0;
 static uint32_t lastAck = 0;
 static uint8_t msgLen = sizeof(Message);
@@ -63,7 +63,6 @@ static void sendCurrentMessage() {
     int oldestIndex = -1;
 
     for (int i=0; i<HISTORY_SIZE; i++) {
-        Serial.println(history[i].timestamp);
         if (history[i].orig !=0
             && (oldestTimestamp == 0 || history[i].timestamp < oldestTimestamp) ) {
               oldestTimestamp = history[i].timestamp;
@@ -101,7 +100,7 @@ static void sendCurrentMessage() {
             memcpy(&history[emptyIndex], buf, msgLen);
         }
     }
-    printHistory();
+    //printHistory();
 }
 
 void printMessageData() {
@@ -139,9 +138,11 @@ static void writeLogLine() {
     char* line = logline();
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
     Serial.println(line);
-    digitalWrite(SD_CHIP_SELECT_PIN, LOW);
-    writeToSD(logfile, line);
-    digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+    if (logfile) {
+        digitalWrite(SD_CHIP_SELECT_PIN, LOW);
+        writeToSD(logfile, line);
+        digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+    }
 }
 
 static void warnNoGPSConfig() {
@@ -242,7 +243,6 @@ static uint32_t getRegisterData(char* registerName) {
     }
 }
 
-
 static void fillCurrentMessageData() {
       clearBuffer();
       uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
@@ -294,49 +294,63 @@ void reTransmitOldestHistory() {
         memcpy(buf, &history[idx], msgLen);
         printMessageData();
         sendCurrentMessage();
+    } else {
+        Serial.println("Empty history. Nothing to re-transmit");
     }
 }
 
 void transmit() {
-      MSG_ID++;
-      fillCurrentMessageData();
-      printMessageData();
+    for (int i=0; i<HISTORY_SIZE; i++) {
+        if (history[i].orig == nodeID && history[i].id == MSG_ID) {
+            // Do not transmit new message from this node until
+            // we rx an ack for previous message. TODO: prevent black hole of infinitely repeating same message
 
-      /**
-       * Unable to get WINC1500 and Adalogger to share SPI bus for logger writes.
-       * WiFi does not want to reconnect after losing the SPI. Things tried:
-       *
-       * Setting Chip select pin modes (WiFi CS HIGH during logger write, logger LOW with
-       *     reset to WiFi LOW after write)
-       * WIFI_CLIENT.stop() ... begin()
-       * WiFi.end()
-       * WiFi.refresh()
-       * SPI.endTransaction()
-       * SPI.end() .. begin()
-       * various time delays
-       *
-       * In the end, unable to get WiFi to continue after writing to the SD card.
-       * For now settle with incompatibility between logging and WiFi API posts.
-       * SD card read for configs still seems to be ok.
-       *
-       * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
-       */
+            // instead of preventing new messages, maybe keep track of historical ids rxed rather than just max timestamp
+            Serial.print("Preventing new messages until ACK is received for ID: "); Serial.println(MSG_ID);
+            memcpy(buf, &history[i], msgLen);
+            printMessageData();
+            sendCurrentMessage();
+            return;
+        }
+    }
+    MSG_ID++;
+    fillCurrentMessageData();
+    printMessageData();
 
-      if ( logfile && (
-           !strcmp(logMode, "NODE")
-           || !strcmp(logMode, "NETWORK")
-           || !strcmp(logMode, "ALL")) ) {
-         writeLogLine();
-      }
+    /**
+     * Unable to get WINC1500 and Adalogger to share SPI bus for logger writes.
+     * WiFi does not want to reconnect after losing the SPI. Things tried:
+     *
+     * Setting Chip select pin modes (WiFi CS HIGH during logger write, logger LOW with
+     *     reset to WiFi LOW after write)
+     * WIFI_CLIENT.stop() ... begin()
+     * WiFi.end()
+     * WiFi.refresh()
+     * SPI.endTransaction()
+     * SPI.end() .. begin()
+     * various time delays
+     *
+     * In the end, unable to get WiFi to continue after writing to the SD card.
+     * For now settle with incompatibility between logging and WiFi API posts.
+     * SD card read for configs still seems to be ok.
+     *
+     * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
+     */
 
-      if (!WiFiPresent || !postToAPI(
-            getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
-            getConfig("API_HOST"), atoi(getConfig("API_PORT")),
-            charBuf, msgLen)) {
-          flashLED(3, HIGH);
-          Serial.println("Sending current message");
-          sendCurrentMessage();
-      }
+    if ( !strcmp(logMode, "NODE")
+         || !strcmp(logMode, "NETWORK")
+         || !strcmp(logMode, "ALL") ) {
+       writeLogLine();
+    }
+
+    if (!WiFiPresent || !postToAPI(
+          getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
+          getConfig("API_HOST"), atoi(getConfig("API_PORT")),
+          charBuf, msgLen)) {
+        flashLED(3, HIGH);
+        Serial.println("Sending current message");
+        sendCurrentMessage();
+    }
 }
 
 static void _receive() {
@@ -350,7 +364,7 @@ static void _receive() {
             Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100/100);
             return;
         }
-        if ( logfile && msg->orig != nodeID && (
+        if ( msg->orig != nodeID && (
              (!strcmp(logMode, "NETWORK") && msg->net == networkID)
              || !strcmp(logMode, "ALL") )) {
            writeLogLine();
@@ -387,12 +401,17 @@ static void _receive() {
             display.print(" ");display.print(rf95.lastRssi());
             display.display();
         }
-        if (msg->id <= maxIDs[msg->orig]) {
+        if ( (msg->orig != msg->snd) && (msg->timestamp <= maxTimestamps[msg->orig]) ) {
+            /**
+             * Always re-transmit 1st hop messages. Retransmit subsequent hops if they are new
+             */
             Serial.print(F("Ignore old Msg: "));
             Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
-            Serial.print(F(" (Current Max: ")); Serial.print(maxIDs[msg->orig]);
+            Serial.print(F(" (Current Max: ")); Serial.print(maxTimestamps[msg->orig]);
             Serial.println(F(")"));
-            // Ignore the message, but clear it out of history
+            /* Not sure we should be clearing this from history. A second rx does not necessarily mean
+             * that we have had a successful tx. E.g., this could be a re-tx from orig that never
+             * received an ack
             for (int i=0; i<HISTORY_SIZE; i++) {
               if (history[i].orig == msg->orig && history[i].id == msg->id) {
                 Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
@@ -400,16 +419,8 @@ static void _receive() {
                 break;
               }
             }
+            */
             printHistory();
-            if (maxIDs[msg->orig] - msg->id > 5) {
-                // Large spread of current max from received ID is indicative of a
-                // node reset. TODO: Can we store the last ID in EEPROM and continue?
-                // EEPROM on M0 Feather boards may be complex (if available at all?). See:
-                // https://forums.adafruit.com/viewtopic.php?f=22&t=88272
-                Serial.print(F("Reset Max ID. Node: "));
-                Serial.println(msg->orig);
-                maxIDs[msg->orig] = 0;
-            }
         } else {
             msg->snd = nodeID;
             if (!WiFiPresent || !postToAPI(
@@ -421,7 +432,7 @@ static void _receive() {
                 Serial.print(F("  snd: ")); Serial.print(msg->snd);
                 Serial.print(F("; orig: ")); Serial.print(msg->orig);
                 sendCurrentMessage();
-                maxIDs[msg->orig] = msg->id;
+                maxTimestamps[msg->orig] = msg->id;
                 Serial.println(F("  ...RETRANSMITTED"));
             }
         }

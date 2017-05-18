@@ -34,7 +34,7 @@ def data():
         return flask.json.jsonify(
             list(map(convert_mongo_id, db.data.find(
                 limit=100)\
-                .sort('created_at', pymongo.DESCENDING))))
+                .sort('received_at', pymongo.DESCENDING))))
     # we should be checking data length. See Flask docs:
     # http://werkzeug.pocoo.org/docs/0.11/wrappers/#werkzeug.wrappers.BaseRequest.get_data
     if request.json.get('ver') == '0.11': # json encoded message
