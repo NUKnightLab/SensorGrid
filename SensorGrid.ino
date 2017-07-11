@@ -228,17 +228,12 @@ void loop() {
             } else {
                 oledOn = true;
                 oledActivated = millis();
-                //DateTime now = rtc.now();
-                //now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
-                //if (now.unixtime() > lastDisplayTime) {
-                    display.clearMsgArea();
-                    display.setBattery(batteryLevel());
-                    display.renderBattery();
-                    lastDisplayTime = displayCurrentRTCDateTime();
-                    updateGPSDisplay();
-                    display.display();
-                    
-                //}
+                display.clearMsgArea();
+                display.setBattery(batteryLevel());
+                display.renderBattery();
+                lastDisplayTime = displayCurrentRTCDateTime();
+                updateGPSDisplay();
+                display.display();
             }
         }
 
