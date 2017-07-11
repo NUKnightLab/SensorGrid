@@ -44,6 +44,8 @@ bool sensorSi1145Module = false;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 
 bool WiFiPresent = false;
+uint32_t lastDisplayTime = 0;
+
 
 void setup() {
 
@@ -52,8 +54,6 @@ void setup() {
     }
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
-
-
 
     /* The Adafruit RTCLib API and related tutorials are quite misleading here.
      * ::begin() simply calls Wire.begin() and returns true. See:
@@ -76,18 +76,11 @@ void setup() {
      * But with PCF8523. However note that this example, and general RTC
      * library code uses Wire1
      */
+    Serial.println(F("Starting GPS"));
+    setupGPS();
     Serial.println(F("Starting RTC"));
     rtc.begin(); // Always true. Don't check as per Adafruit tutorials
-    if (! rtc.initialized()) {
-        /*
-         * Compiled time, thus compile and upload immediately. Arduino IDE
-         * generally re-compiles for an upload anyway.
-         * Pull battery to reset the clock
-         */
-        Serial.println(F("Init RTC to compile time: "));
-        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-    }
-
+    
     flashLED(2, HIGH);
 
     if (!readSDConfig(CONFIG_FILE)) {
@@ -180,11 +173,20 @@ void setup() {
         fail(MESSAGE_STRUCT_TOO_LARGE);
     }
     Serial.println(F("OK!"));
-
-
 }
 
 void loop() {
+    
+    int gpsYear = GPS.year;
+    if (gpsYear != 0 && gpsYear != 80) {
+        uint32_t gpsTime = DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds).unixtime();
+        uint32_t rtcTime = rtc.now().unixtime();
+        if (rtcTime - gpsTime > 1 || gpsTime - rtcTime > 1) { 
+          Serial.println("Setting RTC to GPS time");
+          rtc.adjust(DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds));
+        }
+    }
+
     Serial.println(F("****"));
     printRam();
 
@@ -200,7 +202,14 @@ void loop() {
             display.display();
         }
         if (oledOn) {
-            updateDateTimeDisplay();
+            DateTime now = rtc.now();
+            now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
+            if (now.unixtime() > lastDisplayTime) {
+                display.clearMsgArea();
+                lastDisplayTime = displayCurrentRTCDateTime();
+                updateGPSDisplay();
+                display.display();
+            }
         }
         if (! digitalRead(BUTTON_C)) { // there seems to be a conflict on button A (pin 9)
             if (oledOn) { // wait for possible shutdown request
@@ -219,9 +228,17 @@ void loop() {
             } else {
                 oledOn = true;
                 oledActivated = millis();
-                display.setBattery(batteryLevel());
-                display.renderBattery();
-                displayCurrentRTCDateTime();
+                //DateTime now = rtc.now();
+                //now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
+                //if (now.unixtime() > lastDisplayTime) {
+                    display.clearMsgArea();
+                    display.setBattery(batteryLevel());
+                    display.renderBattery();
+                    lastDisplayTime = displayCurrentRTCDateTime();
+                    updateGPSDisplay();
+                    display.display();
+                    
+                //}
             }
         }
 

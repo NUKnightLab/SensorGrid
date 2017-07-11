@@ -18,17 +18,53 @@ void displayCurrentRTCTime() {
     display.print(now.minute(), DEC);
 }
 
-void displayCurrentRTCDateTime() {
+void _displayCurrentRTCDateTime() {
     displayCurrentRTCDate();
     displayCurrentRTCTime();
-    lastMinute = rtc.now().minute();
-    display.display();
+    lastMinute = rtc.now().minute();   
+}
+
+uint32_t displayCurrentRTCDateTime() {
+    DateTime now = rtc.now();
+    now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
+    display.setCursor(0,8);
+    display.print(now.hour(), DEC); display.print(':');
+    if (now.minute() < 10)
+        display.print(0, DEC);
+    display.print(now.minute(), DEC);  
+    display.setCursor(38,8);
+    display.print(now.month(), DEC); display.print('/');
+    display.print(now.day(), DEC); display.print('/');
+    display.print(now.year(), DEC);
+    return now.unixtime();
 }
 
 void updateDateTimeDisplay() {
     if (rtc.now().minute() != lastMinute) {
         displayCurrentRTCDateTime();
     }
+}
+
+void updateGPSDisplay() {
+      display.setCursor(0,16);
+      if (GPS.year == 0) {
+          display.print("No GPS");
+      } else {
+          display.print("fix:");
+          if (GPS.fix) {
+              display.print("y");
+          } else {
+              display.print("n");
+          }
+          display.print(" qual:");
+          display.print(GPS.fixquality, DEC);
+          display.print(" sats:");
+          display.print(GPS.satellites, DEC);
+
+          display.setCursor(0,24);
+          display.print("lt:"); display.print(GPS.latitudeDegrees, 3);
+          display.print(" ln:"); display.print(GPS.longitudeDegrees, 3);
+      }
 }
 
 void _setDate() {
@@ -73,7 +109,6 @@ void _setDate() {
       delay(100);
       if (millis() - startTime > 10*1000) break;
       yield();
-      //display.display();
     }
     display.setCursor(0,16);
     display.print("Date: ");
@@ -86,7 +121,6 @@ void _setDate() {
           display.setTextColor(BLACK);
           display.print(date++, DEC);
           if (date > 31) date = 1;
-          //display.display();
           display.setCursor(36,16);
           display.setTextColor(WHITE);
           display.print(date, DEC);
@@ -96,7 +130,6 @@ void _setDate() {
       delay(100);
       if (millis() - startTime > 10*1000) break;
       yield();
-      //display.display();
     }
     now = rtc.now();
     rtc.adjust(DateTime(yr, mnth, date, now.hour(), now.minute(), now.second()));

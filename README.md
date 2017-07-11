@@ -35,13 +35,13 @@ If you can answer yes to these questions:
   * AdaFruit_SSD1306 https://github.com/adafruit/Adafruit_SSD1306
   * AdaFruit Feather_OLED https://github.com/adafruit/Adafruit_FeatherOLED
   * AdaFruit RTCLib https://github.com/adafruit/RTClib
-  
+
 TODO: is it possible to make these optional?:
   * WiFi101
   * AdaFruit_GPS
   * KnightLab_GPS
   * AdaFruit_SSD1306
-  
+
 
 # Documentation
 
@@ -54,15 +54,25 @@ See these additional docs:
   * (TBD) WiFi building tutorial
   * (TBD) Sensor integration tutorial
 
-## Warning about GPS!!
+## Time settings
 
-Besides module incompatibilities with the GPS module (see below), for the time being, the GPS is considered generally unusable. We are seeing corrupted NMEA strings like the following:
+All nodes must have the correct time. Time can be set with a GPS module. Once the time is set, the node can be deployed without the GPS if preferred.
 
-$GPGGA,163232.000,4203.0383,N,08740.4182$0,A$GPGGA,163233.000,4203.0383,N,08740.,33,.$GPGGA,163234.000,4203.0383,N,087
-$GPGGA,164328.000,4203.0390,N,08740.40,0.1$GPGGA,164329.000,4203.0390,N,08740.4132$0,*$GPGGA,164330.000,4203.0390,N,08
-$GPGGA,164846.000,4203.0380,N,08740.41W.48,$GPGGA,164847.000,4203.0380,N,08740.41W488,$GPGGA,164848.000,4203.0380,N,08
+To set the time, first initialize the GPS time:
 
-One immediate side effect is the parsing out of these longitude values into the wrong E/W hemisphere. There are likely other major issues given the weirdness of these NMEA. It appears as though one string is being over-written by another at an offset. It is not clear if this is something in the current code base or in the KnightLab_GPS library. In general we do not recommend using GPS for the time being.
+ 1. Attach a GPS wing to the node. Be sure there is a backup coin cell battery in both the GPS and the logger wing
+ 2. Turn on the node. Wait for the display shows `fix: y`
+    - be sure the GPS has a clear view of the sky
+    - the time will likely update before getting a fix. Be sure to wait for the fix
+ 3. After the time is set and the GPS gets a fix, power down the node
+ 4. The GPS may now be detached to use for time-setting on other nodes
+
+Once initialized with a fix and set time, the GPS should hold its time as long as the backup battery is good. To use the initialized GPS to set the time on other nodes:
+
+ 1. Attach the GPS to the node
+ 2. Turn on the node
+ 3. Once powered up, the time should get set to the GPS clock
+ 4. Power down the node
 
 ## Module Incompatibilities!!
 
