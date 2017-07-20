@@ -42,6 +42,9 @@ extern Adafruit_SI1145 sensorSi1145UV;
 extern RTC_PCF8523 rtc;
 extern bool sensorSi7021Module;
 extern bool sensorSi1145Module;
+extern int8_t hopDistanceToSink;
+extern uint8_t sinkNode;
+extern uint8_t numParents;
 
 enum ERRORS {
      NO_ERR,
@@ -66,6 +69,17 @@ typedef struct Message {
     uint32_t timestamp;
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
+
+typedef struct Node {
+  uint8_t id;
+  uint32_t timestamp;
+  float rssi;
+  int8_t ext;
+  struct Node * nextNode;
+};
+
+extern Node * parent;
+
 #else
     #error Unsupported architecture
 #endif

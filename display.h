@@ -9,5 +9,6 @@ void setupDisplay();
 void displayBatteryLevel();
 void updateDateTimeDisplay();
 void updateGPSDisplay();
+void displayId();
 
 #endif

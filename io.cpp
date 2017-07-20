@@ -24,7 +24,7 @@ static void clearBuffer() {
     memset(buf, 0, msgLen);
 }
 
-void setupRadio() {
+void setupRadio(uint8_t nodeID) {
     Serial.println(F("LoRa Test!"));
     digitalWrite(RFM95_RST, LOW);
     delay(10);
@@ -39,6 +39,8 @@ void setupRadio() {
     }
     Serial.print(F("FREQ: ")); Serial.println(rf95Freq);
     rf95.setTxPower(txPower, false);
+    rf95.setThisAddress(nodeID);
+    rf95.setHeaderFrom(nodeID);
     for (int i=0; i<HISTORY_SIZE; i++) {
       history[i] = {0};
     }
@@ -51,6 +53,26 @@ static void printHistory() {
         Serial.print(history[i].orig); Serial.print("."); Serial.print(history[i].id); Serial.print(";");
     }
     Serial.println("");
+}
+
+void sendBeacon() {
+    clearBuffer();
+    uint16_t ver = (uint16_t)(333); // for now: using version field as message type. 333 = beacon
+    msg->ver_100 = ver;
+    int32_t ext;
+    if (sinkNode) {
+        ext = 0;
+    } else if (parent == NULL) {
+        ext = -1;
+    } else {
+        ext = parent->ext + 1;
+    }
+    msg->data[0] = ext;
+    Serial.println("Sending BEACON");
+    rf95.setHeaderTo(255);
+    rf95.send((const uint8_t*)buf, msgLen);
+    rf95.waitPacketSent();
+    Serial.println("Sent BEACON");
 }
 
 static void sendCurrentMessage() {
@@ -353,6 +375,132 @@ void transmit() {
     }
 }
 
+static void removeParent(uint8_t id) {
+    if (parent == NULL) return;
+    Serial.print("Removing a parent node: "); Serial.println(id);
+    if (parent->id == id) {
+        Serial.println("parent ID is id");
+        parent = parent->nextNode;
+        Serial.println("Parent is now next node");
+        // TODO: destroy old parent?
+        numParents -= 1;
+        return;   
+    }
+    Node * current = parent;
+    while (current->nextNode != NULL) {
+        Serial.print("Checking id of next node: "); Serial.println(current->nextNode->id);
+        if (current->nextNode->id == id) {
+            current->nextNode = current->nextNode->nextNode;
+            // TODO: destroy removed node?
+            numParents -= 1;
+            return;
+        }
+        current = current->nextNode;
+    }
+    Serial.println("Done remove");
+}
+
+
+static void addParent(Node * node) {
+
+    Serial.println("Adding a parent node");
+    // since order is maintained and could have changed, remove and re-add
+    removeParent(node->id);
+    
+    if (parent == NULL) {
+        Serial.println("Adding first parent");
+        parent = node;
+        numParents += 1;
+        return;
+    }
+
+    Serial.println("Remove-check done. parent is not null");
+    Serial.print("parent ext: "); Serial.println(parent->ext);
+    Serial.print("parent rssi: "); Serial.print(parent->rssi);
+    Serial.print("Node ext: "); Serial.print(node->ext);
+    Serial.print("Node rssi: "); Serial.println(node->rssi);
+    if ( (node->ext < parent->ext)
+          || ( node->ext == parent->ext && node->rssi > parent->rssi )) {
+        node->nextNode = parent;
+        parent = node;
+        Serial.println("Pushed node in front of parent");
+        Serial.println("incrementing numParents");
+        numParents += 1;
+        Serial.print("number of parents: "); Serial.println(numParents, DEC);
+        return;
+    }
+    Serial.println("New node is greater than current parent");
+    Node * current = parent;
+    while (current->nextNode != NULL) {
+        Serial.print("node ext: "); Serial.println(node->ext);
+        Serial.print("next node ext: "); Serial.println(current->nextNode->ext);
+        if (node->ext < current->nextNode->ext
+          || ( node->ext == current->ext && node->rssi < current->rssi )) {
+            node->nextNode = current->nextNode;
+            current->nextNode = node;
+            Serial.println("Inserted node into parents");
+            numParents += 1;
+            Serial.print("number of parents: "); Serial.println(numParents);
+            return;
+        }
+        current = current->nextNode;
+    }
+    Serial.println("Node goes at end of parent list");
+    current->nextNode = node;
+    Serial.println("Increment num parents");
+    numParents += 1;
+    Serial.print("Number of parents"); Serial.println(numParents);
+}
+
+void expireParents() {
+     Serial.println("Checking for expired parents");
+     Node * node = parent;
+     while (node != NULL) {
+        if ( (millis() - node->timestamp) > 40 * 3000 ) {
+            Serial.print("Removing expired parent: "); Serial.println(node->id);
+            removeParent(node->id);
+        }
+        node = node->nextNode;
+     }
+}
+
+static void handleBeacon() {
+    Serial.print("Received beacon from: "); Serial.print(rf95.headerFrom(), DEC);
+    Serial.print(" EXT: "); Serial.println(msg->data[0], DEC);
+    Serial.print("; RSSI: "); Serial.println(rf95.lastRssi(), DEC);
+    
+    /*
+    if (msg->data[0] < 0) {
+        // skip disconnected nodes for now. Later these might inform how we handle beaconing and route construction
+        Serial.println("Skipping handling disconnected node beacon");
+        return;
+    } */
+    
+    /*
+    if (parent == NULL) {
+        Serial.println("Creating parent");
+        parent = (Node*) malloc(sizeof(Node));
+        //memset(parent, 0, sizeof(Node));
+        Serial.print("Parent is null: "); Serial.println(parent == NULL);
+        parent->id = rf95.headerFrom();
+        parent->ext = msg->data[0];
+        parent->rssi = rf95.lastRssi();
+        Serial.print("Parent is now null: "); Serial.println(parent == NULL);
+        Serial.print("Next parent is null: "); Serial.println(parent->nextNode == NULL);
+        hopDistanceToSink = parent->ext + 1;
+        numParents = 1;
+        return;
+    } */
+    Serial.println("malloc new node");
+    Node * node = (Node*) malloc(sizeof(Node));
+    node->id = rf95.headerFrom();
+    node->timestamp = millis();
+    node->ext = msg->data[0];
+    node->rssi = rf95.lastRssi();
+    node->nextNode = NULL;
+    addParent(node);
+}
+
 static void _receive() {
     if (rf95.recv(buf, &msgLen)) {
         Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
@@ -360,6 +508,11 @@ static void _receive() {
         Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
         Serial.println(rf95.lastRssi(), DEC);
         uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
+        // temporarily using version 333 to indicate beacon transmission
+        if (msg->ver_100 == 333) {
+            handleBeacon();
+            return;
+        }
         if (msg->ver_100 != ver) {
             Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100/100);
             return;

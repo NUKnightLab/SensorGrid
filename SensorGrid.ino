@@ -9,6 +9,7 @@ static const char* DEFAULT_TX_POWER = "10";
 static const char* DEFAULT_PROTOCOL_VERSION = "0.11";
 static const char* DEFAULT_DISPLAY_TIMEOUT = "60";
 static char* DEFAULT_OLED = "0";
+static char* DEFAULT_COLLECTOR = "0";
 static char* DEFAULT_LOG_FILE = "sensorgrid.log";
 static char* DEFAULT_TRANSMIT = "1";
 static char* DEFAULT_LOG_MODE = "NODE"; // NONE, NODE, NETWORK, ALL
@@ -17,6 +18,10 @@ uint8_t GROVE_AIR_QUALITY_1_3_PIN;
 
 static const bool CHARGE_ONLY = false;
 static const bool RECEIVE = true;
+
+int8_t hopDistanceToSink;
+uint8_t numParents;
+Node * parent;
 
 /* vars set by config file */
 uint32_t networkID;
@@ -30,8 +35,10 @@ char* gpsModule;
 uint32_t displayTimeout;
 uint8_t hasOLED;
 uint8_t doTransmit;
+uint8_t sinkNode;
 
 uint32_t lastTransmit = 0;
+uint32_t lastBeacon = 0;
 uint32_t lastReTransmit = 0;
 uint32_t oledActivated = 0;
 bool oledOn;
@@ -94,6 +101,7 @@ void setup() {
         displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
         gpsModule = getConfig("GPS_MODULE");
         hasOLED = (uint8_t)(atoi(getConfig("DISPLAY", DEFAULT_OLED)));
+        sinkNode = (uint8_t)(atoi(getConfig("COLLECTOR", DEFAULT_COLLECTOR)));
         doTransmit = (uint8_t)(atoi(getConfig("TRANSMIT", DEFAULT_TRANSMIT)));
         SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
@@ -108,9 +116,20 @@ void setup() {
         logMode = DEFAULT_LOG_MODE;
         displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
         hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
+        sinkNode = (uint8_t)(atoi(DEFAULT_COLLECTOR));
         doTransmit = (uint8_t)(atoi(DEFAULT_TRANSMIT));
     }
 
+    /*
+    if (sinkNode) {
+        hopDistanceToSink = 0;
+    } else {
+        hopDistanceToSink = -1;
+    }
+    */
+    numParents = 0;
+    parent = NULL;
+    
     if (hasOLED) {
         Serial.print(F("Display timeout set to: ")); Serial.println(displayTimeout);
         setupDisplay();
@@ -135,7 +154,7 @@ void setup() {
     } else {
         Serial.println(F("No GPS_MODULE specified in config .. Skipping GPS setup"));
     }
-    setupRadio();
+    setupRadio(nodeID);
     char* ssid = getConfig("WIFI_SSID");
     if (ssid) {
       Serial.println(F("ssid is valid"));
@@ -190,6 +209,18 @@ void loop() {
     Serial.println(F("****"));
     printRam();
 
+    if (parent != NULL) {
+        Serial.println("Routing Parents\n***************");
+        Node * current = parent;
+        do {
+            Serial.print("ID: "); Serial.print(current->id);
+            Serial.print(" TIME: "); Serial.print(millis() - current->timestamp);
+            Serial.print("; EXT: "); Serial.print(current->ext);
+            Serial.print("; RSSI: "); Serial.println(current->rssi);
+            current = current->nextNode;
+        } while (current != NULL);
+    }
+
     if (hasOLED) {
         if (oledOn) {
             display.setBattery(batteryLevel());
@@ -231,6 +262,7 @@ void loop() {
                 display.clearMsgArea();
                 display.setBattery(batteryLevel());
                 display.renderBattery();
+                displayId();
                 lastDisplayTime = displayCurrentRTCDateTime();
                 updateGPSDisplay();
                 display.display();
@@ -245,12 +277,18 @@ void loop() {
       return;
     }
 
-    if ( doTransmit && (millis() - lastReTransmit) > 1000 * 10) {
+    if ( (millis() - lastBeacon) > 1000 * 30) {
+         sendBeacon();
+         lastBeacon = millis();
+         expireParents();
+    }
+
+    if ( false && doTransmit && (millis() - lastReTransmit) > 1000 * 10) {
          Serial.println(F("***\nRE-TX\n---"));
          reTransmitOldestHistory();
          Serial.println(F("Transmitted"));
          lastReTransmit = millis();
-    } else if ( doTransmit && (millis() - lastTransmit) > 1000 * 30) {     
+    } else if ( !sinkNode && parent != NULL && doTransmit && (millis() - lastTransmit) > 1000 * 30) {     
         Serial.println(F("***\nTX\n---"));
         transmit();
         Serial.println(F("Transmitted"));

@@ -2,6 +2,12 @@
 
 uint8_t lastMinute;
 
+void displayId() {
+    display.setCursor(0,0);
+    display.print("ID: ");
+    display.print(nodeID, DEC);
+}
+
 void displayCurrentRTCDate() {
     DateTime now = rtc.now();
     display.clearMsgArea();
@@ -171,6 +177,7 @@ void setupDisplay() {
     display.setBatteryIcon(true);
     display.setBattery(batteryLevel());
     display.renderBattery();
+    displayId();
     displayCurrentRTCDateTime();
 }
 
