@@ -12,6 +12,7 @@ void setupRadio(uint8_t nodeID);
 void printMessageData();
 bool postToAPI();
 void transmit();
+void transmitCurrentData();
 void reTransmitOldestHistory();
 void receive();
 void writeToSD(char* filename, char* str);

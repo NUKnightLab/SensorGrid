@@ -290,7 +290,8 @@ void loop() {
          lastReTransmit = millis();
     } else if ( !sinkNode && parent != NULL && doTransmit && (millis() - lastTransmit) > 1000 * 30) {     
         Serial.println(F("***\nTX\n---"));
-        transmit();
+        // transmit(); // old transmit which keeps history
+        transmitCurrentData();
         Serial.println(F("Transmitted"));
         lastTransmit = millis();
     }

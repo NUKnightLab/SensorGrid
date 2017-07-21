@@ -75,6 +75,132 @@ void sendBeacon() {
     Serial.println("Sent BEACON");
 }
 
+static void removeParent(uint8_t id) {
+    if (parent == NULL) return;
+    Serial.print("Removing a parent node: "); Serial.println(id);
+    if (parent->id == id) {
+        Serial.println("parent ID is id");
+        parent = parent->nextNode;
+        Serial.println("Parent is now next node");
+        // TODO: destroy old parent?
+        numParents -= 1;
+        return;   
+    }
+    Node * current = parent;
+    while (current->nextNode != NULL) {
+        Serial.print("Checking id of next node: "); Serial.println(current->nextNode->id);
+        if (current->nextNode->id == id) {
+            current->nextNode = current->nextNode->nextNode;
+            // TODO: destroy removed node?
+            numParents -= 1;
+            return;
+        }
+        current = current->nextNode;
+    }
+    Serial.println("Done remove");
+}
+
+
+static void addParent(Node * node) {
+
+    Serial.println("Adding a parent node");
+    // since order is maintained and could have changed, remove and re-add
+    removeParent(node->id);
+    
+    if (parent == NULL) {
+        Serial.println("Adding first parent");
+        parent = node;
+        numParents += 1;
+        return;
+    }
+
+    Serial.println("Remove-check done. parent is not null");
+    Serial.print("parent ext: "); Serial.println(parent->ext);
+    Serial.print("parent rssi: "); Serial.print(parent->rssi);
+    Serial.print("Node ext: "); Serial.print(node->ext);
+    Serial.print("Node rssi: "); Serial.println(node->rssi);
+    if ( (node->ext < parent->ext)
+          || ( node->ext == parent->ext && node->rssi > parent->rssi )) {
+        node->nextNode = parent;
+        parent = node;
+        Serial.println("Pushed node in front of parent");
+        Serial.println("incrementing numParents");
+        numParents += 1;
+        Serial.print("number of parents: "); Serial.println(numParents, DEC);
+        return;
+    }
+    Serial.println("New node is greater than current parent");
+    Node * current = parent;
+    while (current->nextNode != NULL) {
+        Serial.print("node ext: "); Serial.println(node->ext);
+        Serial.print("next node ext: "); Serial.println(current->nextNode->ext);
+        if (node->ext < current->nextNode->ext
+          || ( node->ext == current->ext && node->rssi < current->rssi )) {
+            node->nextNode = current->nextNode;
+            current->nextNode = node;
+            Serial.println("Inserted node into parents");
+            numParents += 1;
+            Serial.print("number of parents: "); Serial.println(numParents);
+            return;
+        }
+        current = current->nextNode;
+    }
+    Serial.println("Node goes at end of parent list");
+    current->nextNode = node;
+    Serial.println("Increment num parents");
+    numParents += 1;
+    Serial.print("Number of parents"); Serial.println(numParents);
+}
+
+void expireParents() {
+     Serial.println("Checking for expired parents");
+     Node * node = parent;
+     while (node != NULL) {
+        if ( (millis() - node->timestamp) > 40 * 3000 ) {
+            Serial.print("Removing expired parent: "); Serial.println(node->id);
+            removeParent(node->id);
+        }
+        node = node->nextNode;
+     }
+}
+
+static void handleBeacon() {
+    Serial.print("Received beacon from: "); Serial.print(rf95.headerFrom(), DEC);
+    Serial.print(" EXT: "); Serial.println(msg->data[0], DEC);
+    Serial.print("; RSSI: "); Serial.println(rf95.lastRssi(), DEC);
+    
+    /*
+    if (msg->data[0] < 0) {
+        // skip disconnected nodes for now. Later these might inform how we handle beaconing and route construction
+        Serial.println("Skipping handling disconnected node beacon");
+        return;
+    } */
+    
+    /*
+    if (parent == NULL) {
+        Serial.println("Creating parent");
+        parent = (Node*) malloc(sizeof(Node));
+        //memset(parent, 0, sizeof(Node));
+        Serial.print("Parent is null: "); Serial.println(parent == NULL);
+        parent->id = rf95.headerFrom();
+        parent->ext = msg->data[0];
+        parent->rssi = rf95.lastRssi();
+        Serial.print("Parent is now null: "); Serial.println(parent == NULL);
+        Serial.print("Next parent is null: "); Serial.println(parent->nextNode == NULL);
+        hopDistanceToSink = parent->ext + 1;
+        numParents = 1;
+        return;
+    } */
+    Serial.println("malloc new node");
+    Node * node = (Node*) malloc(sizeof(Node));
+    node->id = rf95.headerFrom();
+    node->timestamp = millis();
+    node->ext = msg->data[0];
+    node->rssi = rf95.lastRssi();
+    node->nextNode = NULL;
+    addParent(node);
+}
+
 static void sendCurrentMessage() {
     rf95.send((const uint8_t*)buf, msgLen);
     rf95.waitPacketSent();
@@ -125,6 +251,182 @@ static void sendCurrentMessage() {
     //printHistory();
 }
 
+static char* logline() {
+    char str[200]; // 155+16 is current theoretical max
+    sprintf(str,
+        "%4.2f,%i,%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+        (float)(msg->ver_100)/100, msg->net, msg->snd, msg->orig, msg->id, (float)(msg->bat_100)/100, msg->timestamp,
+        msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
+        msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
+    return str;
+}
+
+static void writeLogLine() {
+    char* line = logline();
+    Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
+    Serial.println(line);
+    if (logfile) {
+        digitalWrite(SD_CHIP_SELECT_PIN, LOW);
+        writeToSD(logfile, line);
+        digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+    }
+}
+
+static void _receive() {
+    if (rf95.recv(buf, &msgLen)) {
+        Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
+        Serial.print(F(")"));
+        Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
+        Serial.println(rf95.lastRssi(), DEC);
+        uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
+        // temporarily using version 333 to indicate beacon transmission
+        if (msg->ver_100 == 333) {
+            handleBeacon();
+            return;
+        }
+        if (msg->ver_100 == 444) { // 444: temp data ack code. handle in transmission
+            return;
+        }
+        if (msg->ver_100 != ver) {
+            Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100);
+            return;
+        }
+
+        // looks like data packet. send ack
+        rf95.setHeaderTo(rf95.headerFrom());
+        clearBuffer();
+        msg->ver_100 = (uint16_t)(444); // for now: using version field as message type. 444 = data ack
+        rf95.send((const uint8_t*)buf, msgLen);
+        rf95.waitPacketSent();
+        Serial.println("Sent ACK");
+        return;
+
+        // TODO: forward data to parent
+        
+        // old _receive
+        if ( msg->orig != nodeID && (
+             (!strcmp(logMode, "NETWORK") && msg->net == networkID)
+             || !strcmp(logMode, "ALL") )) {
+           writeLogLine();
+        }
+        if (msg->net > 0 && msg->net != networkID) {
+            Serial.println(F("SKIP: out-of-network msg"));
+            return;
+        }
+        if ( msg->orig == nodeID) {
+            Serial.print(F("SKIP: own msg from: ")); Serial.println(msg->snd);
+            // remove it from history
+            for (int i=0; i<HISTORY_SIZE; i++) {
+              if (history[i].orig == msg->orig && history[i].id == msg->id) {
+                Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
+                history[i] = {0};
+                break;
+              }
+            }
+            printHistory();
+            //Serial.print(F("LOST ACK: ")); Serial.println(msg->id - (lastAck+1));
+            //lastAck = msg->id;
+            return;
+        }
+        printMessageData();
+        flashLED(1, HIGH);
+        if (oledOn) {
+            display.fillRect(35, 16, 128, 32, BLACK);
+            display.display();
+            display.setTextColor(WHITE);
+            display.setCursor(35, 16);
+            display.print(msg->snd); display.print(":");
+            display.print(msg->orig); display.print(".");
+            display.print(msg->id);
+            display.print(" ");display.print(rf95.lastRssi());
+            display.display();
+        }
+        if ( (msg->orig != msg->snd) && (msg->timestamp <= maxTimestamps[msg->orig]) ) {
+            /**
+             * Always re-transmit 1st hop messages. Retransmit subsequent hops if they are new
+             */
+            Serial.print(F("Ignore old Msg: "));
+            Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
+            Serial.print(F(" (Current Max: ")); Serial.print(maxTimestamps[msg->orig]);
+            Serial.println(F(")"));
+            /* Not sure we should be clearing this from history. A second rx does not necessarily mean
+             * that we have had a successful tx. E.g., this could be a re-tx from orig that never
+             * received an ack
+            for (int i=0; i<HISTORY_SIZE; i++) {
+              if (history[i].orig == msg->orig && history[i].id == msg->id) {
+                Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
+                history[i] = {0};
+                break;
+              }
+            }
+            */
+            printHistory();
+        } else {
+            msg->snd = nodeID;
+            if (!WiFiPresent || !postToAPI(
+                  getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
+                  getConfig("API_HOST"), atoi(getConfig("API_PORT")),
+                  charBuf, msgLen)) {
+                delay(RETRANSMIT_DELAY);
+                Serial.print(F("RETRANSMITTING ..."));
+                Serial.print(F("  snd: ")); Serial.print(msg->snd);
+                Serial.print(F("; orig: ")); Serial.print(msg->orig);
+                sendCurrentMessage();
+                maxTimestamps[msg->orig] = msg->id;
+                Serial.println(F("  ...RETRANSMITTED"));
+            }
+        }
+    }
+}
+
+void receive() {
+    /**
+     * Randomized receive cycle to avoid loop sync across nodes
+     */
+    clearBuffer();
+    int delta = 1000 + rand() % 1000;
+    Serial.print(F("NODE ")); Serial.print(nodeID);
+    Serial.print(F(" LISTEN: ")); Serial.print(delta);
+    Serial.println(F("ms"));
+    if (rf95.waitAvailableTimeout(delta)) {
+        _receive();
+    } else {
+        Serial.println(F("  ..NO MSG REC"));
+    }
+}
+
+
+static void sendCurrentMessageWithAck() {
+    Serial.print("Sending current msg to parent with ID: "); Serial.print(parent->id);
+    rf95.setHeaderTo(parent->id);
+    flashLED(3, HIGH);
+    rf95.send((const uint8_t*)buf, msgLen);
+    rf95.waitPacketSent();
+    clearBuffer();
+    for (int i=0; i<3; i++) {
+        if (rf95.waitAvailableTimeout(1000)) {
+            if (rf95.recv(buf, &msgLen)) {
+                Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
+                Serial.print(F(")"));
+                Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
+                Serial.println(rf95.lastRssi(), DEC);
+                if (msg->ver_100 == 444) {
+                    Serial.println("Received ack");
+                    break;
+                } else {
+                    Serial.print("Received non-ack. Possible data to handle");
+                }
+            } else {
+                Serial.println(" ..NO MSG RCVD");
+            }
+        } else {
+            Serial.println(F("  ..ACK WAIT TIMEOUT"));
+        }
+    }
+}
+
+
+
 void printMessageData() {
     Serial.print(F("VER: ")); Serial.print((float)msg->ver_100/100);
     Serial.print(F("; NET: ")); Serial.print(msg->net);
@@ -146,26 +448,7 @@ void printMessageData() {
     Serial.print(F("    [9] ")); Serial.println(msg->data[9]);
 }
 
-static char* logline() {
-    char str[200]; // 155+16 is current theoretical max
-    sprintf(str,
-        "%4.2f,%i,%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
-        (float)(msg->ver_100)/100, msg->net, msg->snd, msg->orig, msg->id, (float)(msg->bat_100)/100, msg->timestamp,
-        msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
-        msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
-    return str;
-}
 
-static void writeLogLine() {
-    char* line = logline();
-    Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
-    Serial.println(line);
-    if (logfile) {
-        digitalWrite(SD_CHIP_SELECT_PIN, LOW);
-        writeToSD(logfile, line);
-        digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
-    }
-}
 
 static void warnNoGPSConfig() {
     Serial.println(F("WARNING! GPS data specified in data registers, but no GPS_MODULE in config"));
@@ -321,6 +604,20 @@ void reTransmitOldestHistory() {
     }
 }
 
+void transmitCurrentData() {
+    MSG_ID++;
+    fillCurrentMessageData();
+    printMessageData();
+    if ( !strcmp(logMode, "NODE")
+         || !strcmp(logMode, "NETWORK")
+         || !strcmp(logMode, "ALL") ) {
+       writeLogLine();
+    }
+    flashLED(3, HIGH);
+    Serial.println("Sending current message");
+    sendCurrentMessageWithAck();
+    // TODO: handle sink
+}
 void transmit() {
     for (int i=0; i<HISTORY_SIZE; i++) {
         if (history[i].orig == nodeID && history[i].id == MSG_ID) {
@@ -375,238 +672,10 @@ void transmit() {
     }
 }
 
-static void removeParent(uint8_t id) {
-    if (parent == NULL) return;
-    Serial.print("Removing a parent node: "); Serial.println(id);
-    if (parent->id == id) {
-        Serial.println("parent ID is id");
-        parent = parent->nextNode;
-        Serial.println("Parent is now next node");
-        // TODO: destroy old parent?
-        numParents -= 1;
-        return;   
-    }
-    Node * current = parent;
-    while (current->nextNode != NULL) {
-        Serial.print("Checking id of next node: "); Serial.println(current->nextNode->id);
-        if (current->nextNode->id == id) {
-            current->nextNode = current->nextNode->nextNode;
-            // TODO: destroy removed node?
-            numParents -= 1;
-            return;
-        }
-        current = current->nextNode;
-    }
-    Serial.println("Done remove");
-}
 
 
-static void addParent(Node * node) {
 
-    Serial.println("Adding a parent node");
-    // since order is maintained and could have changed, remove and re-add
-    removeParent(node->id);
-    
-    if (parent == NULL) {
-        Serial.println("Adding first parent");
-        parent = node;
-        numParents += 1;
-        return;
-    }
 
-    Serial.println("Remove-check done. parent is not null");
-    Serial.print("parent ext: "); Serial.println(parent->ext);
-    Serial.print("parent rssi: "); Serial.print(parent->rssi);
-    Serial.print("Node ext: "); Serial.print(node->ext);
-    Serial.print("Node rssi: "); Serial.println(node->rssi);
-    if ( (node->ext < parent->ext)
-          || ( node->ext == parent->ext && node->rssi > parent->rssi )) {
-        node->nextNode = parent;
-        parent = node;
-        Serial.println("Pushed node in front of parent");
-        Serial.println("incrementing numParents");
-        numParents += 1;
-        Serial.print("number of parents: "); Serial.println(numParents, DEC);
-        return;
-    }
-    Serial.println("New node is greater than current parent");
-    Node * current = parent;
-    while (current->nextNode != NULL) {
-        Serial.print("node ext: "); Serial.println(node->ext);
-        Serial.print("next node ext: "); Serial.println(current->nextNode->ext);
-        if (node->ext < current->nextNode->ext
-          || ( node->ext == current->ext && node->rssi < current->rssi )) {
-            node->nextNode = current->nextNode;
-            current->nextNode = node;
-            Serial.println("Inserted node into parents");
-            numParents += 1;
-            Serial.print("number of parents: "); Serial.println(numParents);
-            return;
-        }
-        current = current->nextNode;
-    }
-    Serial.println("Node goes at end of parent list");
-    current->nextNode = node;
-    Serial.println("Increment num parents");
-    numParents += 1;
-    Serial.print("Number of parents"); Serial.println(numParents);
-}
-
-void expireParents() {
-     Serial.println("Checking for expired parents");
-     Node * node = parent;
-     while (node != NULL) {
-        if ( (millis() - node->timestamp) > 40 * 3000 ) {
-            Serial.print("Removing expired parent: "); Serial.println(node->id);
-            removeParent(node->id);
-        }
-        node = node->nextNode;
-     }
-}
-
-static void handleBeacon() {
-    Serial.print("Received beacon from: "); Serial.print(rf95.headerFrom(), DEC);
-    Serial.print(" EXT: "); Serial.println(msg->data[0], DEC);
-    Serial.print("; RSSI: "); Serial.println(rf95.lastRssi(), DEC);
-    
-    /*
-    if (msg->data[0] < 0) {
-        // skip disconnected nodes for now. Later these might inform how we handle beaconing and route construction
-        Serial.println("Skipping handling disconnected node beacon");
-        return;
-    } */
-    
-    /*
-    if (parent == NULL) {
-        Serial.println("Creating parent");
-        parent = (Node*) malloc(sizeof(Node));
-        //memset(parent, 0, sizeof(Node));
-        Serial.print("Parent is null: "); Serial.println(parent == NULL);
-        parent->id = rf95.headerFrom();
-        parent->ext = msg->data[0];
-        parent->rssi = rf95.lastRssi();
-        Serial.print("Parent is now null: "); Serial.println(parent == NULL);
-        Serial.print("Next parent is null: "); Serial.println(parent->nextNode == NULL);
-        hopDistanceToSink = parent->ext + 1;
-        numParents = 1;
-        return;
-    } */
-    Serial.println("malloc new node");
-    Node * node = (Node*) malloc(sizeof(Node));
-    node->id = rf95.headerFrom();
-    node->timestamp = millis();
-    node->ext = msg->data[0];
-    node->rssi = rf95.lastRssi();
-    node->nextNode = NULL;
-    addParent(node);
-}
-
-static void _receive() {
-    if (rf95.recv(buf, &msgLen)) {
-        Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
-        Serial.print(F(")"));
-        Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
-        Serial.println(rf95.lastRssi(), DEC);
-        uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
-        // temporarily using version 333 to indicate beacon transmission
-        if (msg->ver_100 == 333) {
-            handleBeacon();
-            return;
-        }
-        if (msg->ver_100 != ver) {
-            Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100/100);
-            return;
-        }
-        if ( msg->orig != nodeID && (
-             (!strcmp(logMode, "NETWORK") && msg->net == networkID)
-             || !strcmp(logMode, "ALL") )) {
-           writeLogLine();
-        }
-        if (msg->net > 0 && msg->net != networkID) {
-            Serial.println(F("SKIP: out-of-network msg"));
-            return;
-        }
-        if ( msg->orig == nodeID) {
-            Serial.print(F("SKIP: own msg from: ")); Serial.println(msg->snd);
-            // remove it from history
-            for (int i=0; i<HISTORY_SIZE; i++) {
-              if (history[i].orig == msg->orig && history[i].id == msg->id) {
-                Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
-                history[i] = {0};
-                break;
-              }
-            }
-            printHistory();
-            //Serial.print(F("LOST ACK: ")); Serial.println(msg->id - (lastAck+1));
-            //lastAck = msg->id;
-            return;
-        }
-        printMessageData();
-        flashLED(1, HIGH);
-        if (oledOn) {
-            display.fillRect(35, 16, 128, 32, BLACK);
-            display.display();
-            display.setTextColor(WHITE);
-            display.setCursor(35, 16);
-            display.print(msg->snd); display.print(":");
-            display.print(msg->orig); display.print(".");
-            display.print(msg->id);
-            display.print(" ");display.print(rf95.lastRssi());
-            display.display();
-        }
-        if ( (msg->orig != msg->snd) && (msg->timestamp <= maxTimestamps[msg->orig]) ) {
-            /**
-             * Always re-transmit 1st hop messages. Retransmit subsequent hops if they are new
-             */
-            Serial.print(F("Ignore old Msg: "));
-            Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
-            Serial.print(F(" (Current Max: ")); Serial.print(maxTimestamps[msg->orig]);
-            Serial.println(F(")"));
-            /* Not sure we should be clearing this from history. A second rx does not necessarily mean
-             * that we have had a successful tx. E.g., this could be a re-tx from orig that never
-             * received an ack
-            for (int i=0; i<HISTORY_SIZE; i++) {
-              if (history[i].orig == msg->orig && history[i].id == msg->id) {
-                Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
-                history[i] = {0};
-                break;
-              }
-            }
-            */
-            printHistory();
-        } else {
-            msg->snd = nodeID;
-            if (!WiFiPresent || !postToAPI(
-                  getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
-                  getConfig("API_HOST"), atoi(getConfig("API_PORT")),
-                  charBuf, msgLen)) {
-                delay(RETRANSMIT_DELAY);
-                Serial.print(F("RETRANSMITTING ..."));
-                Serial.print(F("  snd: ")); Serial.print(msg->snd);
-                Serial.print(F("; orig: ")); Serial.print(msg->orig);
-                sendCurrentMessage();
-                maxTimestamps[msg->orig] = msg->id;
-                Serial.println(F("  ...RETRANSMITTED"));
-            }
-        }
-    }
-}
-
-void receive() {
-    /**
-     * Randomized receive cycle to avoid loop sync across nodes
-     */
-    clearBuffer();
-    int delta = 1000 + rand() % 1000;
-    Serial.print(F("NODE ")); Serial.print(nodeID);
-    Serial.print(F(" LISTEN: ")); Serial.print(delta);
-    Serial.println(F("ms"));
-    if (rf95.waitAvailableTimeout(delta)) {
-        _receive();
-    } else {
-        Serial.println(F("  ..NO MSG REC"));
-    }
-}
 
 void _writeToSD(char* filename, char* str) {
   Serial.print(F("Init SD card .."));
