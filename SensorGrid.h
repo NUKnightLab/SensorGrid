@@ -75,6 +75,7 @@ typedef struct Node {
   uint32_t timestamp;
   float rssi;
   int8_t ext;
+  int8_t tx;
   struct Node * nextNode;
 };
 

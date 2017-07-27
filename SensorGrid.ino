@@ -216,7 +216,8 @@ void loop() {
             Serial.print("ID: "); Serial.print(current->id);
             Serial.print(" TIME: "); Serial.print(millis() - current->timestamp);
             Serial.print("; EXT: "); Serial.print(current->ext);
-            Serial.print("; RSSI: "); Serial.println(current->rssi);
+            Serial.print("; RSSI: "); Serial.print(current->rssi);
+            Serial.print("; TX: "); Serial.println(current->tx);
             current = current->nextNode;
         } while (current != NULL);
     }
@@ -280,7 +281,7 @@ void loop() {
     if ( (millis() - lastBeacon) > 1000 * 30) {
          sendBeacon();
          lastBeacon = millis();
-         expireParents();
+         //expireParents();
     }
 
     if ( false && doTransmit && (millis() - lastReTransmit) > 1000 * 10) {
@@ -292,7 +293,6 @@ void loop() {
         Serial.println(F("***\nTX\n---"));
         // transmit(); // old transmit which keeps history
         transmitCurrentData();
-        Serial.println(F("Transmitted"));
         lastTransmit = millis();
     }
     // RX as soon as possible after TX to catch ack of sent msg
