@@ -187,8 +187,8 @@ void loop() {
         }
     }
 
-    Serial.println(F("****"));
-    printRam();
+    //Serial.println(F("****"));
+    //printRam();
 
     if (hasOLED) {
         if (oledOn) {
@@ -257,8 +257,9 @@ void loop() {
         lastTransmit = millis();
     }
     // RX as soon as possible after TX to catch ack of sent msg
-    if (RECEIVE) {
-        Serial.println(F("***\nRX\n---"));
+    //if (RECEIVE) {
+    if (nodeID == 1) {
+        //Serial.println(F("***\nRX\n---"));
         receive();
     }
 

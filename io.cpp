@@ -9,6 +9,7 @@ static SdFat SD;
 #define HISTORY_SIZE 30
 
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
+static RHMesh router(rf95, 8);
 static uint32_t maxTimestamps[MAX_NETWORK_SIZE] = {0};
 static uint32_t MSG_ID = 0;
 static uint32_t lastAck = 0;
@@ -25,6 +26,7 @@ static void clearBuffer() {
 }
 
 void setupRadio() {
+    Serial.print("MESSAGE LENGTH"); Serial.println(msgLen, DEC);
     Serial.println(F("LoRa Test!"));
     digitalWrite(RFM95_RST, LOW);
     delay(10);
@@ -42,6 +44,8 @@ void setupRadio() {
     for (int i=0; i<HISTORY_SIZE; i++) {
       history[i] = {0};
     }
+    if (!router.init())
+        Serial.println("Router init failed");
     delay(100);
 }
 
@@ -54,6 +58,28 @@ static void printHistory() {
 }
 
 static void sendCurrentMessage() {
+  Serial.println("Sending to mesh server");
+  // Send a message to a rf22_mesh_server
+  // A route to the destination will be automatically discovered.
+  if (router.sendtoWait((uint8_t*)buf, msgLen, 1) == RH_ROUTER_ERROR_NONE) {
+    // It has been reliably delivered to the next node.
+    // Now wait for a reply from the ultimate server
+    uint8_t len = sizeof(buf);
+    uint8_t from;
+    clearBuffer();    
+    if (router.recvfromAckTimeout(buf, &len, 3000, &from)) {
+      Serial.print("got reply from : 0x"); Serial.print(from, HEX);
+      Serial.print(": "); Serial.println((char*)buf);
+    } else {
+      Serial.println("No reply, is rf22_mesh_server1, rf22_mesh_server2 and rf22_mesh_server3 running?");
+    }
+  } else {
+     Serial.println("sendtoWait failed. Are the intermediate mesh servers running?");
+  }
+  router.printRoutingTable();
+}
+
+static void old_sendCurrentMessage() {
     rf95.send((const uint8_t*)buf, msgLen);
     rf95.waitPacketSent();
     flashLED(3, HIGH);
@@ -354,6 +380,20 @@ void transmit() {
 }
 
 static void _receive() {
+  uint8_t from;
+  if (router.recvfromAck(buf, &msgLen, &from))
+  {
+    Serial.print("got request from : 0x");
+    Serial.print(from, HEX);
+    Serial.print(": ");
+    Serial.println((char*)buf);
+    // Send a reply back to the originator client
+    if (router.sendtoWait((uint8_t*)buf, msgLen, from) != RH_ROUTER_ERROR_NONE)
+      Serial.println("sendtoWait failed");
+  }
+}
+
+static void _orig_receive() {
     if (rf95.recv(buf, &msgLen)) {
         Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
         Serial.print(F(")"));
@@ -445,14 +485,16 @@ void receive() {
      */
     clearBuffer();
     int delta = 1000 + rand() % 1000;
-    Serial.print(F("NODE ")); Serial.print(nodeID);
-    Serial.print(F(" LISTEN: ")); Serial.print(delta);
-    Serial.println(F("ms"));
+    //Serial.print(F("NODE ")); Serial.print(nodeID);
+    //Serial.print(F(" LISTEN: ")); Serial.print(delta);
+    //Serial.println(F("ms"));
+    _receive();
+    /*
     if (rf95.waitAvailableTimeout(delta)) {
         _receive();
     } else {
         Serial.println(F("  ..NO MSG REC"));
-    }
+    } */
 }
 
 void _writeToSD(char* filename, char* str) {
