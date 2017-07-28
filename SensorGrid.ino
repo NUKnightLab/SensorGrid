@@ -245,7 +245,7 @@ void loop() {
       return;
     }
 
-    if ( doTransmit && (millis() - lastReTransmit) > 1000 * 10) {
+    if ( false && doTransmit && (millis() - lastReTransmit) > 1000 * 10) {
          Serial.println(F("***\nRE-TX\n---"));
          reTransmitOldestHistory();
          Serial.println(F("Transmitted"));
@@ -258,7 +258,7 @@ void loop() {
     }
     // RX as soon as possible after TX to catch ack of sent msg
     //if (RECEIVE) {
-    if (nodeID == 1) {
+    if (true || nodeID == 1) {
         //Serial.println(F("***\nRX\n---"));
         receive();
     }
