@@ -57,7 +57,6 @@ void setupRadio() {
     for (int i=0; i<HISTORY_SIZE; i++) {
       history[i] = {0};
     }
-
     delay(100);
 }
 
@@ -69,27 +68,35 @@ static void printHistory() {
     Serial.println("");
 }
 
-static void sendCurrentMessage() {
+bool channelActive() {
+  return rf95.isChannelActive();
+}
+
+static bool sendCurrentMessage() {
   Serial.println("Sending to mesh server");
-  // Send a message to a rf22_mesh_server
-  // A route to the destination will be automatically discovered.
-  if (router->sendtoWait((uint8_t*)buf, msgLen, 1) == RH_ROUTER_ERROR_NONE) {
+  clearAckBuffer();
+  uint8_t len = sizeof(ackBuffer);
+  uint8_t from;
+  int errCode = router->sendtoWait((uint8_t*)buf, msgLen, 1);
+  if (errCode == RH_ROUTER_ERROR_NONE) {
     // It has been reliably delivered to the next node.
     // Now wait for a reply from the ultimate server
-    clearAckBuffer();
-    uint8_t len = sizeof(ackBuffer);
-    uint8_t from; 
     if (router->recvfromAckTimeout(ackBuffer, &len, 3000, &from)) {
       Serial.print("got reply from : 0x"); Serial.print(from, HEX);
       Serial.print(": "); Serial.print((char*)buf);
       Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
     } else {
-      Serial.println("No reply, is rf22_mesh_server1, rf22_mesh_server2 and rf22_mesh_server3 running?");
+      Serial.println("No reply, is collector running?");
     }
   } else {
-     Serial.println("sendtoWait failed. Are the intermediate mesh servers running?");
+     Serial.println("sendtoWait failed. Are the intermediate nodes running?");
   }
   router->printRoutingTable();
+  if (errCode == RH_ROUTER_ERROR_NONE) {
+      return true;
+  } else {
+      return false;
+  }
 }
 
 static void old_sendCurrentMessage() {
@@ -276,8 +283,8 @@ static uint32_t getRegisterData(char* registerName) {
     if (type) {
         return getDataByTypeName(type);
     } else {
-        Serial.print(F("Data register ")); Serial.print(registerName);
-        Serial.println(F(" not configured"));
+        //Serial.print(F("Data register ")); Serial.print(registerName);
+        //Serial.println(F(" not configured"));
         return 0;
     }
 }
@@ -338,7 +345,13 @@ void reTransmitOldestHistory() {
     }
 }
 
-void transmit() {
+
+bool transmit() {
+    fillCurrentMessageData();
+    return sendCurrentMessage();
+}
+
+void _old_transmit() {
     for (int i=0; i<HISTORY_SIZE; i++) {
         if (history[i].orig == nodeID && history[i].id == MSG_ID) {
             // Do not transmit new message from this node until
@@ -394,8 +407,7 @@ void transmit() {
 
 static void _receive() {
   uint8_t from;
-  if (router->recvfromAck(buf, &msgLen, &from))
-  {
+  if (router->recvfromAck(buf, &msgLen, &from)) {
     Serial.print("got request from : 0x");
     Serial.print(from, HEX);
     Serial.print(": ");

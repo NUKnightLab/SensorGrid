@@ -12,9 +12,10 @@
 void setupRadio();
 void printMessageData();
 bool postToAPI();
-void transmit();
+bool transmit();
 void reTransmitOldestHistory();
 void receive();
 void writeToSD(char* filename, char* str);
+bool channelActive();
 
 #endif

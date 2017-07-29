@@ -1,5 +1,6 @@
 #include "SensorGrid.h"
 #include "display.h"
+#include <pt.h>
 
 /* Config defaults are strings so they can be passed to getConfig */
 static const char* DEFAULT_NETWORK_ID = "1";
@@ -46,9 +47,49 @@ Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 bool WiFiPresent = false;
 uint32_t lastDisplayTime = 0;
 
+static struct pt pt1, pt2;
+
+static int radioTransmitThread(struct pt *pt, int interval) {
+  static unsigned long timestamp = 0;
+  PT_BEGIN(pt);
+  while(1) { // never stop 
+    /* each time the function is called the second boolean
+    *  argument "millis() - timestamp > interval" is re-evaluated
+    *  and if false the function exits after that. */
+    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
+    transmit();
+    timestamp = millis();
+  }
+  PT_END(pt);
+}
+
+static int radioListenThread(struct pt *pt, int interval) {
+  static unsigned long timestamp = 0;
+  static uint8_t txCountdown = 0;
+  PT_BEGIN(pt);
+  while(1) {
+    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
+    timestamp = millis();
+    receive();
+    if ( nodeID != 1 && doTransmit && (millis() - lastTransmit) > 1000 * 10 + rand() % 2000) {
+        if (txCountdown == 0) {
+          txCountdown = 1 + rand() % 10;
+        } else {
+          txCountdown--;
+          if (txCountdown == 0) {
+            if (transmit())
+                lastTransmit = millis();
+          }
+        }
+    }
+  }
+  PT_END(pt);
+}
 
 void setup() {
 
+    randomSeed(analogRead(A0));
+    
     if (false) {
         while (!Serial); // only do this if connected to USB
     }
@@ -173,10 +214,18 @@ void setup() {
         fail(MESSAGE_STRUCT_TOO_LARGE);
     }
     Serial.println(F("OK!"));
+
+    //PT_INIT(&pt1);  // initialise the two
+    PT_INIT(&pt2);  // protothread variables
 }
 
 void loop() {
-    
+
+    //if (nodeID != 1)
+    //    radioTransmitThread(&pt1, 10*1000);
+    radioListenThread(&pt2, 100);
+
+    /*
     int gpsYear = GPS.year;
     if (gpsYear != 0 && gpsYear != 80) {
         uint32_t gpsTime = DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds).unixtime();
@@ -185,7 +234,7 @@ void loop() {
           Serial.println("Setting RTC to GPS time");
           rtc.adjust(DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds));
         }
-    }
+    } */
 
     //Serial.println(F("****"));
     //printRam();
@@ -245,6 +294,7 @@ void loop() {
       return;
     }
 
+    /*
     if ( false && doTransmit && (millis() - lastReTransmit) > 1000 * 10) {
          Serial.println(F("***\nRE-TX\n---"));
          reTransmitOldestHistory();
@@ -255,13 +305,15 @@ void loop() {
         transmit();
         Serial.println(F("Transmitted"));
         lastTransmit = millis();
-    }
+    } */
+    
     // RX as soon as possible after TX to catch ack of sent msg
     //if (RECEIVE) {
+    /*
     if (true || nodeID == 1) {
         //Serial.println(F("***\nRX\n---"));
         receive();
-    }
+    } */
 
     //Serial.print("GAS: "); Serial.println(analogRead(14));
 }
