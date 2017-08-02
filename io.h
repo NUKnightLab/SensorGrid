@@ -2,6 +2,7 @@
 #define IO_H
 
 #include <RHMesh.h>
+#include <RHRouter.h>
 #include <RH_RF95.h>
 #include "SensorGrid.h"
 

@@ -136,6 +136,7 @@ void _setDate() {
     displayCurrentRTCDate();
 }
 
+/*
 void setDate() {
     display.clearDisplay();
     _setDate();
@@ -157,6 +158,7 @@ void setDate() {
     displayCurrentRTCDateTime();
     display.display();
 }
+*/
 
 void displayBatteryLevel() {
     display.setBattery(batteryLevel());

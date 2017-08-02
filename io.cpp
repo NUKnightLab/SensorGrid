@@ -7,10 +7,19 @@ static SdFat SD;
 
 #define SD_CHIP_SELECT_PIN 10
 #define HISTORY_SIZE 30
+#define RH_MESH_MAX_MESSAGE_LEN 60
+
+#define ROUTER_TYPE 1
 
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
 //static RHMesh router(rf95, 1);
+//static RHMesh* router;
+#if ROUTER_TYPE == 0
+static RHRouter* router;
+#else
 static RHMesh* router;
+#endif
+
 static uint32_t maxTimestamps[MAX_NETWORK_SIZE] = {0};
 static uint32_t MSG_ID = 0;
 static uint32_t lastAck = 0;
@@ -22,6 +31,8 @@ static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
 static struct Message history[HISTORY_SIZE];
 static char* charBuf = (char*)buf;
+uint8_t data[] = "Hello back from server";
+uint8_t routingBuf[RH_MESH_MAX_MESSAGE_LEN];
 
 static void clearBuffer() {
     memset(buf, 0, msgLen);
@@ -44,7 +55,11 @@ void setupRadio() {
     }
     Serial.println(F("LoRa OK!")); */
 
-    router = new RHMesh(rf95, nodeID);
+    #if ROUTER_TYPE == 0
+        router = new RHRouter(rf95, nodeID);
+    #else
+        router = new RHMesh(rf95, nodeID);
+    #endif
     if (!router->init())
         Serial.println("Router init failed");
         
@@ -53,9 +68,17 @@ void setupRadio() {
     }
     Serial.print(F("FREQ: ")); Serial.println(rf95Freq);
     rf95.setTxPower(txPower, false);
-    rf95.setCADTimeout(3000);
+    rf95.setCADTimeout(2000);
+    //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     for (int i=0; i<HISTORY_SIZE; i++) {
       history[i] = {0};
+    }
+    router->setTimeout(1000);
+
+    if (ROUTER_TYPE == 0) {
+        router->addRouteTo(1, 108);
+        router->addRouteTo(107, 108);
+        router->addRouteTo(108, 108);
     }
     delay(100);
 }
@@ -73,30 +96,31 @@ bool channelActive() {
 }
 
 static bool sendCurrentMessage() {
-  Serial.println("Sending to mesh server");
-  clearAckBuffer();
-  uint8_t len = sizeof(ackBuffer);
-  uint8_t from;
-  int errCode = router->sendtoWait((uint8_t*)buf, msgLen, 1);
-  if (errCode == RH_ROUTER_ERROR_NONE) {
-    // It has been reliably delivered to the next node.
-    // Now wait for a reply from the ultimate server
-    if (router->recvfromAckTimeout(ackBuffer, &len, 3000, &from)) {
-      Serial.print("got reply from : 0x"); Serial.print(from, HEX);
-      Serial.print(": "); Serial.print((char*)buf);
-      Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
+    Serial.println("Sending to mesh server");
+    clearAckBuffer();
+    uint8_t len = sizeof(ackBuffer);
+    uint8_t from;
+    int errCode;
+    errCode = router->sendtoWait((uint8_t*)buf, msgLen, collectorID);
+    if (errCode == RH_ROUTER_ERROR_NONE) {
+        // It has been reliably delivered to the next node.
+        // Now wait for a reply from the ultimate server
+        if (router->recvfromAckTimeout(ackBuffer, &len, 5000, &from)) {
+        Serial.print("got reply from : 0x"); Serial.print(from, HEX);
+        Serial.print(": "); Serial.print((char*)buf);
+        Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
+      } else {
+        Serial.println("recvfromAckTimeout: No reply, is collector running?");
+      }
     } else {
-      Serial.println("No reply, is collector running?");
+       Serial.println("sendtoWait failed. Are the intermediate nodes running?");
     }
-  } else {
-     Serial.println("sendtoWait failed. Are the intermediate nodes running?");
-  }
-  router->printRoutingTable();
-  if (errCode == RH_ROUTER_ERROR_NONE) {
+    router->printRoutingTable();
+    if (errCode == RH_ROUTER_ERROR_NONE) {
       return true;
-  } else {
+    } else {
       return false;
-  }
+    }
 }
 
 static void old_sendCurrentMessage() {
@@ -348,6 +372,7 @@ void reTransmitOldestHistory() {
 
 bool transmit() {
     fillCurrentMessageData();
+    printMessageData();
     return sendCurrentMessage();
 }
 
@@ -414,7 +439,25 @@ static void _receive() {
     Serial.println((char*)buf);
     // Send a reply back to the originator client
     if (router->sendtoWait((uint8_t*)buf, msgLen, from) != RH_ROUTER_ERROR_NONE)
-      Serial.println("sendtoWait failed");
+      Serial.print("FAIL: send ACK of data tx from "); Serial.println(from);
+  }
+}
+
+void receive() {
+  uint8_t len = sizeof(buf);
+  uint8_t from;
+  if (router->recvfromAckTimeout(buf, &len, 5000, &from)) {
+    if (nodeID == 1) {
+        Serial.print("got request from :");
+        Serial.println(from, DEC);
+        printMessageData();
+    } 
+    if (router->sendtoWait(data, sizeof(data), from) != RH_ROUTER_ERROR_NONE)
+        Serial.println("sendtoWait failed");
+    //if (NODE_ID != 1 && from == 1)
+    //    rssi = rf95.lastRssi();
+  } else {
+    //Serial.println("Got nothing");
   }
 }
 
@@ -502,24 +545,6 @@ static void _orig_receive() {
             }
         }
     }
-}
-
-void receive() {
-    /**
-     * Randomized receive cycle to avoid loop sync across nodes
-     */
-    clearBuffer();
-    int delta = 1000 + rand() % 1000;
-    //Serial.print(F("NODE ")); Serial.print(nodeID);
-    //Serial.print(F(" LISTEN: ")); Serial.print(delta);
-    //Serial.println(F("ms"));
-    _receive();
-    /*
-    if (rf95.waitAvailableTimeout(delta)) {
-        _receive();
-    } else {
-        Serial.println(F("  ..NO MSG REC"));
-    } */
 }
 
 void _writeToSD(char* filename, char* str) {

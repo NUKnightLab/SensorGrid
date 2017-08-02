@@ -2,6 +2,8 @@
 #include "display.h"
 #include <pt.h>
 
+
+
 /* Config defaults are strings so they can be passed to getConfig */
 static const char* DEFAULT_NETWORK_ID = "1";
 static const char* DEFAULT_NODE_ID = "1";
@@ -9,6 +11,9 @@ static const char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
 static const char* DEFAULT_TX_POWER = "10";
 static const char* DEFAULT_PROTOCOL_VERSION = "0.11";
 static const char* DEFAULT_DISPLAY_TIMEOUT = "60";
+static char* DEFAULT_COLLECTOR_ID = "1";
+static char* DEFAULT_ROUTER = "0";
+static char* DEFAULT_COLLECTOR = "0";
 static char* DEFAULT_OLED = "0";
 static char* DEFAULT_LOG_FILE = "sensorgrid.log";
 static char* DEFAULT_TRANSMIT = "1";
@@ -24,6 +29,9 @@ uint32_t networkID;
 uint32_t nodeID;
 float rf95Freq;
 uint8_t txPower;
+uint8_t isRouter;
+uint8_t isCollector;
+uint32_t collectorID;
 float protocolVersion;
 char* logfile;
 char* logMode;
@@ -48,6 +56,7 @@ bool WiFiPresent = false;
 uint32_t lastDisplayTime = 0;
 
 static struct pt pt1, pt2;
+
 
 static int radioTransmitThread(struct pt *pt, int interval) {
   static unsigned long timestamp = 0;
@@ -76,15 +85,21 @@ static int radioListenThread(struct pt *pt, int interval) {
           txCountdown = 1 + rand() % 10;
         } else {
           txCountdown--;
-          if (txCountdown == 0) {
-            if (transmit())
+          if (txCountdown <= 0) {
+            if (transmit()) {
                 lastTransmit = millis();
+                txCountdown = 0;
+            } else {
+                txCountdown = 1 + rand() % 10;
+            }
           }
         }
     }
   }
   PT_END(pt);
 }
+
+
 
 void setup() {
 
@@ -95,6 +110,8 @@ void setup() {
     }
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
+
+    Serial.print("Message length: "); Serial.println(sizeof(Message), DEC);
 
     /* The Adafruit RTCLib API and related tutorials are quite misleading here.
      * ::begin() simply calls Wire.begin() and returns true. See:
@@ -136,6 +153,9 @@ void setup() {
         gpsModule = getConfig("GPS_MODULE");
         hasOLED = (uint8_t)(atoi(getConfig("DISPLAY", DEFAULT_OLED)));
         doTransmit = (uint8_t)(atoi(getConfig("TRANSMIT", DEFAULT_TRANSMIT)));
+        isRouter = (uint8_t)(atoi(getConfig("ROUTER", DEFAULT_ROUTER)));
+        isCollector = (uint8_t)(atoi(getConfig("COLLECTOR", DEFAULT_COLLECTOR)));
+        collectorID = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
         SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
     } else {
@@ -150,6 +170,9 @@ void setup() {
         displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
         hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
         doTransmit = (uint8_t)(atoi(DEFAULT_TRANSMIT));
+        isRouter = (uint8_t)(atoi(DEFAULT_ROUTER));
+        isCollector = (uint8_t)(atoi(DEFAULT_COLLECTOR));
+        collectorID = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));        
     }
 
     if (hasOLED) {
@@ -222,8 +245,12 @@ void setup() {
 void loop() {
 
     //if (nodeID != 1)
-    //    radioTransmitThread(&pt1, 10*1000);
-    radioListenThread(&pt2, 100);
+    if (isRouter || isCollector) {
+        receive();
+    } else {
+        radioTransmitThread(&pt1, 10*1000);
+    }
+    //radioListenThread(&pt2, 100);
 
     /*
     int gpsYear = GPS.year;

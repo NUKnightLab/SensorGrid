@@ -28,6 +28,7 @@
 
 extern uint32_t networkID;
 extern uint32_t nodeID;
+extern uint32_t collectorID;
 extern float rf95Freq;
 extern uint8_t txPower;
 extern float protocolVersion;
