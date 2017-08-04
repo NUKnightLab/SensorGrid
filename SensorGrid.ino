@@ -2,8 +2,6 @@
 #include "display.h"
 #include <pt.h>
 
-
-
 /* Config defaults are strings so they can be passed to getConfig */
 static const char* DEFAULT_NETWORK_ID = "1";
 static const char* DEFAULT_NODE_ID = "1";
@@ -55,8 +53,7 @@ Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 bool WiFiPresent = false;
 uint32_t lastDisplayTime = 0;
 
-static struct pt pt1, pt2;
-
+static struct pt pt1, pt2, pt3;
 
 static int radioTransmitThread(struct pt *pt, int interval) {
   static unsigned long timestamp = 0;
@@ -72,34 +69,57 @@ static int radioTransmitThread(struct pt *pt, int interval) {
   PT_END(pt);
 }
 
-static int radioListenThread(struct pt *pt, int interval) {
+
+float bat = 0.0;
+uint32_t displayTime = 0;
+
+
+static int updateDisplayBatteryThread(struct pt *pt, int interval) {
   static unsigned long timestamp = 0;
-  static uint8_t txCountdown = 0;
+  
   PT_BEGIN(pt);
-  while(1) {
+  while(1) { // never stop 
+    /* each time the function is called the second boolean
+    *  argument "millis() - timestamp > interval" is re-evaluated
+    *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
+    if (batteryLevel() != bat) {
+        Serial.print(batteryLevel()); Serial.print(" "); Serial.println(bat);
+        display.setCursor(45,0);
+        display.fillRect(77, 0, 51, 7, BLACK);
+        bat = batteryLevel();
+        display.setBattery(bat);
+        display.renderBattery();
+        display.display();         
+    }    
     timestamp = millis();
-    receive();
-    if ( nodeID != 1 && doTransmit && (millis() - lastTransmit) > 1000 * 10 + rand() % 2000) {
-        if (txCountdown == 0) {
-          txCountdown = 1 + rand() % 10;
-        } else {
-          txCountdown--;
-          if (txCountdown <= 0) {
-            if (transmit()) {
-                lastTransmit = millis();
-                txCountdown = 0;
-            } else {
-                txCountdown = 1 + rand() % 10;
-            }
-          }
-        }
-    }
   }
   PT_END(pt);
 }
 
+static int updateDisplayThread(struct pt *pt, int interval) {
+  static unsigned long timestamp = 0;
+  
+  PT_BEGIN(pt);
+  while(1) { // never stop 
 
+    /* each time the function is called the second boolean
+    *  argument "millis() - timestamp > interval" is re-evaluated
+    *  and if false the function exits after that. */
+    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
+
+    DateTime now = rtc.now();
+    now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
+    if (now.unixtime() != displayTime) {
+        display.clearMsgArea();
+        displayTime = displayCurrentRTCDateTime();
+        updateGPSDisplay();
+        display.display();
+    }      
+    timestamp = millis();
+  }
+  PT_END(pt);
+}
 
 void setup() {
 
@@ -110,10 +130,9 @@ void setup() {
     }
     Serial.begin(9600);
     Serial.println(F("SRL RDY"));
-
     Serial.print("Message length: "); Serial.println(sizeof(Message), DEC);
 
-    /* The Adafruit RTCLib API and related tutorials are quite misleading here.
+    /* The Adafruit RTCLib API and related tutorials are misleading here.
      * ::begin() simply calls Wire.begin() and returns true. See:
      * https://github.com/adafruit/RTClib/blob/e03a97139e285eeb4a5a3c052ab421f53a88031c/RTClib.cpp#L355
      *
@@ -134,10 +153,10 @@ void setup() {
      * But with PCF8523. However note that this example, and general RTC
      * library code uses Wire1
      */
-    Serial.println(F("Starting GPS"));
-    setupGPS();
-    Serial.println(F("Starting RTC"));
-    rtc.begin(); // Always true. Don't check as per Adafruit tutorials
+    //Serial.println(F("Starting GPS"));
+    //setupGPS();
+    //Serial.println(F("Starting RTC"));
+    //rtc.begin(); // Always true. Don't check as per Adafruit tutorials
     
     flashLED(2, HIGH);
 
@@ -194,11 +213,12 @@ void setup() {
     pinMode(RFM95_RST, OUTPUT);
     digitalWrite(RFM95_RST, HIGH);
 
-    if (gpsModule) {
+    if (gpsModule && !isRouter && !isCollector) {
         setupGPS();
     } else {
         Serial.println(F("No GPS_MODULE specified in config .. Skipping GPS setup"));
     }
+    rtc.begin();
     setupRadio();
     char* ssid = getConfig("WIFI_SSID");
     if (ssid) {
@@ -238,20 +258,33 @@ void setup() {
     }
     Serial.println(F("OK!"));
 
-    //PT_INIT(&pt1);  // initialise the two
+    PT_INIT(&pt1);  // initialise the two
     PT_INIT(&pt2);  // protothread variables
+    PT_INIT(&pt3);
 }
 
 void loop() {
 
-    //if (nodeID != 1)
+    if (CHARGE_ONLY) {
+      Serial.print(F("BAT: ")); Serial.println(batteryLevel());
+      delay(10000);
+      return;
+    }
+
+    //Serial.println(F("****"));
+    //printRam();
+
     if (isRouter || isCollector) {
         receive();
     } else {
         radioTransmitThread(&pt1, 10*1000);
     }
-    //radioListenThread(&pt2, 100);
 
+    if (hasOLED) {
+        updateDisplayThread(&pt2, 1000);
+        updateDisplayBatteryThread(&pt3, 10 * 1000);
+    }
+    
     /*
     int gpsYear = GPS.year;
     if (gpsYear != 0 && gpsYear != 80) {
@@ -263,10 +296,8 @@ void loop() {
         }
     } */
 
-    //Serial.println(F("****"));
-    //printRam();
 
-    if (hasOLED) {
+/*
         if (oledOn) {
             display.setBattery(batteryLevel());
             display.renderBattery();
@@ -314,33 +345,5 @@ void loop() {
         }
 
     }
-
-    if (CHARGE_ONLY) {
-      Serial.print(F("BAT: ")); Serial.println(batteryLevel());
-      delay(10000);
-      return;
-    }
-
-    /*
-    if ( false && doTransmit && (millis() - lastReTransmit) > 1000 * 10) {
-         Serial.println(F("***\nRE-TX\n---"));
-         reTransmitOldestHistory();
-         Serial.println(F("Transmitted"));
-         lastReTransmit = millis();
-    } else if ( doTransmit && (millis() - lastTransmit) > 1000 * 30) {     
-        Serial.println(F("***\nTX\n---"));
-        transmit();
-        Serial.println(F("Transmitted"));
-        lastTransmit = millis();
-    } */
-    
-    // RX as soon as possible after TX to catch ack of sent msg
-    //if (RECEIVE) {
-    /*
-    if (true || nodeID == 1) {
-        //Serial.println(F("***\nRX\n---"));
-        receive();
-    } */
-
-    //Serial.print("GAS: "); Serial.println(analogRead(14));
+*/
 }
