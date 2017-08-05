@@ -70,10 +70,8 @@ static int radioTransmitThread(struct pt *pt, int interval) {
   PT_END(pt);
 }
 
-
 float bat = 0.0;
 uint32_t displayTime = 0;
-
 
 static void _updateDisplayBattery() {
      if (batteryLevel() != bat) {
@@ -131,7 +129,6 @@ static int updateDisplayThread(struct pt *pt, int interval) {
   PT_END(pt);
 }
 
-
 static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
   static unsigned long timestamp = 0;
   
@@ -170,11 +167,9 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
     } else {
         if (cButtonPressed > 0)
             cButtonPressed = 0;
-        
         if ( displayTimeout > 0 && (millis() - oledActivated) > displayTimeout*1000) {
             oledOn = false;
             display.clearDisplay();
-            //display.clearMsgArea();
             display.display();
         }
     }
@@ -334,12 +329,8 @@ void loop() {
       return;
     }
 
-    //Serial.println(F("****"));
-    //printRam();
-
-    /*
-    receive();
-    radioTransmitThread(&pt1, 10*1000); */
+    Serial.println(F("****"));
+    printRam();
 
     if (isRouter || isCollector) {
         receive();

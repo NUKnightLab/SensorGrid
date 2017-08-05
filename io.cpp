@@ -6,14 +6,11 @@
 static SdFat SD;
 
 #define SD_CHIP_SELECT_PIN 10
-#define HISTORY_SIZE 30
 #define RH_MESH_MAX_MESSAGE_LEN 60
 
 #define ROUTER_TYPE 1
 
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
-//static RHMesh router(rf95, 1);
-//static RHMesh* router;
 #if ROUTER_TYPE == 0
 static RHRouter* router;
 #else
@@ -29,7 +26,6 @@ static uint8_t buf[sizeof(Message)] = {0};
 static uint8_t ackBuffer[50] = {0};
 static struct Message *msg = (struct Message*)buf;
 static struct Message message = *msg;
-static struct Message history[HISTORY_SIZE];
 static char* charBuf = (char*)buf;
 uint8_t data[] = "Hello back from server";
 uint8_t routingBuf[RH_MESH_MAX_MESSAGE_LEN];
@@ -59,10 +55,6 @@ void setupRadio() {
     Serial.print(F("FREQ: ")); Serial.println(rf95Freq);
     rf95.setTxPower(txPower, false);
     rf95.setCADTimeout(2000);
-    //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
-    for (int i=0; i<HISTORY_SIZE; i++) {
-      history[i] = {0};
-    }
     router->setTimeout(1000);
 
     if (ROUTER_TYPE == 0) {
@@ -71,14 +63,6 @@ void setupRadio() {
         router->addRouteTo(108, 108);
     }
     delay(100);
-}
-
-static void printHistory() {
-    Serial.print("HISTORY: ");
-    for(int i=0; i<HISTORY_SIZE; i++) {
-        Serial.print(history[i].orig); Serial.print("."); Serial.print(history[i].id); Serial.print(";");
-    }
-    Serial.println("");
 }
 
 bool channelActive() {
@@ -111,56 +95,6 @@ static bool sendCurrentMessage() {
     } else {
       return false;
     }
-}
-
-static void old_sendCurrentMessage() {
-    rf95.send((const uint8_t*)buf, msgLen);
-    rf95.waitPacketSent();
-    flashLED(3, HIGH);
-    bool inHistory = false;
-    int emptyIndex = -1;
-    uint32_t oldestTimestamp = 0;
-    int oldestIndex = -1;
-
-    for (int i=0; i<HISTORY_SIZE; i++) {
-        if (history[i].orig !=0
-            && (oldestTimestamp == 0 || history[i].timestamp < oldestTimestamp) ) {
-              oldestTimestamp = history[i].timestamp;
-              oldestIndex = i;
-        }
-    }
-    for (int i=0; i<HISTORY_SIZE; i++) {
-        if (history[i].orig == 0) {
-            emptyIndex = i;
-        } else if (oldestTimestamp == 0 || history[i].timestamp < oldestTimestamp) {
-            oldestTimestamp = history[i].timestamp;
-            oldestIndex = i;
-        }
-        if (history[i].orig == msg->orig && history[i].id == msg->id) {
-            inHistory = true;
-        }
-        //if (history[i].orig == 0) {
-        //    Serial.print("set hist: "); Serial.print(i); Serial.print("To orig: "); Serial.println(msg->orig);
-        //    memcpy(&history[i], buf, msgLen);
-        //    break;
-        //}
-    }
-    if (!inHistory) {
-        if (emptyIndex < 0) {
-            Serial.println("WARNING: FULL HISTORY QUEUE!!!"); // TODO: manage full history case
-            if (oldestIndex >= 0) {
-                Serial.print("DROPPING OLDEST HISTORICAL MESSAGE: ");
-                Serial.print(history[oldestIndex].orig); Serial.print("."); Serial.println(history[oldestIndex].id);
-                history[oldestIndex] = {0};
-                memcpy(&history[oldestIndex], buf, msgLen);
-            } else {
-                Serial.println("ERROR: Invalid state. Oldest historical index not found!!!");
-            }
-        }  else {
-            memcpy(&history[emptyIndex], buf, msgLen);
-        }
-    }
-    //printHistory();
 }
 
 void printMessageData() {
@@ -337,54 +271,14 @@ static void fillCurrentMessageData() {
 
 }
 
-void reTransmitOldestHistory() {
-    uint32_t oldestTimestamp = 0;
-    int idx = -1;
-    Serial.println("************ RE-TX OLDEST IN HISTORY **********");    
-    for (int i=0; i<HISTORY_SIZE; i++) {
-        if (history[i].orig !=0
-            && (oldestTimestamp == 0 || history[i].timestamp < oldestTimestamp) ) {
-              oldestTimestamp = history[i].timestamp;
-              idx = i;
-        }
-    }
-    if (idx >= 0) {
-        Serial.print("Re-transmit: "); Serial.print(history[idx].orig); Serial.print("."); Serial.println(history[idx].id);
-        clearBuffer();
-        memcpy(buf, &history[idx], msgLen);
-        printMessageData();
-        sendCurrentMessage();
-    } else {
-        Serial.println("Empty history. Nothing to re-transmit");
-    }
-}
-
-
 bool transmit() {
     fillCurrentMessageData();
     printMessageData();
     return sendCurrentMessage();
 }
 
-void _old_transmit() {
-    for (int i=0; i<HISTORY_SIZE; i++) {
-        if (history[i].orig == nodeID && history[i].id == MSG_ID) {
-            // Do not transmit new message from this node until
-            // we rx an ack for previous message. TODO: prevent black hole of infinitely repeating same message
-
-            // instead of preventing new messages, maybe keep track of historical ids rxed rather than just max timestamp
-            Serial.print("Preventing new messages until ACK is received for ID: "); Serial.println(MSG_ID);
-            memcpy(buf, &history[i], msgLen);
-            printMessageData();
-            sendCurrentMessage();
-            return;
-        }
-    }
-    MSG_ID++;
-    fillCurrentMessageData();
-    printMessageData();
-
     /**
+     * Note from old transmit function:
      * Unable to get WINC1500 and Adalogger to share SPI bus for logger writes.
      * WiFi does not want to reconnect after losing the SPI. Things tried:
      *
@@ -404,35 +298,6 @@ void _old_transmit() {
      * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
      */
 
-    if ( !strcmp(logMode, "NODE")
-         || !strcmp(logMode, "NETWORK")
-         || !strcmp(logMode, "ALL") ) {
-       writeLogLine();
-    }
-
-    if (!WiFiPresent || !postToAPI(
-          getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
-          getConfig("API_HOST"), atoi(getConfig("API_PORT")),
-          charBuf, msgLen)) {
-        flashLED(3, HIGH);
-        Serial.println("Sending current message");
-        sendCurrentMessage();
-    }
-}
-
-static void _receive() {
-  uint8_t from;
-  if (router->recvfromAck(buf, &msgLen, &from)) {
-    Serial.print("got request from : 0x");
-    Serial.print(from, HEX);
-    Serial.print(": ");
-    Serial.println((char*)buf);
-    // Send a reply back to the originator client
-    if (router->sendtoWait((uint8_t*)buf, msgLen, from) != RH_ROUTER_ERROR_NONE)
-      Serial.print("FAIL: send ACK of data tx from "); Serial.println(from);
-  }
-}
-
 void receive() {
   uint8_t len = sizeof(buf);
   uint8_t from;
@@ -444,97 +309,9 @@ void receive() {
     } 
     if (router->sendtoWait(data, sizeof(data), from) != RH_ROUTER_ERROR_NONE)
         Serial.println("sendtoWait failed");
-    //if (NODE_ID != 1 && from == 1)
-    //    rssi = rf95.lastRssi();
   } else {
     //Serial.println("Got nothing");
   }
-}
-
-static void _orig_receive() {
-    if (rf95.recv(buf, &msgLen)) {
-        Serial.print(F(" ..RX (ver: ")); Serial.print(msg->ver_100);
-        Serial.print(F(")"));
-        Serial.print(F("    RSSI: ")); // min recommended RSSI: -91
-        Serial.println(rf95.lastRssi(), DEC);
-        uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
-        if (msg->ver_100 != ver) {
-            Serial.print(F("SKIP: unknown protocol version: ")); Serial.print(msg->ver_100/100);
-            return;
-        }
-        if ( msg->orig != nodeID && (
-             (!strcmp(logMode, "NETWORK") && msg->net == networkID)
-             || !strcmp(logMode, "ALL") )) {
-           writeLogLine();
-        }
-        if (msg->net > 0 && msg->net != networkID) {
-            Serial.println(F("SKIP: out-of-network msg"));
-            return;
-        }
-        if ( msg->orig == nodeID) {
-            Serial.print(F("SKIP: own msg from: ")); Serial.println(msg->snd);
-            // remove it from history
-            for (int i=0; i<HISTORY_SIZE; i++) {
-              if (history[i].orig == msg->orig && history[i].id == msg->id) {
-                Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
-                history[i] = {0};
-                break;
-              }
-            }
-            printHistory();
-            //Serial.print(F("LOST ACK: ")); Serial.println(msg->id - (lastAck+1));
-            //lastAck = msg->id;
-            return;
-        }
-        printMessageData();
-        flashLED(1, HIGH);
-        if (oledOn) {
-            display.fillRect(35, 16, 128, 32, BLACK);
-            display.display();
-            display.setTextColor(WHITE);
-            display.setCursor(35, 16);
-            display.print(msg->snd); display.print(":");
-            display.print(msg->orig); display.print(".");
-            display.print(msg->id);
-            display.print(" ");display.print(rf95.lastRssi());
-            display.display();
-        }
-        if ( (msg->orig != msg->snd) && (msg->timestamp <= maxTimestamps[msg->orig]) ) {
-            /**
-             * Always re-transmit 1st hop messages. Retransmit subsequent hops if they are new
-             */
-            Serial.print(F("Ignore old Msg: "));
-            Serial.print(msg->orig); Serial.print("."); Serial.print(msg->id);
-            Serial.print(F(" (Current Max: ")); Serial.print(maxTimestamps[msg->orig]);
-            Serial.println(F(")"));
-            /* Not sure we should be clearing this from history. A second rx does not necessarily mean
-             * that we have had a successful tx. E.g., this could be a re-tx from orig that never
-             * received an ack
-            for (int i=0; i<HISTORY_SIZE; i++) {
-              if (history[i].orig == msg->orig && history[i].id == msg->id) {
-                Serial.print("delete from hist: "); Serial.print(msg->orig); Serial.println(msg->id);
-                history[i] = {0};
-                break;
-              }
-            }
-            */
-            printHistory();
-        } else {
-            msg->snd = nodeID;
-            if (!WiFiPresent || !postToAPI(
-                  getConfig("WIFI_SSID"), getConfig("WIFI_PASS"), getConfig("API_SERVER"),
-                  getConfig("API_HOST"), atoi(getConfig("API_PORT")),
-                  charBuf, msgLen)) {
-                delay(RETRANSMIT_DELAY);
-                Serial.print(F("RETRANSMITTING ..."));
-                Serial.print(F("  snd: ")); Serial.print(msg->snd);
-                Serial.print(F("; orig: ")); Serial.print(msg->orig);
-                sendCurrentMessage();
-                maxTimestamps[msg->orig] = msg->id;
-                Serial.println(F("  ...RETRANSMITTED"));
-            }
-        }
-    }
 }
 
 void _writeToSD(char* filename, char* str) {
