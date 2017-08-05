@@ -274,6 +274,10 @@ void loop() {
     //Serial.println(F("****"));
     //printRam();
 
+    /*
+    receive();
+    radioTransmitThread(&pt1, 10*1000); */
+
     if (isRouter || isCollector) {
         receive();
     } else {

@@ -43,23 +43,13 @@ static void clearAckBuffer() {
 }
 
 void setupRadio() {
-    /*
-    Serial.print("MESSAGE LENGTH"); Serial.println(msgLen, DEC);
-    Serial.println(F("LoRa Test!"));
-    digitalWrite(RFM95_RST, LOW);
-    delay(10);
-    digitalWrite(RFM95_RST, HIGH);
-    delay(10);
-    while (!rf95.init()) {
-        fail(LORA_INIT_FAIL);
-    }
-    Serial.println(F("LoRa OK!")); */
-
     #if ROUTER_TYPE == 0
         router = new RHRouter(rf95, nodeID);
     #else
         router = new RHMesh(rf95, nodeID);
     #endif
+    
+    rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
         Serial.println("Router init failed");
         
