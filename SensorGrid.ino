@@ -2,6 +2,12 @@
 #include "display.h"
 #include <pt.h>
 
+
+#define NODE_TYPE_COLLECTOR 1
+#define NODE_TYPE_ROUTER 2
+#define NODE_TYPE_SENSOR 3
+#define NODE_TYPE_TIER 4
+
 /* Config defaults are strings so they can be passed to getConfig */
 static const char* DEFAULT_NETWORK_ID = "1";
 static const char* DEFAULT_NODE_ID = "1";
@@ -10,8 +16,6 @@ static const char* DEFAULT_TX_POWER = "10";
 static const char* DEFAULT_PROTOCOL_VERSION = "0.11";
 static const char* DEFAULT_DISPLAY_TIMEOUT = "60";
 static char* DEFAULT_COLLECTOR_ID = "1";
-static char* DEFAULT_ROUTER = "0";
-static char* DEFAULT_COLLECTOR = "0";
 static char* DEFAULT_OLED = "0";
 static char* DEFAULT_LOG_FILE = "sensorgrid.log";
 static char* DEFAULT_TRANSMIT = "1";
@@ -27,8 +31,7 @@ uint32_t networkID;
 uint32_t nodeID;
 float rf95Freq;
 uint8_t txPower;
-uint8_t isRouter;
-uint8_t isCollector;
+uint8_t nodeType;
 uint32_t collectorID;
 float protocolVersion;
 char* logfile;
@@ -223,8 +226,7 @@ void setup() {
         gpsModule = getConfig("GPS_MODULE");
         hasOLED = (uint8_t)(atoi(getConfig("DISPLAY", DEFAULT_OLED)));
         doTransmit = (uint8_t)(atoi(getConfig("TRANSMIT", DEFAULT_TRANSMIT)));
-        isRouter = (uint8_t)(atoi(getConfig("ROUTER", DEFAULT_ROUTER)));
-        isCollector = (uint8_t)(atoi(getConfig("COLLECTOR", DEFAULT_COLLECTOR)));
+        nodeType = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         collectorID = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
         SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
@@ -240,11 +242,10 @@ void setup() {
         displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
         hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
         doTransmit = (uint8_t)(atoi(DEFAULT_TRANSMIT));
-        isRouter = (uint8_t)(atoi(DEFAULT_ROUTER));
-        isCollector = (uint8_t)(atoi(DEFAULT_COLLECTOR));
+        nodeType = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         collectorID = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));        
     }
-
+    
     if (hasOLED) {
         Serial.print(F("Display timeout set to: ")); Serial.println(displayTimeout);
         setupDisplay();
@@ -264,7 +265,7 @@ void setup() {
     pinMode(RFM95_RST, OUTPUT);
     digitalWrite(RFM95_RST, HIGH);
 
-    if (gpsModule && !isRouter && !isCollector) {
+    if (gpsModule && nodeType != NODE_TYPE_ROUTER && nodeType != NODE_TYPE_COLLECTOR) {
         setupGPS();
     } else {
         Serial.println(F("No GPS_MODULE specified in config .. Skipping GPS setup"));
@@ -326,9 +327,9 @@ void loop() {
     //Serial.println(F("****"));
     //printRam();
 
-    if (isRouter || isCollector) {
+    if (nodeType == NODE_TYPE_ROUTER || nodeType == NODE_TYPE_COLLECTOR) {
         receive();
-    } else {
+    } else if (nodeType == NODE_TYPE_SENSOR) {
         radioTransmitThread(&pt1, 10*1000);
     }
 
