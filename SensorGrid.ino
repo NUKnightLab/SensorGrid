@@ -41,6 +41,7 @@ uint8_t doTransmit;
 uint32_t lastTransmit = 0;
 uint32_t lastReTransmit = 0;
 uint32_t oledActivated = 0;
+uint32_t cButtonPressed = 0;
 bool oledOn;
 
 RTC_PCF8523 rtc;
@@ -53,7 +54,7 @@ Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 bool WiFiPresent = false;
 uint32_t lastDisplayTime = 0;
 
-static struct pt pt1, pt2, pt3;
+static struct pt pt1, pt2, pt3, pt4;
 
 static int radioTransmitThread(struct pt *pt, int interval) {
   static unsigned long timestamp = 0;
@@ -74,6 +75,18 @@ float bat = 0.0;
 uint32_t displayTime = 0;
 
 
+static void _updateDisplayBattery() {
+     if (batteryLevel() != bat) {
+        Serial.print(batteryLevel()); Serial.print(" "); Serial.println(bat);
+        display.setCursor(45,0);
+        display.fillRect(77, 0, 51, 7, BLACK);
+        bat = batteryLevel();
+        display.setBattery(bat);
+        display.renderBattery();
+        display.display();         
+    }    
+}
+
 static int updateDisplayBatteryThread(struct pt *pt, int interval) {
   static unsigned long timestamp = 0;
   
@@ -83,18 +96,22 @@ static int updateDisplayBatteryThread(struct pt *pt, int interval) {
     *  argument "millis() - timestamp > interval" is re-evaluated
     *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    if (batteryLevel() != bat) {
-        Serial.print(batteryLevel()); Serial.print(" "); Serial.println(bat);
-        display.setCursor(45,0);
-        display.fillRect(77, 0, 51, 7, BLACK);
-        bat = batteryLevel();
-        display.setBattery(bat);
-        display.renderBattery();
-        display.display();         
-    }    
+    if (oledOn)
+        _updateDisplayBattery();
     timestamp = millis();
   }
   PT_END(pt);
+}
+
+static void _updateDisplay() {
+    DateTime now = rtc.now();
+    now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
+    if (now.unixtime() != displayTime) {
+        display.clearMsgArea();
+        displayTime = displayCurrentRTCDateTime();
+        updateGPSDisplay();
+        display.display();
+    }     
 }
 
 static int updateDisplayThread(struct pt *pt, int interval) {
@@ -107,15 +124,60 @@ static int updateDisplayThread(struct pt *pt, int interval) {
     *  argument "millis() - timestamp > interval" is re-evaluated
     *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
+    if (oledOn)
+        _updateDisplay();
+    timestamp = millis();
+  }
+  PT_END(pt);
+}
 
-    DateTime now = rtc.now();
-    now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
-    if (now.unixtime() != displayTime) {
-        display.clearMsgArea();
-        displayTime = displayCurrentRTCDateTime();
-        updateGPSDisplay();
-        display.display();
-    }      
+
+static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
+  static unsigned long timestamp = 0;
+  
+  PT_BEGIN(pt);
+  while(1) { // never stop 
+
+    /* each time the function is called the second boolean
+    *  argument "millis() - timestamp > interval" is re-evaluated
+    *  and if false the function exits after that. */
+    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
+
+    if (! digitalRead(BUTTON_C)) {
+        Serial.println("C button pressed");
+        if (!oledOn) {
+            Serial.println("setting oled on");
+            oledOn = true;
+            oledActivated = millis();
+            displayTime = 0; // force immediate update - don't wait for next minute
+            _updateDisplay();
+            _updateDisplayBattery();
+        }
+        if (cButtonPressed == 0) {
+            cButtonPressed = millis();
+        } else {
+            Serial.println("checking cbutton pressed time");
+            if ( (millis() - cButtonPressed) > 3000) {
+                Serial.println("c button pressed > 3 seconds");
+                display.clearDisplay();
+                //display.clearMsgArea();
+                display.setCursor(0,16);
+                display.print("Shutdown OK");
+                display.display();
+                while(1);
+            }
+        }
+    } else {
+        if (cButtonPressed > 0)
+            cButtonPressed = 0;
+        
+        if ( displayTimeout > 0 && (millis() - oledActivated) > displayTimeout*1000) {
+            oledOn = false;
+            display.clearDisplay();
+            //display.clearMsgArea();
+            display.display();
+        }
+    }
     timestamp = millis();
   }
   PT_END(pt);
@@ -261,6 +323,7 @@ void setup() {
     PT_INIT(&pt1);  // initialise the two
     PT_INIT(&pt2);  // protothread variables
     PT_INIT(&pt3);
+    PT_INIT(&pt4);
 }
 
 void loop() {
@@ -287,6 +350,7 @@ void loop() {
     if (hasOLED) {
         updateDisplayThread(&pt2, 1000);
         updateDisplayBatteryThread(&pt3, 10 * 1000);
+        displayTimeoutShutdownThread(&pt4, 50);
     }
     
     /*
@@ -299,55 +363,4 @@ void loop() {
           rtc.adjust(DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds));
         }
     } */
-
-
-/*
-        if (oledOn) {
-            display.setBattery(batteryLevel());
-            display.renderBattery();
-        }
-        if ( (displayTimeout > 0) && oledOn && ((millis() - oledActivated) > (displayTimeout * 1000L)) ) {
-            oledOn = false;
-            display.clearDisplay();
-            display.clearMsgArea();
-            display.display();
-        }
-        if (oledOn) {
-            DateTime now = rtc.now();
-            now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
-            if (now.unixtime() > lastDisplayTime) {
-                display.clearMsgArea();
-                lastDisplayTime = displayCurrentRTCDateTime();
-                updateGPSDisplay();
-                display.display();
-            }
-        }
-        if (! digitalRead(BUTTON_C)) { // there seems to be a conflict on button A (pin 9)
-            if (oledOn) { // wait for possible shutdown request
-                long start = millis();
-                while (!digitalRead(BUTTON_C)) {
-                    if ( (millis() - start) < 3000) {
-                        display.clearDisplay();
-                        display.clearMsgArea();
-                        display.setCursor(0,16);
-                        display.print("Shutdown OK");
-                        display.display();
-                        while(1);
-                    }
-                    delay(500);
-                }
-            } else {
-                oledOn = true;
-                oledActivated = millis();
-                display.clearMsgArea();
-                display.setBattery(batteryLevel());
-                display.renderBattery();
-                lastDisplayTime = displayCurrentRTCDateTime();
-                updateGPSDisplay();
-                display.display();
-            }
-        }
-
-    }
-*/
 }
