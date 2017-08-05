@@ -74,27 +74,35 @@ static bool sendCurrentMessage() {
     clearAckBuffer();
     uint8_t len = sizeof(ackBuffer);
     uint8_t from;
-    int errCode;
-    errCode = router->sendtoWait((uint8_t*)buf, msgLen, collectorID);
-    if (errCode == RH_ROUTER_ERROR_NONE) {
-        // It has been reliably delivered to the next node.
-        // Now wait for a reply from the ultimate server
-        if (router->recvfromAckTimeout(ackBuffer, &len, 5000, &from)) {
-        Serial.print("got reply from : 0x"); Serial.print(from, HEX);
-        Serial.print(": "); Serial.print((char*)buf);
-        Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
-      } else {
-        Serial.println("recvfromAckTimeout: No reply, is collector running?");
-      }
-    } else {
-       Serial.println("sendtoWait failed. Are the intermediate nodes running?");
+    uint8_t errCode;
+    uint8_t txAttempts = 5;
+    while (txAttempts > 0) {
+        errCode = router->sendtoWait((uint8_t*)buf, msgLen, collectorID);
+        if (errCode == RH_ROUTER_ERROR_NONE) {
+            // It has been reliably delivered to the next node.
+            // Now wait for a reply from the ultimate server
+            if (router->recvfromAckTimeout(ackBuffer, &len, 5000, &from)) {
+            Serial.print("got reply from : 0x"); Serial.print(from, HEX);
+            Serial.print(": "); Serial.print((char*)buf);
+            Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
+          } else {
+            Serial.println("recvfromAckTimeout: No reply, is collector running?");
+          }
+        } else {
+           Serial.println("sendtoWait failed. Are the intermediate nodes running?");
+        }
+        router->printRoutingTable();
+        if (errCode == RH_ROUTER_ERROR_NONE) {
+          return true;
+        } else {
+          txAttempts--;
+          if (txAttempts > 0) {
+              Serial.print("Retrying data transmission x"); Serial.println(5-txAttempts);
+          }
+        }
     }
-    router->printRoutingTable();
-    if (errCode == RH_ROUTER_ERROR_NONE) {
-      return true;
-    } else {
-      return false;
-    }
+    Serial.println("Data transmission failed");
+    return false;
 }
 
 void printMessageData() {

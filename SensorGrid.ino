@@ -75,7 +75,6 @@ uint32_t displayTime = 0;
 
 static void _updateDisplayBattery() {
      if (batteryLevel() != bat) {
-        Serial.print(batteryLevel()); Serial.print(" "); Serial.println(bat);
         display.setCursor(45,0);
         display.fillRect(77, 0, 51, 7, BLACK);
         bat = batteryLevel();
@@ -141,9 +140,7 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
 
     if (! digitalRead(BUTTON_C)) {
-        Serial.println("C button pressed");
         if (!oledOn) {
-            Serial.println("setting oled on");
             oledOn = true;
             oledActivated = millis();
             displayTime = 0; // force immediate update - don't wait for next minute
@@ -153,11 +150,8 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
         if (cButtonPressed == 0) {
             cButtonPressed = millis();
         } else {
-            Serial.println("checking cbutton pressed time");
             if ( (millis() - cButtonPressed) > 3000) {
-                Serial.println("c button pressed > 3 seconds");
                 display.clearDisplay();
-                //display.clearMsgArea();
                 display.setCursor(0,16);
                 display.print("Shutdown OK");
                 display.display();
@@ -329,8 +323,8 @@ void loop() {
       return;
     }
 
-    Serial.println(F("****"));
-    printRam();
+    //Serial.println(F("****"));
+    //printRam();
 
     if (isRouter || isCollector) {
         receive();
