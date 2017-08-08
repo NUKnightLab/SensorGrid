@@ -1,8 +1,10 @@
 #include "io.h"
+#include "display.h"
 
 #include <SPI.h>
 //#include <SD.h>
 #include <SdFat.h>
+#include <RHDatagram.h>
 static SdFat SD;
 
 #define SD_CHIP_SELECT_PIN 10
@@ -23,8 +25,10 @@ static uint32_t lastAck = 0;
 static uint8_t msgLen = sizeof(Message);
 
 static uint8_t buf[sizeof(Message)] = {0};
-static uint8_t ackBuffer[50] = {0};
+static uint8_t controlBuffer[sizeof(Control)] = {0};
+//static uint8_t ackBuffer[50] = {0};
 static struct Message *msg = (struct Message*)buf;
+static struct Control *control = (struct Control*)controlBuffer;
 static struct Message message = *msg;
 static char* charBuf = (char*)buf;
 uint8_t data[] = "Hello back from server";
@@ -34,8 +38,12 @@ static void clearBuffer() {
     memset(buf, 0, msgLen);
 }
 
-static void clearAckBuffer() {
-    memset(ackBuffer, 0, 50);
+//static void clearAckBuffer() {
+//    memset(ackBuffer, 0, 50);
+//}
+
+static void clearControlBuffer() {
+    memset(controlBuffer, 0, sizeof(Control));
 }
 
 void setupRadio() {
@@ -71,20 +79,24 @@ bool channelActive() {
 
 static bool sendCurrentMessage() {
     Serial.println("Sending to mesh server");
-    clearAckBuffer();
-    uint8_t len = sizeof(ackBuffer);
+    clearControlBuffer();
+    uint8_t len = sizeof(controlBuffer);
     uint8_t from;
     uint8_t errCode;
     uint8_t txAttempts = 5;
+    displayTx(collectorID);
     while (txAttempts > 0) {
         errCode = router->sendtoWait((uint8_t*)buf, msgLen, collectorID);
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // It has been reliably delivered to the next node.
             // Now wait for a reply from the ultimate server
-            if (router->recvfromAckTimeout(ackBuffer, &len, 5000, &from)) {
-            Serial.print("got reply from : 0x"); Serial.print(from, HEX);
-            Serial.print(": "); Serial.print((char*)buf);
-            Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
+            if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
+                Serial.print("got reply from : 0x"); Serial.print(from, HEX);
+                Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
+                if (control->type == CONTROL_TYPE_SLEEP) {
+                    Serial.print("Received ok sleep for: "); Serial.println(control->data);
+                    delay(control->data);
+                }
           } else {
             Serial.println("recvfromAckTimeout: No reply, is collector running?");
           }
@@ -321,6 +333,131 @@ void receive() {
     //Serial.println("Got nothing");
   }
 }
+
+void waitForInstructions() {
+  uint8_t len = sizeof(controlBuffer);
+  uint8_t from;
+  if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
+      Serial.print("Got request from "); Serial.println(from, DEC);
+      //displayRx(from, rf95.lastRssi());
+      if (control->type == CONTROL_TYPE_SEND_DATA) {
+          // data request
+          Serial.println("Received send-data request");
+          fillCurrentMessageData();
+          printMessageData();
+          sendCurrentMessage();
+          //if (router->sendtoWait(data, sizeof(data), from) != RH_ROUTER_ERROR_NONE)
+          //    Serial.println("sendtoWait failed");
+      } else if (control->type == CONTROL_TYPE_SLEEP) {
+          // OK to sleep
+          int sleepTime = control->data;
+          Serial.print("Faking sleep for: "); Serial.println(sleepTime);
+          delay(sleepTime);
+      }
+  } else {
+    //Serial.println("Got nothing");
+  }
+}
+
+void collectTiers(int toID, uint32_t nextCollectTime) {
+    Serial.print("Sending data request to node "); Serial.println(toID);
+    clearControlBuffer();
+    clearBuffer();
+    //uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
+    msg->ver_100 = 444;
+    msg->net = networkID;
+    msg->snd = nodeID;
+    msg->orig = nodeID;
+    msg->id = MSG_ID;
+    msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
+    msg->timestamp = rtc.now().unixtime();
+    uint8_t len = sizeof(controlBuffer);
+    uint8_t from;
+    uint8_t errCode;
+    uint8_t txAttempts = 3;
+    control->type = CONTROL_TYPE_SEND_DATA;
+    while (txAttempts > 0) {
+        // request the data
+        errCode = router->sendtoWait((uint8_t*)control, len, toID);
+        if (errCode == RH_ROUTER_ERROR_NONE) {
+            // receive the data
+            if (router->recvfromAckTimeout(buf, &msgLen, 5000, &from)) {
+                Serial.print("got reply from : "); Serial.print(from, DEC);
+                Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
+                // TODO: send data to the API
+                printMessageData();
+                // ack with OK SLEEP
+                control->type = CONTROL_TYPE_SLEEP;
+                control->data = nextCollectTime - millis(); 
+                if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE)
+                    Serial.println("ACK sendtoWait failed");
+          } else {
+              Serial.println("recvfromAckTimeout: No reply, is collector running?");
+          }
+        } else {
+           Serial.println("sendtoWait failed. Are the intermediate nodes running?");
+        }
+        if (errCode == RH_ROUTER_ERROR_NONE) {
+          return;
+        } else {
+          txAttempts--;
+          if (txAttempts > 0) {
+              Serial.print("Retrying request for data transmission x"); Serial.println(3-txAttempts);
+          }
+        }
+    }
+    Serial.println("Request for data transmission failed");
+    router->printRoutingTable();
+}
+
+/*
+void sendSleep(int toID, int32_t sleepTime) {
+    Serial.print("Sending sleep OK to node "); Serial.println(toID, DEC);
+    clearAckBuffer();
+    clearBuffer();
+    //uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
+    msg->ver_100 = 555;
+    msg->net = networkID;
+    msg->snd = nodeID;
+    msg->orig = nodeID;
+    msg->id = MSG_ID;
+    msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
+    msg->timestamp = rtc.now().unixtime();
+    msg->data[0] = sleepTime;
+    uint8_t len = sizeof(ackBuffer);
+    uint8_t from;
+    uint8_t errCode;
+    uint8_t txAttempts = 2;
+    while (txAttempts > 0) {
+        // request the data
+        errCode = router->sendtoWait((uint8_t*)buf, msgLen, toID);
+        if (errCode == RH_ROUTER_ERROR_NONE) {
+            // receive the data
+            if (router->recvfromAckTimeout(buf, &len, 5000, &from)) {
+                Serial.print("got reply from : 0x"); Serial.print(from, HEX);
+                printMessageData();
+                // ack the data
+                if (router->sendtoWait(data, sizeof(data), from) != RH_ROUTER_ERROR_NONE)
+                    Serial.println("ACK sendtoWait failed");
+          } else {
+              Serial.println("recvfromAckTimeout: No reply, is collector running?");
+          }
+        } else {
+           Serial.println("sendtoWait failed. Are the intermediate nodes running?");
+        }
+        if (errCode == RH_ROUTER_ERROR_NONE) {
+          return;
+        } else {
+          txAttempts--;
+          if (txAttempts > 0) {
+              Serial.print("Retrying request for data transmission x"); Serial.println(2-txAttempts);
+          }
+        }
+    }
+    Serial.println("Send sleep failed");
+    router->printRoutingTable();
+}
+*/
 
 void _writeToSD(char* filename, char* str) {
   Serial.print(F("Init SD card .."));

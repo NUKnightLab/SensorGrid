@@ -6,7 +6,8 @@
 #define NODE_TYPE_COLLECTOR 1
 #define NODE_TYPE_ROUTER 2
 #define NODE_TYPE_SENSOR 3
-#define NODE_TYPE_TIER 4
+#define NODE_TYPE_TIER_COLLECTOR 4
+#define NODE_TYPE_TIER_SENSOR_ROUTER 5
 
 /* Config defaults are strings so they can be passed to getConfig */
 static const char* DEFAULT_NETWORK_ID = "1";
@@ -46,6 +47,8 @@ uint32_t lastReTransmit = 0;
 uint32_t oledActivated = 0;
 uint32_t cButtonPressed = 0;
 bool oledOn;
+
+char *nodeIds[254] = {0};
 
 RTC_PCF8523 rtc;
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
@@ -149,6 +152,7 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
             displayTime = 0; // force immediate update - don't wait for next minute
             _updateDisplay();
             _updateDisplayBattery();
+            displayID();
         }
         if (cButtonPressed == 0) {
             cButtonPressed = millis();
@@ -230,6 +234,27 @@ void setup() {
         collectorID = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
         SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
+
+        if (nodeType == NODE_TYPE_TIER_COLLECTOR) {
+            char* nodeIdsConfig = strdup(getConfig("NODE_IDS", ""));
+            if (nodeIdsConfig[0] == NULL) {
+                Serial.println("BAD CONFIGURATION. Node type TIER_COLLECTOR requires NODE_IDS");
+                while(1);
+            }
+            char **ap;
+            Serial.print("Separating string: "); Serial.println(nodeIdsConfig);
+            for (ap = nodeIds; (*ap = strsep(&nodeIdsConfig, ",")) != NULL;)
+                if (**ap != '\0')
+                    if (++ap >= &nodeIds[10])
+                        break;
+            Serial.println("Node IDs:");
+            for (int i=0; i<254 && nodeIds[i] != NULL; i++) {
+                if (i > 0)
+                    Serial.print(",");
+                Serial.print(nodeIds[i]);
+            }
+            Serial.println("");
+        }
     } else {
         Serial.println(F("Using default configs"));
         networkID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
@@ -331,6 +356,21 @@ void loop() {
         receive();
     } else if (nodeType == NODE_TYPE_SENSOR) {
         radioTransmitThread(&pt1, 10*1000);
+    } else if (nodeType == NODE_TYPE_TIER_SENSOR_ROUTER) {
+        waitForInstructions();
+    } else if (nodeType == NODE_TYPE_TIER_COLLECTOR) {
+        uint32_t nextCollectTime = millis() + 60000;
+        for (int i=0; i<254 && nodeIds[i] != NULL; i++) {
+            collectTiers(atoi(nodeIds[i]), nextCollectTime);
+        }
+        if (nextCollectTime > millis()) {
+            delay(nextCollectTime - millis());
+        } else {
+            Serial.println("WARNING: cycle period time too short to collect all node data!!!");
+        }
+    } else {
+        Serial.print("Unknown node type: "); Serial.println(nodeType, DEC);
+        while(1);
     }
 
     if (hasOLED) {

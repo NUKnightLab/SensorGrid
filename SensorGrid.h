@@ -26,6 +26,10 @@
 #define BUTTON_B 6
 #define BUTTON_C 5
 
+#define CONTROL_TYPE_ACK 1
+#define CONTROL_TYPE_SEND_DATA 2
+#define CONTROL_TYPE_SLEEP 3
+
 extern uint32_t networkID;
 extern uint32_t nodeID;
 extern uint32_t collectorID;
@@ -66,6 +70,11 @@ typedef struct Message {
     uint16_t bat_100;
     uint32_t timestamp;
     int32_t data[10]; /* -2147483648 through 2147483647 */
+};
+
+typedef struct Control {
+    uint8_t type;
+    uint32_t data;
 };
 #else
     #error Unsupported architecture

@@ -166,6 +166,39 @@ void displayBatteryLevel() {
     display.display();
 }
 
+void displayID() {
+    display.setCursor(0,0);
+    display.print("ID: ");
+    display.print(nodeID);
+    display.display();
+}
+
+void displayMessage(char* message) {
+    display.fillRect(0, 24, 6*21, 24+5, BLACK);
+    display.setCursor(0,24);
+    display.print(message);
+    display.display();
+}
+
+void displayTx(int toID) {
+    display.fillRect(0, 24, 42, 29, BLACK);
+    display.setCursor(0,24);
+    display.print("TX:");
+    display.print(toID, DEC);
+    display.display();
+}
+
+void displayRx(int fromID, float rssi) {
+    display.fillRect(45, 24, 50, 29, BLACK);
+    display.setCursor(45, 24);
+    display.print("RX:");
+    display.print(fromID, DEC);
+    display.print(" (");
+    display.print(rssi, 2);
+    display.print(")");
+    display.display();
+}
+
 void setupDisplay() {
     display.init();
     pinMode(BUTTON_A, INPUT_PULLUP); // we may be having conflicts with this button
@@ -174,5 +207,6 @@ void setupDisplay() {
     display.setBattery(batteryLevel());
     display.renderBattery();
     displayCurrentRTCDateTime();
+    displayID();
 }
 
