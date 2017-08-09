@@ -17,8 +17,7 @@ bool transmit();
 void reTransmitOldestHistory();
 void receive();
 void waitForInstructions();
-void collectTiers(int toID, uint32_t nextCollectTime);
-void sendSleep(int toID, int32_t sleepTime);
+void collectFromNode(int toID, uint32_t nextCollectTime);
 void writeToSD(char* filename, char* str);
 bool channelActive();
 

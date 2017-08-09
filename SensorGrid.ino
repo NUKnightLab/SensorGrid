@@ -6,8 +6,8 @@
 #define NODE_TYPE_COLLECTOR 1
 #define NODE_TYPE_ROUTER 2
 #define NODE_TYPE_SENSOR 3
-#define NODE_TYPE_TIER_COLLECTOR 4
-#define NODE_TYPE_TIER_SENSOR_ROUTER 5
+#define NODE_TYPE_ORDERED_COLLECTOR 4
+#define NODE_TYPE_ORDERED_SENSOR_ROUTER 5
 
 /* Config defaults are strings so they can be passed to getConfig */
 static const char* DEFAULT_NETWORK_ID = "1";
@@ -235,10 +235,10 @@ void setup() {
         SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
 
-        if (nodeType == NODE_TYPE_TIER_COLLECTOR) {
-            char* nodeIdsConfig = strdup(getConfig("NODE_IDS", ""));
+        if (nodeType == NODE_TYPE_ORDERED_COLLECTOR) {
+            char* nodeIdsConfig = strdup(getConfig("ORDERED_NODE_IDS", ""));
             if (nodeIdsConfig[0] == NULL) {
-                Serial.println("BAD CONFIGURATION. Node type TIER_COLLECTOR requires NODE_IDS");
+                Serial.println("BAD CONFIGURATION. Node type ORDERED_COLLECTOR requires ORDERED_NODE_IDS");
                 while(1);
             }
             char **ap;
@@ -356,12 +356,12 @@ void loop() {
         receive();
     } else if (nodeType == NODE_TYPE_SENSOR) {
         radioTransmitThread(&pt1, 10*1000);
-    } else if (nodeType == NODE_TYPE_TIER_SENSOR_ROUTER) {
+    } else if (nodeType == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         waitForInstructions();
-    } else if (nodeType == NODE_TYPE_TIER_COLLECTOR) {
+    } else if (nodeType == NODE_TYPE_ORDERED_COLLECTOR) {
         uint32_t nextCollectTime = millis() + 60000;
         for (int i=0; i<254 && nodeIds[i] != NULL; i++) {
-            collectTiers(atoi(nodeIds[i]), nextCollectTime);
+            collectFromNode(atoi(nodeIds[i]), nextCollectTime);
         }
         if (nextCollectTime > millis()) {
             delay(nextCollectTime - millis());
