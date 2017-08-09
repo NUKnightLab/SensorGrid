@@ -1,6 +1,7 @@
 #include "SensorGrid.h"
 
 #if defined(__AVR_ATmega32U4__)
+/* Here for reference. 32u4 no longer supported */
 static int _freeRam () {
   extern int __heap_start, *__brkval;
   int v;
@@ -41,3 +42,8 @@ void printRam() {
     Serial.print(F("Free RAM: "));
     Serial.println(_freeRam());
 }
+
+int freeRam() {
+    return _freeRam();
+}
+

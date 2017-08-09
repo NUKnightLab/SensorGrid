@@ -2,7 +2,6 @@
 #include "display.h"
 #include <pt.h>
 
-
 #define NODE_TYPE_COLLECTOR 1
 #define NODE_TYPE_ROUTER 2
 #define NODE_TYPE_SENSOR 3
@@ -34,7 +33,7 @@ float rf95Freq;
 uint8_t txPower;
 uint8_t nodeType;
 uint32_t collectorID;
-float protocolVersion;
+uint16_t protocolVersion;
 char* logfile;
 char* logMode;
 char* gpsModule;
@@ -223,7 +222,7 @@ void setup() {
         nodeID = (uint32_t)(atoi(getConfig("NODE_ID")));
         rf95Freq = (float)(atof(getConfig("RF95_FREQ")));
         txPower = (uint8_t)(atoi(getConfig("TX_POWER")));
-        protocolVersion = (float)(atof(getConfig("PROTOCOL_VERSION")));
+        protocolVersion = atof(getConfig("PROTOCOL_VERSION"));
         logfile = getConfig("LOGFILE", DEFAULT_LOG_FILE);
         logMode = getConfig("LOGMODE", DEFAULT_LOG_MODE);
         displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
@@ -349,8 +348,8 @@ void loop() {
       return;
     }
 
-    //Serial.println(F("****"));
-    //printRam();
+    Serial.println(F("****"));
+    printRam();
 
     if (nodeType == NODE_TYPE_ROUTER || nodeType == NODE_TYPE_COLLECTOR) {
         receive();

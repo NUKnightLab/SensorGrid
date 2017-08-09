@@ -84,7 +84,7 @@ static void sleep(int sleepTime) {
 }
 
 static bool sendCurrentMessage() {
-    Serial.println("Sending to mesh server");
+    Serial.println("Sending current data");
     clearControlBuffer();
     uint8_t len = sizeof(controlBuffer);
     uint8_t from;
@@ -98,7 +98,7 @@ static bool sendCurrentMessage() {
             // It has been reliably delivered to the next node.
             // Now wait for a reply from the ultimate server
             if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
-                Serial.print("got reply from : 0x"); Serial.print(from, HEX);
+                Serial.print("got reply from: "); Serial.print(from, DEC);
                 Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
                 if (control->type == CONTROL_TYPE_SLEEP) {
                     // TODO: there should be a minimum allowed sleep time due to radio startup cost
@@ -126,12 +126,9 @@ static bool sendCurrentMessage() {
 }
 
 void printMessageData() {
-    Serial.print(F("VER: ")); Serial.print((float)msg->ver_100/100);
-    Serial.print(F("; NET: ")); Serial.print(msg->net);
-    Serial.print(F("; SND: ")); Serial.print(msg->snd);
-    Serial.print(F("; ORIG: ")); Serial.print(msg->orig);
-    Serial.print(F("; ID: ")); Serial.println(msg->id);
+    Serial.print(F("VER: ")); Serial.println(msg->ver, DEC);
     Serial.print(F("BAT: ")); Serial.println((float)msg->bat_100/100);
+    Serial.print(F("RAM: ")); Serial.println(msg->ram, DEC);
     Serial.print(F("TS: ")); Serial.println(msg->timestamp);
     Serial.println(F("Data:"));
     Serial.print(F("    [0] ")); Serial.print(msg->data[0]);
@@ -149,8 +146,8 @@ void printMessageData() {
 static char* logline() {
     char str[200]; // 155+16 is current theoretical max
     sprintf(str,
-        "%4.2f,%i,%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
-        (float)(msg->ver_100)/100, msg->net, msg->snd, msg->orig, msg->id, (float)(msg->bat_100)/100, msg->timestamp,
+        "%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+        msg->ver, msg->net, (float)(msg->bat_100)/100, msg->timestamp,
         msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
         msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
     return str;
@@ -267,14 +264,10 @@ static uint32_t getRegisterData(char* registerName) {
 
 static void fillCurrentMessageData() {
       clearBuffer();
-      uint16_t ver = (uint16_t)(roundf(protocolVersion * 100));
-      msg->ver_100 = ver;
-      msg->net = networkID;
-      msg->snd = nodeID;
-      msg->orig = nodeID;
-      msg->id = MSG_ID;
+      msg->ver = protocolVersion;
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
       msg->timestamp = rtc.now().unixtime();
+      msg->ram = freeRam();
       memcpy(msg->data, {0}, sizeof(msg->data));
 
       if (gpsModule) {

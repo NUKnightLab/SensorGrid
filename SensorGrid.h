@@ -35,7 +35,7 @@ extern uint32_t nodeID;
 extern uint32_t collectorID;
 extern float rf95Freq;
 extern uint8_t txPower;
-extern float protocolVersion;
+extern uint16_t protocolVersion;
 extern char* logfile;
 extern char* logMode;
 extern char* gpsModule;
@@ -62,13 +62,11 @@ enum ERRORS {
 extern Adafruit_FeatherOLED display;
 
 typedef struct Message {
-    uint16_t ver_100;
+    uint16_t ver;
     uint16_t net;
-    uint16_t snd;
-    uint16_t orig;
-    uint32_t id;
-    uint16_t bat_100;
+    uint8_t bat_100;
     uint32_t timestamp;
+    uint16_t ram;
     int32_t data[10]; /* -2147483648 through 2147483647 */
 };
 
@@ -98,5 +96,6 @@ void fail(enum ERRORS err);
 void flashLED(int times, int endState);
 float batteryLevel();
 void printRam();
+int freeRam();
 
 #endif
