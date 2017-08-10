@@ -31,7 +31,10 @@ void flashLED(int times, int endState) {
 }
 
 float batteryLevel() {
+    pinMode(BUTTON_A, INPUT);
     float measuredvbat = analogRead(VBATPIN);
+    pinMode(BUTTON_A, INPUT_PULLUP);
+    attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
     measuredvbat *= 2;    // we divided by 2, so multiply back
     measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
     measuredvbat /= 1024; // convert to voltage

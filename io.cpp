@@ -74,13 +74,14 @@ bool channelActive() {
 
 static void sleep(int sleepTime) {
     // TODO: may need minimum allowed sleep time due to radio startup cost
-    rf95.sleep();
-    oledOn = false;
-    display.clearDisplay();
-    display.display();
-    Serial.print("Sleeping for: "); Serial.println(sleepTime);
-    digitalWrite(LED, LOW);
-    delay(sleepTime); // TODO: this might not be the best way to sleep. Look at SleepyDog: https://github.com/adafruit/Adafruit_SleepyDog
+    if (sleepTime > 0) {
+        rf95.sleep();
+        Serial.print("Sleeping for: "); Serial.println(sleepTime);
+        // Note: this delay will prevent display timeout, display update, and other protothread calls
+        delay(sleepTime); // TODO: this might not be the best way to sleep. Look at SleepyDog: https://github.com/adafruit/Adafruit_SleepyDog
+    } else {
+        Serial.print("Got a bad sleep time: "); Serial.println(sleepTime);
+    }
 }
 
 static bool sendCurrentMessage() {
@@ -91,7 +92,8 @@ static bool sendCurrentMessage() {
     uint8_t errCode;
     uint8_t txAttempts = 5;
     bool success = false;
-    displayTx(collectorID);
+    if (oledOn)
+        displayTx(collectorID);
     while (txAttempts > 0) {
         errCode = router->sendtoWait((uint8_t*)buf, msgLen, collectorID);
         if (errCode == RH_ROUTER_ERROR_NONE) {
@@ -100,6 +102,8 @@ static bool sendCurrentMessage() {
             if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
                 Serial.print("got reply from: "); Serial.print(from, DEC);
                 Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
+                if (oledOn)
+                    displayRx(from, rf95.lastRssi());
                 if (control->type == CONTROL_TYPE_SLEEP) {
                     // TODO: there should be a minimum allowed sleep time due to radio startup cost
                     sleep(control->data);

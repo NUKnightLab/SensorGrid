@@ -58,6 +58,7 @@ Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 
 bool WiFiPresent = false;
 uint32_t lastDisplayTime = 0;
+uint32_t displayTime = 0;
 
 static struct pt pt1, pt2, pt3, pt4;
 
@@ -75,20 +76,6 @@ static int radioTransmitThread(struct pt *pt, int interval) {
   PT_END(pt);
 }
 
-float bat = 0.0;
-uint32_t displayTime = 0;
-
-static void _updateDisplayBattery() {
-     if (batteryLevel() != bat) {
-        display.setCursor(45,0);
-        display.fillRect(77, 0, 51, 7, BLACK);
-        bat = batteryLevel();
-        display.setBattery(bat);
-        display.renderBattery();
-        display.display();         
-    }    
-}
-
 static int updateDisplayBatteryThread(struct pt *pt, int interval) {
   static unsigned long timestamp = 0;
   
@@ -99,21 +86,10 @@ static int updateDisplayBatteryThread(struct pt *pt, int interval) {
     *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     if (oledOn)
-        _updateDisplayBattery();
+        updateDisplayBattery();
     timestamp = millis();
   }
   PT_END(pt);
-}
-
-static void _updateDisplay() {
-    DateTime now = rtc.now();
-    now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
-    if (now.unixtime() != displayTime) {
-        display.clearMsgArea();
-        displayTime = displayCurrentRTCDateTime();
-        updateGPSDisplay();
-        display.display();
-    }     
 }
 
 static int updateDisplayThread(struct pt *pt, int interval) {
@@ -127,7 +103,7 @@ static int updateDisplayThread(struct pt *pt, int interval) {
     *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     if (oledOn)
-        _updateDisplay();
+        updateDisplay();
     timestamp = millis();
   }
   PT_END(pt);
@@ -144,13 +120,19 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
     *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
 
+    if ( displayTimeout > 0 && (millis() - oledActivated) > displayTimeout*1000) {
+        oledOn = false;
+        display.clearDisplay();
+        display.display();
+    }
+    /*
     if (! digitalRead(BUTTON_C)) {
         if (!oledOn) {
             oledOn = true;
             oledActivated = millis();
             displayTime = 0; // force immediate update - don't wait for next minute
-            _updateDisplay();
-            _updateDisplayBattery();
+            updateDisplay();
+            updateDisplayBattery();
             displayID();
         }
         if (cButtonPressed == 0) {
@@ -173,9 +155,50 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
             display.display();
         }
     }
+    */
     timestamp = millis();
   }
   PT_END(pt);
+}
+
+volatile int aButtonState = 0;
+volatile int bButtonState = 0;
+volatile int cButtonState = 0;
+
+
+void aButton_ISR() {
+    aButtonState = !digitalRead(BUTTON_A);
+    if (aButtonState) {
+        oledOn = !oledOn;
+        if (oledOn) {
+            oledActivated = millis();
+            displayTime = 0; // force immediate update - don't wait for next minute
+            updateDisplay();
+            displayID();
+            //updateDisplayBattery();
+        } else {
+            display.clearDisplay();
+            display.display();
+        }
+    }
+}
+
+
+void pin_ISR() {
+    cButtonState = !digitalRead(BUTTON_C);
+    if (cButtonState) {
+        oledOn = !oledOn;
+        if (oledOn) {
+            oledActivated = millis();
+            displayTime = 0; // force immediate update - don't wait for next minute
+            updateDisplay();
+            updateDisplayBattery();
+            displayID();
+        } else {
+            display.clearDisplay();
+            display.display();
+        }
+    }
 }
 
 void setup() {
@@ -215,7 +238,7 @@ void setup() {
     //Serial.println(F("Starting RTC"));
     //rtc.begin(); // Always true. Don't check as per Adafruit tutorials
     
-    flashLED(2, HIGH);
+    //flashLED(2, HIGH);
 
     if (!readSDConfig(CONFIG_FILE)) {
         networkID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
@@ -269,11 +292,21 @@ void setup() {
         nodeType = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         collectorID = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));        
     }
+
+    pinMode(LED, OUTPUT);
+    pinMode(RFM95_RST, OUTPUT);
+    pinMode(BUTTON_A, INPUT_PULLUP);
+    pinMode(BUTTON_B, INPUT_PULLUP);
+    pinMode(BUTTON_C, INPUT_PULLUP);
+    
+    digitalWrite(LED, LOW);
+    digitalWrite(RFM95_RST, HIGH);
     
     if (hasOLED) {
         Serial.print(F("Display timeout set to: ")); Serial.println(displayTimeout);
         setupDisplay();
         oledOn = true;
+        attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
     }
 
     Serial.print(F("BAT: "));
@@ -285,9 +318,8 @@ void setup() {
     if (CHARGE_ONLY) {
       return;
     }
-    pinMode(LED, OUTPUT);
-    pinMode(RFM95_RST, OUTPUT);
-    digitalWrite(RFM95_RST, HIGH);
+
+    
 
     if (gpsModule && nodeType != NODE_TYPE_ROUTER && nodeType != NODE_TYPE_COLLECTOR) {
         setupGPS();
@@ -375,7 +407,7 @@ void loop() {
     if (hasOLED) {
         updateDisplayThread(&pt2, 1000);
         updateDisplayBatteryThread(&pt3, 10 * 1000);
-        displayTimeoutShutdownThread(&pt4, 50);
+        displayTimeoutShutdownThread(&pt4, 1000);
     }
     
     /*

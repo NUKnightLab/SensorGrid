@@ -39,6 +39,7 @@ extern uint16_t protocolVersion;
 extern char* logfile;
 extern char* logMode;
 extern char* gpsModule;
+extern uint8_t hasOLED;
 extern bool oledOn;
 extern bool WiFiPresent;
 extern uint8_t doTransmit;
@@ -47,6 +48,7 @@ extern Adafruit_SI1145 sensorSi1145UV;
 extern RTC_PCF8523 rtc;
 extern bool sensorSi7021Module;
 extern bool sensorSi1145Module;
+extern uint32_t displayTime;
 
 enum ERRORS {
      NO_ERR,
@@ -97,5 +99,6 @@ void flashLED(int times, int endState);
 float batteryLevel();
 void printRam();
 int freeRam();
+void aButton_ISR();
 
 #endif

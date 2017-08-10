@@ -210,3 +210,27 @@ void setupDisplay() {
     displayID();
 }
 
+float bat = 0.0;
+
+void updateDisplayBattery() {
+     if (batteryLevel() != bat) {
+        display.setCursor(45,0);
+        display.fillRect(77, 0, 51, 7, BLACK);
+        bat = batteryLevel();
+        display.setBattery(bat);
+        display.renderBattery();
+        display.display();         
+    }    
+}
+
+void updateDisplay() {
+    DateTime now = rtc.now();
+    now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
+    if (now.unixtime() != displayTime) {
+        display.clearMsgArea();
+        displayTime = displayCurrentRTCDateTime();
+        updateGPSDisplay();
+        display.display();
+    }     
+}
+
