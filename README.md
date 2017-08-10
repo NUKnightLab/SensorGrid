@@ -108,7 +108,7 @@ I2C address 0x3C (Fixed) Uses SDA & SCL pins for display communication
 ~10mA current draw
 
 Buttons:
- * Button A #9
+ * Button A #9 (note this is also used for the battery voltage divider so if you want to use both make sure you disable the pullup when you analog read, then turn on the pullup for button reads)
  * Button B #6 (has 100K pullup)
  * Button C #5
 
@@ -122,7 +122,7 @@ Buttons:
   * 6 (also 1 & 12) Used by WiFi WINC1500 Module
   * 7 RFM95 Interrupt (32u4)
   * 8 RFM95 Chip select (Must be HIGH during Adalogger read/write)
-  * 9 OLED Button A
+  * 9 OLED Button A/Battery read voltage divider
   * 10 SD Chip select
   * 12 (proposed) Dust Sensor LED power
   * 12 (also 1 & 6) Used by WiFi WINC1500 Module
