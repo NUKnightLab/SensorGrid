@@ -23,7 +23,6 @@ static char* DEFAULT_LOG_MODE = "NODE"; // NONE, NODE, NETWORK, ALL
 uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 uint8_t GROVE_AIR_QUALITY_1_3_PIN;
 
-static const bool CHARGE_ONLY = false;
 static const bool RECEIVE = true;
 
 /* vars set by config file */
@@ -40,6 +39,7 @@ char* gpsModule;
 uint32_t displayTimeout;
 uint8_t hasOLED;
 uint8_t doTransmit;
+uint8_t chargeOnly;
 
 uint32_t lastTransmit = 0;
 uint32_t lastReTransmit = 0;
@@ -238,6 +238,7 @@ void setup() {
         collectorID = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
         SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
+        chargeOnly = atoi(getConfig("CHARGE", "0"));
 
         if (nodeType == NODE_TYPE_ORDERED_COLLECTOR) {
             char* nodeIdsConfig = strdup(getConfig("ORDERED_NODE_IDS", ""));
@@ -297,7 +298,7 @@ void setup() {
     } else {
         Serial.println(F("A9"));
     }
-    if (CHARGE_ONLY) {
+    if (chargeOnly) {
       return;
     }
     
@@ -354,8 +355,10 @@ void setup() {
 
 void loop() {
 
-    if (CHARGE_ONLY) {
+    if (chargeOnly) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
+      if (hasOLED)
+          updateDisplayBattery();
       delay(10000);
       return;
     }
