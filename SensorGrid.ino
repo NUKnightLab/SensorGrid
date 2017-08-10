@@ -183,24 +183,6 @@ void aButton_ISR() {
     }
 }
 
-
-void pin_ISR() {
-    cButtonState = !digitalRead(BUTTON_C);
-    if (cButtonState) {
-        oledOn = !oledOn;
-        if (oledOn) {
-            oledActivated = millis();
-            displayTime = 0; // force immediate update - don't wait for next minute
-            updateDisplay();
-            updateDisplayBattery();
-            displayID();
-        } else {
-            display.clearDisplay();
-            display.display();
-        }
-    }
-}
-
 void setup() {
 
     randomSeed(analogRead(A0));
