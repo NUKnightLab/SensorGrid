@@ -360,6 +360,7 @@ void waitForInstructions() {
 void collectFromNode(int toID, uint32_t nextCollectTime) {
     Serial.print("Sending data request to node "); Serial.println(toID);
     clearControlBuffer();
+    clearBuffer();
     uint8_t len = sizeof(controlBuffer);
     uint8_t from;
     uint8_t errCode;
