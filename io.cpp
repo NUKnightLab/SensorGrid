@@ -129,7 +129,8 @@ static bool sendCurrentMessage() {
     return false;
 }
 
-void printMessageData() {
+void printMessageData(int fromNode) {
+    Serial.print(F("FROM: ")); Serial.println(fromNode, DEC);
     Serial.print(F("VER: ")); Serial.println(msg->ver, DEC);
     Serial.print(F("BAT: ")); Serial.println((float)msg->bat_100/100);
     Serial.print(F("RAM: ")); Serial.println(msg->ram, DEC);
@@ -147,18 +148,18 @@ void printMessageData() {
     Serial.print(F("    [9] ")); Serial.println(msg->data[9]);
 }
 
-static char* logline() {
+static char* logline(int fromNode) {
     char str[200]; // 155+16 is current theoretical max
     sprintf(str,
-        "%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
-        msg->ver, msg->net, (float)(msg->bat_100)/100, msg->timestamp,
+        "%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+        msg->ver, msg->net, fromNode, (float)(msg->bat_100)/100, msg->ram, msg->timestamp,
         msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
         msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
     return str;
 }
 
-static void writeLogLine() {
-    char* line = logline();
+static void writeLogLine(int fromNode) {
+    char* line = logline(fromNode);
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
     Serial.println(line);
     if (logfile) {
@@ -297,7 +298,7 @@ static void fillCurrentMessageData() {
 
 bool transmit() {
     fillCurrentMessageData();
-    printMessageData();
+    printMessageData(nodeID);
     return sendCurrentMessage();
 }
 
@@ -329,7 +330,7 @@ void receive() {
     if (nodeID == 1) {
         Serial.print("got request from :");
         Serial.println(from, DEC);
-        printMessageData();
+        printMessageData(from);
     } 
     if (router->sendtoWait(data, sizeof(data), from) != RH_ROUTER_ERROR_NONE)
         Serial.println("sendtoWait failed");
@@ -346,7 +347,7 @@ void waitForInstructions() {
       if (control->type == CONTROL_TYPE_SEND_DATA) {
           Serial.println("Received send-data request");
           fillCurrentMessageData();
-          printMessageData();
+          printMessageData(from);
           sendCurrentMessage();
       } else if (control->type == CONTROL_TYPE_SLEEP) {
           sleep(control->data);
@@ -374,7 +375,7 @@ void collectFromNode(int toID, uint32_t nextCollectTime) {
                 Serial.print("got reply from : "); Serial.print(from, DEC);
                 Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
                 // TODO: send data to the API
-                printMessageData();
+                printMessageData(from);
                 success = true;
                 // ack with OK SLEEP
                 control->type = CONTROL_TYPE_SLEEP;

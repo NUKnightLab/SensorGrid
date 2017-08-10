@@ -300,9 +300,7 @@ void setup() {
     if (CHARGE_ONLY) {
       return;
     }
-
     
-
     if (gpsModule && nodeType != NODE_TYPE_ROUTER && nodeType != NODE_TYPE_COLLECTOR) {
         setupGPS();
     } else {
