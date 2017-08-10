@@ -14,7 +14,7 @@ static const char* DEFAULT_NODE_ID = "1";
 static const char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
 static const char* DEFAULT_TX_POWER = "10";
 static const char* DEFAULT_PROTOCOL_VERSION = "0.11";
-static const char* DEFAULT_DISPLAY_TIMEOUT = "60";
+static char* DEFAULT_DISPLAY_TIMEOUT = "60";
 static char* DEFAULT_COLLECTOR_ID = "1";
 static char* DEFAULT_OLED = "0";
 static char* DEFAULT_LOG_FILE = "sensorgrid.log";
@@ -230,7 +230,7 @@ void setup() {
         protocolVersion = atof(getConfig("PROTOCOL_VERSION"));
         logfile = getConfig("LOGFILE", DEFAULT_LOG_FILE);
         logMode = getConfig("LOGMODE", DEFAULT_LOG_MODE);
-        displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", "60")));
+        displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", DEFAULT_DISPLAY_TIMEOUT)));
         gpsModule = getConfig("GPS_MODULE");
         hasOLED = (uint8_t)(atoi(getConfig("DISPLAY", DEFAULT_OLED)));
         doTransmit = (uint8_t)(atoi(getConfig("TRANSMIT", DEFAULT_TRANSMIT)));

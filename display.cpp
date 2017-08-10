@@ -189,7 +189,7 @@ void displayTx(int toID) {
 }
 
 void displayRx(int fromID, float rssi) {
-    display.fillRect(45, 24, 50, 29, BLACK);
+    display.fillRect(45, 24, 128, 29, BLACK);
     display.setCursor(45, 24);
     display.print("RX:");
     display.print(fromID, DEC);
@@ -215,7 +215,7 @@ float bat = 0.0;
 void updateDisplayBattery() {
      if (batteryLevel() != bat) {
         display.setCursor(45,0);
-        display.fillRect(77, 0, 51, 7, BLACK);
+        display.fillRect(77, 0, 128, 7, BLACK);
         bat = batteryLevel();
         display.setBattery(bat);
         display.renderBattery();
