@@ -357,7 +357,7 @@ void loop() {
 
     if (chargeOnly) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
-      if (hasOLED)
+      if (hasOLED && oledOn)
           updateDisplayBattery();
       delay(10000);
       return;
