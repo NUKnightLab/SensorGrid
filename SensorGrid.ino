@@ -62,7 +62,8 @@ uint32_t displayTime = 0;
 
 static struct pt pt1, pt2, pt3, pt4;
 
-static int radioTransmitThread(struct pt *pt, int interval) {
+static int radioTransmitThread(struct pt *pt, int interval)
+{
   static unsigned long timestamp = 0;
   PT_BEGIN(pt);
   while(1) { // never stop 
@@ -76,7 +77,8 @@ static int radioTransmitThread(struct pt *pt, int interval) {
   PT_END(pt);
 }
 
-static int updateDisplayBatteryThread(struct pt *pt, int interval) {
+static int updateDisplayBatteryThread(struct pt *pt, int interval)
+{
   static unsigned long timestamp = 0;
   
   PT_BEGIN(pt);
@@ -92,7 +94,8 @@ static int updateDisplayBatteryThread(struct pt *pt, int interval) {
   PT_END(pt);
 }
 
-static int updateDisplayThread(struct pt *pt, int interval) {
+static int updateDisplayThread(struct pt *pt, int interval)
+{
   static unsigned long timestamp = 0;
   
   PT_BEGIN(pt);
@@ -109,7 +112,8 @@ static int updateDisplayThread(struct pt *pt, int interval) {
   PT_END(pt);
 }
 
-static int displayTimeoutShutdownThread(struct pt *pt, int interval) {
+static int displayTimeoutShutdownThread(struct pt *pt, int interval)
+{
   static unsigned long timestamp = 0;
   
   PT_BEGIN(pt);
@@ -166,7 +170,8 @@ volatile int bButtonState = 0;
 volatile int cButtonState = 0;
 
 
-void aButton_ISR() {
+void aButton_ISR()
+{
     aButtonState = !digitalRead(BUTTON_A);
     if (aButtonState) {
         oledOn = !oledOn;
@@ -183,7 +188,8 @@ void aButton_ISR() {
     }
 }
 
-void setup() {
+void setup()
+{
 
     randomSeed(analogRead(A0));
     
@@ -353,8 +359,8 @@ void setup() {
     PT_INIT(&pt4);
 }
 
-void loop() {
-
+void loop()
+{
     if (chargeOnly) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
       if (hasOLED && oledOn)

@@ -2,7 +2,8 @@
 
 uint8_t lastMinute;
 
-void displayCurrentRTCDate() {
+void displayCurrentRTCDate()
+{
     DateTime now = rtc.now();
     display.clearMsgArea();
     display.setCursor(0,8);
@@ -11,20 +12,23 @@ void displayCurrentRTCDate() {
     display.print(now.year(), DEC);
 }
 
-void displayCurrentRTCTime() {
+void displayCurrentRTCTime()
+{
     display.setCursor(0,16);
     DateTime now = rtc.now();
     display.print(now.hour(), DEC); display.print(':');
     display.print(now.minute(), DEC);
 }
 
-void _displayCurrentRTCDateTime() {
+void _displayCurrentRTCDateTime()
+{
     displayCurrentRTCDate();
     displayCurrentRTCTime();
     lastMinute = rtc.now().minute();   
 }
 
-uint32_t displayCurrentRTCDateTime() {
+uint32_t displayCurrentRTCDateTime()
+{
     DateTime now = rtc.now();
     now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
     display.setCursor(0,8);
@@ -39,13 +43,15 @@ uint32_t displayCurrentRTCDateTime() {
     return now.unixtime();
 }
 
-void updateDateTimeDisplay() {
+void updateDateTimeDisplay()
+{
     if (rtc.now().minute() != lastMinute) {
         displayCurrentRTCDateTime();
     }
 }
 
-void updateGPSDisplay() {
+void updateGPSDisplay()
+{
       display.setCursor(0,16);
       if (GPS.year == 0) {
           display.print("No GPS");
@@ -67,7 +73,8 @@ void updateGPSDisplay() {
       }
 }
 
-void _setDate() {
+void _setDate()
+{
     DateTime now = rtc.now();
     Serial.print(now.year(), DEC);
     Serial.print('/');
@@ -160,27 +167,31 @@ void setDate() {
 }
 */
 
-void displayBatteryLevel() {
+void displayBatteryLevel()
+{
     display.setBattery(batteryLevel());
     //display.renderBattery();
     display.display();
 }
 
-void displayID() {
+void displayID()
+{
     display.setCursor(0,0);
     display.print("ID: ");
     display.print(nodeID);
     display.display();
 }
 
-void displayMessage(char* message) {
+void displayMessage(char* message)
+{
     display.fillRect(0, 24, 6*21, 24+5, BLACK);
     display.setCursor(0,24);
     display.print(message);
     display.display();
 }
 
-void displayTx(int toID) {
+void displayTx(int toID)
+{
     display.fillRect(0, 24, 42, 29, BLACK);
     display.setCursor(0,24);
     display.print("TX:");
@@ -188,7 +199,8 @@ void displayTx(int toID) {
     display.display();
 }
 
-void displayRx(int fromID, float rssi) {
+void displayRx(int fromID, float rssi)
+{
     display.fillRect(45, 24, 128, 29, BLACK);
     display.setCursor(45, 24);
     display.print("RX:");
@@ -199,7 +211,8 @@ void displayRx(int fromID, float rssi) {
     display.display();
 }
 
-void setupDisplay() {
+void setupDisplay()
+{
     display.init();
     pinMode(BUTTON_A, INPUT_PULLUP); // we may be having conflicts with this button
     pinMode(BUTTON_C, INPUT_PULLUP);
@@ -212,7 +225,8 @@ void setupDisplay() {
 
 float bat = 0.0;
 
-void updateDisplayBattery() {
+void updateDisplayBattery()
+{
      if (batteryLevel() != bat) {
         display.setCursor(45,0);
         display.fillRect(77, 0, 128, 7, BLACK);
@@ -223,7 +237,8 @@ void updateDisplayBattery() {
     }    
 }
 
-void updateDisplay() {
+void updateDisplay()
+{
     DateTime now = rtc.now();
     now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
     if (now.unixtime() != displayTime) {

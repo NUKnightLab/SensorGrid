@@ -9,19 +9,22 @@ static int _freeRam () {
 }
 #elif defined(ARDUINO_ARCH_SAMD)
 extern "C" char *sbrk(int i);
-static int _freeRam() {
+static int _freeRam()
+{
   char stack_dummy = 0;
   return &stack_dummy - sbrk(0);
 }
 #endif
 
-void fail(enum ERRORS err) {
+void fail(enum ERRORS err)
+{
     Serial.print(F("ERR: "));
     Serial.println(err);
     while(1);
 }
 
-void flashLED(int times, int endState) {
+void flashLED(int times, int endState)
+{
     digitalWrite(LED, LOW); delay(50);
     for (int i=0; i<times; i++) {
         digitalWrite(LED, HIGH); delay(50);
@@ -30,7 +33,8 @@ void flashLED(int times, int endState) {
     digitalWrite(LED, endState);
 }
 
-float batteryLevel() {
+float batteryLevel()
+{
     pinMode(BUTTON_A, INPUT);
     float measuredvbat = analogRead(VBATPIN);
     pinMode(BUTTON_A, INPUT_PULLUP);
@@ -41,12 +45,14 @@ float batteryLevel() {
     return measuredvbat;
 }
 
-void printRam() {
+void printRam()
+{
     Serial.print(F("Free RAM: "));
     Serial.println(_freeRam());
 }
 
-int freeRam() {
+int freeRam()
+{
     return _freeRam();
 }
 

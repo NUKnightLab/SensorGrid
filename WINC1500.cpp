@@ -4,7 +4,8 @@ static bool WiFiPresent = false;
 
 WiFiClient WIFI_CLIENT;
 
-void printWifiStatus() {
+void printWifiStatus()
+{
     Serial.print(F("SSID: "));
     Serial.print(WiFi.SSID());
     Serial.print(F("; IP: "));
@@ -14,7 +15,8 @@ void printWifiStatus() {
     Serial.println(F(" dBm"));
 }
 
-static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass) {
+static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass)
+{
     //WiFi.end(); // This is here to make the keep-alive work, but not sure
                   // why we are even having to reconnect for every request
     Serial.println("Checking connection ...");
@@ -43,12 +45,14 @@ static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass) {
 }
 
 extern "C" char *sbrk(int i);
-static int _freeRam() {
+static int _freeRam()
+{
   char stack_dummy = 0;
   return &stack_dummy - sbrk(0);
 }
 
-static bool _postToAPI(const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
+static bool _postToAPI(const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen)
+{
     if (WIFI_CLIENT.connect(apiServer, apiPort)) {
         Serial.println(F("API:"));
         Serial.print(F("    CON: "));
@@ -75,7 +79,8 @@ static bool _postToAPI(const char* apiServer, const char* apiHost, const int api
 }
 
 //bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
-bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen) {
+bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen)
+{
 	if (!WiFiPresent || !connectWiFi(wifi_ssid, wifi_pass)) {
 	   return false;
 	}
@@ -91,7 +96,8 @@ bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServ
     return false;
 }
 
-bool setupWiFi(const char* wifi_ssid, const char* wifi_pass) {
+bool setupWiFi(const char* wifi_ssid, const char* wifi_pass)
+{
     Serial.print(F("WiFi Module.. "));
     #if defined(ARDUINO_ARCH_SAMD)
         /**

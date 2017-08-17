@@ -33,15 +33,18 @@ static char* charBuf = (char*)buf;
 uint8_t data[] = "Hello back from server";
 uint8_t routingBuf[RH_MESH_MAX_MESSAGE_LEN];
 
-static void clearBuffer() {
+static void clearBuffer()
+{
     memset(buf, 0, msgLen);
 }
 
-static void clearControlBuffer() {
+static void clearControlBuffer()
+{
     memset(controlBuffer, 0, sizeof(Control));
 }
 
-void setupRadio() {
+void setupRadio()
+{
     #if ROUTER_TYPE == 0
         router = new RHRouter(rf95, nodeID);
     #else
@@ -68,15 +71,17 @@ void setupRadio() {
     delay(100);
 }
 
-bool channelActive() {
+bool channelActive()
+{
   return rf95.isChannelActive();
 }
 
-static void sleep(int sleepTime) {
+static void sleep(int sleepTime)
+{
     // TODO: may need minimum allowed sleep time due to radio startup cost
     if (sleepTime > 0) {
         rf95.sleep();
-        Serial.print("Sleeping for: "); Serial.println(sleepTime);
+        Serial.println("Sleeping for: "); Serial.println(sleepTime);
         // Note: this delay will prevent display timeout, display update, and other protothread calls
         delay(sleepTime); // TODO: this might not be the best way to sleep. Look at SleepyDog: https://github.com/adafruit/Adafruit_SleepyDog
     } else {
@@ -84,7 +89,8 @@ static void sleep(int sleepTime) {
     }
 }
 
-static bool sendCurrentMessage() {
+static bool sendCurrentMessage()
+{
     Serial.println("Sending current data");
     clearControlBuffer();
     uint8_t len = sizeof(controlBuffer);
@@ -129,7 +135,8 @@ static bool sendCurrentMessage() {
     return false;
 }
 
-void printMessageData(int fromNode) {
+void printMessageData(int fromNode)
+{
     Serial.print(F("FROM: ")); Serial.println(fromNode, DEC);
     Serial.print(F("VER: ")); Serial.println(msg->ver, DEC);
     Serial.print(F("BAT: ")); Serial.println((float)msg->bat_100/100);
@@ -148,7 +155,8 @@ void printMessageData(int fromNode) {
     Serial.print(F("    [9] ")); Serial.println(msg->data[9]);
 }
 
-static char* logline(int fromNode) {
+static char* logline(int fromNode)
+{
     char str[200]; // 155+16 is current theoretical max
     sprintf(str,
         "%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
@@ -158,7 +166,8 @@ static char* logline(int fromNode) {
     return str;
 }
 
-static void writeLogLine(int fromNode) {
+static void writeLogLine(int fromNode)
+{
     char* line = logline(fromNode);
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
     Serial.println(line);
@@ -169,11 +178,13 @@ static void writeLogLine(int fromNode) {
     }
 }
 
-static void warnNoGPSConfig() {
+static void warnNoGPSConfig()
+{
     Serial.println(F("WARNING! GPS data specified in data registers, but no GPS_MODULE in config"));
 }
 
-static uint32_t getDataByTypeName(char* type) {
+static uint32_t getDataByTypeName(char* type)
+{
     Serial.print("Getting data for type: "); Serial.println(type);
     if (!strcmp(type, "GPS_FIX")) {
         if (!gpsModule) warnNoGPSConfig();
@@ -248,7 +259,8 @@ static uint32_t getDataByTypeName(char* type) {
     return 0;
 }
 
-static uint32_t getRegisterData(char* registerName, char* defaultType) {
+static uint32_t getRegisterData(char* registerName, char* defaultType)
+{
     char* type = getConfig(registerName);
     if (!type) {
         type = defaultType;
@@ -256,7 +268,8 @@ static uint32_t getRegisterData(char* registerName, char* defaultType) {
     return getDataByTypeName(type);
 }
 
-static uint32_t getRegisterData(char* registerName) {
+static uint32_t getRegisterData(char* registerName)
+{
     char* type = getConfig(registerName);
     if (type) {
         return getDataByTypeName(type);
@@ -267,7 +280,8 @@ static uint32_t getRegisterData(char* registerName) {
     }
 }
 
-static void fillCurrentMessageData() {
+static void fillCurrentMessageData()
+{
       clearBuffer();
       msg->ver = protocolVersion;
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
@@ -296,7 +310,8 @@ static void fillCurrentMessageData() {
       msg->data[9] = getRegisterData("DATA_9");
 }
 
-bool transmit() {
+bool transmit()
+{
     fillCurrentMessageData();
     printMessageData(nodeID);
     return sendCurrentMessage();
@@ -323,7 +338,8 @@ bool transmit() {
      * This issue is logged as: https://github.com/NUKnightLab/SensorGrid/issues/2
      */
 
-void receive() {
+void receive()
+{
   uint8_t len = sizeof(buf);
   uint8_t from;
   if (router->recvfromAckTimeout(buf, &len, 5000, &from)) {
@@ -339,7 +355,8 @@ void receive() {
   }
 }
 
-void waitForInstructions() {
+void waitForInstructions()
+{
   uint8_t len = sizeof(controlBuffer);
   uint8_t from;
   if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
@@ -357,7 +374,8 @@ void waitForInstructions() {
   }
 }
 
-void collectFromNode(int toID, uint32_t nextCollectTime) {
+void collectFromNode(int toID, uint32_t nextCollectTime)
+{
     Serial.print("Sending data request to node "); Serial.println(toID);
     clearControlBuffer();
     clearBuffer();
@@ -403,7 +421,8 @@ void collectFromNode(int toID, uint32_t nextCollectTime) {
     router->printRoutingTable();
 }
 
-void _writeToSD(char* filename, char* str) {
+void _writeToSD(char* filename, char* str)
+{
   Serial.print(F("Init SD card .."));
   if (!SD.begin(10)) {
         Serial.println(F(" .. SD card init failed!"));
@@ -424,7 +443,8 @@ void _writeToSD(char* filename, char* str) {
   Serial.println("File closed");
 }
 
-void writeToSD(char* filename, char* str) {
+void writeToSD(char* filename, char* str)
+{
   digitalWrite(8, HIGH);
   _writeToSD(filename, str);
   digitalWrite(8, LOW);

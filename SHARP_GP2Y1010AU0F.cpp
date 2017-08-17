@@ -8,14 +8,16 @@ float dustSenseVoMeasured = 0;
 float dustSenseCalcVoltage = 0;
 float dustDensity = 0;
 
-void setupDustSensor() {
+void setupDustSensor()
+{
     Serial.print(F("Setting Sharp GP2Y1010AU0F pin to: "));
     Serial.println(SHARP_GP2Y1010AU0F_DUST_PIN);
     pinMode(DUST_SENSOR_LED_POWER, OUTPUT);
     pinMode(SHARP_GP2Y1010AU0F_DUST_PIN, INPUT);
 }
 
-float readDustSensor() {
+float readDustSensor()
+{
     digitalWrite(DUST_SENSOR_LED_POWER, DUST_SENSOR_LED_ON);
     delayMicroseconds(DUST_SENSOR_SAMPLING_TIME);
     dustSenseVoMeasured = analogRead(SHARP_GP2Y1010AU0F_DUST_PIN);
