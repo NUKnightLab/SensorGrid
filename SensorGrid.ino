@@ -5,8 +5,9 @@
 
 uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 uint8_t GROVE_AIR_QUALITY_1_3_PIN;
-uint32_t oledActivated = 0;
-bool oledOn;
+
+static uint32_t oled_activated_time = 0;
+bool oled_is_on;
 
 RTC_PCF8523 rtc;
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
@@ -16,7 +17,7 @@ bool sensorSi1145Module = false;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 
 bool WiFiPresent = false;
-uint32_t display_time = 0;
+uint32_t display_clock_time = 0;
 
 volatile int aButtonState = 0;
 volatile int bButtonState = 0;
@@ -37,7 +38,7 @@ static int radioTransmitThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    transmit();
+    sendCurrentMessage();
     timestamp = millis();
   }
   PT_END(pt);
@@ -50,7 +51,7 @@ static int updateDisplayBatteryThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    if (oledOn)
+    if (oled_is_on)
         updateDisplayBattery();
     timestamp = millis();
   }
@@ -64,7 +65,7 @@ static int updateDisplayThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    if (oledOn)
+    if (oled_is_on)
         updateDisplay();
     timestamp = millis();
   }
@@ -78,8 +79,8 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    if ( config.display_timeout > 0 && (millis() - oledActivated) > config.display_timeout*1000) {
-        oledOn = false;
+    if ( config.display_timeout > 0 && (millis() - oled_activated_time) > config.display_timeout*1000) {
+        oled_is_on = false;
         display.clearDisplay();
         display.display();
     }
@@ -96,10 +97,10 @@ void aButton_ISR()
 {
     aButtonState = !digitalRead(BUTTON_A);
     if (aButtonState) {
-        oledOn = !oledOn;
-        if (oledOn) {
-            oledActivated = millis();
-            display_time = 0; // force immediate update - don't wait for next minute
+        oled_is_on = !oled_is_on;
+        if (oled_is_on) {
+            oled_activated_time = millis();
+            display_clock_time = 0; // force immediate update - don't wait for next minute
             updateDisplay();
             displayID();
             //updateDisplayBattery();
@@ -167,7 +168,7 @@ void setup()
     if (config.has_oled) {
         Serial.print(F("Display timeout set to: ")); Serial.println(config.display_timeout);
         setupDisplay();
-        oledOn = true;
+        oled_is_on = true;
         attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
     }
 
@@ -239,7 +240,7 @@ void loop()
 {
     if (config.charge_only) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
-      if (config.has_oled && oledOn)
+      if (config.has_oled && oled_is_on)
           updateDisplayBattery();
       delay(10000);
       return;

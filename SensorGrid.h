@@ -30,9 +30,7 @@
 #define CONTROL_TYPE_SEND_DATA 2
 #define CONTROL_TYPE_SLEEP 3
 
-
-
-extern bool oledOn;
+extern bool oled_is_on;
 extern bool WiFiPresent;
 
 extern Adafruit_Si7021 sensorSi7021TempHumidity;
@@ -53,7 +51,7 @@ enum ERRORS {
 #if defined(ARDUINO_ARCH_SAMD)
 
 extern Adafruit_FeatherOLED display;
-extern uint32_t display_time;
+extern uint32_t display_clock_time;
 
 
 typedef struct Message {

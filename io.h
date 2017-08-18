@@ -11,9 +11,9 @@
 #define RFM95_INT 3
 
 void setupRadio();
-void printMessageData();
+//void printMessageData();
 bool postToAPI();
-bool transmit();
+bool sendCurrentMessage();
 void reTransmitOldestHistory();
 void receive();
 void waitForInstructions();

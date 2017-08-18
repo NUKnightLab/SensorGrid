@@ -242,9 +242,9 @@ void updateDisplay()
 {
     DateTime now = rtc.now();
     now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
-    if (now.unixtime() != display_time) {
+    if (now.unixtime() != display_clock_time) {
         display.clearMsgArea();
-        display_time = displayCurrentRTCDateTime();
+        display_clock_time = displayCurrentRTCDateTime();
         updateGPSDisplay();
         display.display();
     }     

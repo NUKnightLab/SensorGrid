@@ -34,6 +34,9 @@ static char* charBuf = (char*)buf;
 uint8_t data[] = "Hello back from server";
 uint8_t routingBuf[RH_MESH_MAX_MESSAGE_LEN];
 
+static void fillCurrentMessageData();
+static void printMessageData(int fromNode);
+
 static void clearBuffer()
 {
     memset(buf, 0, msgLen);
@@ -90,8 +93,10 @@ static void sleep(int sleepTime)
     }
 }
 
-static bool sendCurrentMessage()
-{
+bool sendCurrentMessage()
+{ 
+    fillCurrentMessageData();
+    printMessageData(config.node_id);
     Serial.println("Sending current data");
     clearControlBuffer();
     uint8_t len = sizeof(controlBuffer);
@@ -99,7 +104,7 @@ static bool sendCurrentMessage()
     uint8_t errCode;
     uint8_t txAttempts = 5;
     bool success = false;
-    if (oledOn)
+    if (oled_is_on)
         displayTx(config.collector_id);
     while (txAttempts > 0) {
         errCode = router->sendtoWait((uint8_t*)buf, msgLen, config.collector_id);
@@ -109,7 +114,7 @@ static bool sendCurrentMessage()
             if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
                 Serial.print("got reply from: "); Serial.print(from, DEC);
                 Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
-                if (oledOn)
+                if (oled_is_on)
                     displayRx(from, rf95.lastRssi());
                 if (control->type == CONTROL_TYPE_SLEEP) {
                     // TODO: there should be a minimum allowed sleep time due to radio startup cost
@@ -136,7 +141,7 @@ static bool sendCurrentMessage()
     return false;
 }
 
-void printMessageData(int fromNode)
+static void printMessageData(int fromNode)
 {
     Serial.print(F("FROM: ")); Serial.println(fromNode, DEC);
     Serial.print(F("VER: ")); Serial.println(msg->ver, DEC);
@@ -311,12 +316,14 @@ static void fillCurrentMessageData()
       msg->data[9] = getRegisterData("DATA_9");
 }
 
+/*
 bool transmit()
 {
     fillCurrentMessageData();
     printMessageData(config.node_id);
     return sendCurrentMessage();
 }
+*/
 
     /**
      * Note from old transmit function:
@@ -364,8 +371,6 @@ void waitForInstructions()
       Serial.print("Got request from "); Serial.println(from, DEC);
       if (control->type == CONTROL_TYPE_SEND_DATA) {
           Serial.println("Received send-data request");
-          fillCurrentMessageData();
-          printMessageData(from);
           sendCurrentMessage();
       } else if (control->type == CONTROL_TYPE_SLEEP) {
           sleep(control->data);
