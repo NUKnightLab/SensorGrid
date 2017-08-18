@@ -60,16 +60,16 @@ bool WiFiPresent = false;
 uint32_t lastDisplayTime = 0;
 uint32_t displayTime = 0;
 
-static struct pt pt1, pt2, pt3, pt4;
+static struct pt radio_transmit_protothread;
+static struct pt update_display_protothread;
+static struct pt update_display_battery_protothread;
+static struct pt display_timeout_shutdown_protothread;
 
 static int radioTransmitThread(struct pt *pt, int interval)
 {
   static unsigned long timestamp = 0;
   PT_BEGIN(pt);
   while(1) { // never stop 
-    /* each time the function is called the second boolean
-    *  argument "millis() - timestamp > interval" is re-evaluated
-    *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     transmit();
     timestamp = millis();
@@ -83,9 +83,6 @@ static int updateDisplayBatteryThread(struct pt *pt, int interval)
   
   PT_BEGIN(pt);
   while(1) { // never stop 
-    /* each time the function is called the second boolean
-    *  argument "millis() - timestamp > interval" is re-evaluated
-    *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     if (oledOn)
         updateDisplayBattery();
@@ -100,10 +97,6 @@ static int updateDisplayThread(struct pt *pt, int interval)
   
   PT_BEGIN(pt);
   while(1) { // never stop 
-
-    /* each time the function is called the second boolean
-    *  argument "millis() - timestamp > interval" is re-evaluated
-    *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     if (oledOn)
         updateDisplay();
@@ -118,48 +111,12 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval)
   
   PT_BEGIN(pt);
   while(1) { // never stop 
-
-    /* each time the function is called the second boolean
-    *  argument "millis() - timestamp > interval" is re-evaluated
-    *  and if false the function exits after that. */
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-
     if ( displayTimeout > 0 && (millis() - oledActivated) > displayTimeout*1000) {
         oledOn = false;
         display.clearDisplay();
         display.display();
     }
-    /*
-    if (! digitalRead(BUTTON_C)) {
-        if (!oledOn) {
-            oledOn = true;
-            oledActivated = millis();
-            displayTime = 0; // force immediate update - don't wait for next minute
-            updateDisplay();
-            updateDisplayBattery();
-            displayID();
-        }
-        if (cButtonPressed == 0) {
-            cButtonPressed = millis();
-        } else {
-            if ( (millis() - cButtonPressed) > 3000) {
-                display.clearDisplay();
-                display.setCursor(0,16);
-                display.print("Shutdown OK");
-                display.display();
-                while(1);
-            }
-        }
-    } else {
-        if (cButtonPressed > 0)
-            cButtonPressed = 0;
-        if ( displayTimeout > 0 && (millis() - oledActivated) > displayTimeout*1000) {
-            oledOn = false;
-            display.clearDisplay();
-            display.display();
-        }
-    }
-    */
     timestamp = millis();
   }
   PT_END(pt);
@@ -353,10 +310,10 @@ void setup()
     }
     Serial.println(F("OK!"));
 
-    PT_INIT(&pt1);  // initialise the two
-    PT_INIT(&pt2);  // protothread variables
-    PT_INIT(&pt3);
-    PT_INIT(&pt4);
+    PT_INIT(&radio_transmit_protothread);
+    PT_INIT(&update_display_protothread);
+    PT_INIT(&update_display_battery_protothread);
+    PT_INIT(&display_timeout_shutdown_protothread);
 }
 
 void loop()
@@ -375,7 +332,7 @@ void loop()
     if (nodeType == NODE_TYPE_ROUTER || nodeType == NODE_TYPE_COLLECTOR) {
         receive();
     } else if (nodeType == NODE_TYPE_SENSOR) {
-        radioTransmitThread(&pt1, 10*1000);
+        radioTransmitThread(&radio_transmit_protothread, 10*1000);
     } else if (nodeType == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         waitForInstructions();
     } else if (nodeType == NODE_TYPE_ORDERED_COLLECTOR) {
@@ -394,9 +351,9 @@ void loop()
     }
 
     if (hasOLED) {
-        updateDisplayThread(&pt2, 1000);
-        updateDisplayBatteryThread(&pt3, 10 * 1000);
-        displayTimeoutShutdownThread(&pt4, 1000);
+        updateDisplayThread(&update_display_protothread, 1000);
+        updateDisplayBatteryThread(&update_display_battery_protothread, 10 * 1000);
+        displayTimeoutShutdownThread(&display_timeout_shutdown_protothread, 1000);
     }
     
     /*
