@@ -1,4 +1,5 @@
 #include "display.h"
+#include "config.h"
 
 uint8_t lastMinute;
 
@@ -178,7 +179,7 @@ void displayID()
 {
     display.setCursor(0,0);
     display.print("ID: ");
-    display.print(nodeID);
+    display.print(config.node_id);
     display.display();
 }
 
@@ -241,9 +242,9 @@ void updateDisplay()
 {
     DateTime now = rtc.now();
     now = DateTime(now.year(),now.month(),now.day(),now.hour(),now.minute(),0);
-    if (now.unixtime() != displayTime) {
+    if (now.unixtime() != display_time) {
         display.clearMsgArea();
-        displayTime = displayCurrentRTCDateTime();
+        display_time = displayCurrentRTCDateTime();
         updateGPSDisplay();
         display.display();
     }     

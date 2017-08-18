@@ -30,25 +30,16 @@
 #define CONTROL_TYPE_SEND_DATA 2
 #define CONTROL_TYPE_SLEEP 3
 
-extern uint32_t networkID;
-extern uint32_t nodeID;
-extern uint32_t collectorID;
-extern float rf95Freq;
-extern uint8_t txPower;
-extern uint16_t protocolVersion;
-extern char* logfile;
-extern char* logMode;
-extern char* gpsModule;
-extern uint8_t hasOLED;
+
+
 extern bool oledOn;
 extern bool WiFiPresent;
-extern uint8_t doTransmit;
+
 extern Adafruit_Si7021 sensorSi7021TempHumidity;
 extern Adafruit_SI1145 sensorSi1145UV;
 extern RTC_PCF8523 rtc;
 extern bool sensorSi7021Module;
 extern bool sensorSi1145Module;
-extern uint32_t displayTime;
 
 enum ERRORS {
      NO_ERR,
@@ -62,6 +53,8 @@ enum ERRORS {
 #if defined(ARDUINO_ARCH_SAMD)
 
 extern Adafruit_FeatherOLED display;
+extern uint32_t display_time;
+
 
 typedef struct Message {
     uint16_t ver;

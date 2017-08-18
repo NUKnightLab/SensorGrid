@@ -1,5 +1,6 @@
 #include "io.h"
 #include "display.h"
+#include "config.h"
 
 #include <SPI.h>
 //#include <SD.h>
@@ -46,20 +47,20 @@ static void clearControlBuffer()
 void setupRadio()
 {
     #if ROUTER_TYPE == 0
-        router = new RHRouter(rf95, nodeID);
+        router = new RHRouter(rf95, config.node_id);
     #else
-        router = new RHMesh(rf95, nodeID);
+        router = new RHMesh(rf95, config.node_id);
     #endif
     
     rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
         Serial.println("Router init failed");
         
-    if (!rf95.setFrequency(rf95Freq)) {
+    if (!rf95.setFrequency(config.rf95_freq)) {
         fail(LORA_FREQ_FAIL);
     }
-    Serial.print(F("FREQ: ")); Serial.println(rf95Freq);
-    rf95.setTxPower(txPower, false);
+    Serial.print(F("FREQ: ")); Serial.println(config.rf95_freq);
+    rf95.setTxPower(config.tx_power, false);
     rf95.setCADTimeout(2000);
     router->setTimeout(1000);
 
@@ -99,9 +100,9 @@ static bool sendCurrentMessage()
     uint8_t txAttempts = 5;
     bool success = false;
     if (oledOn)
-        displayTx(collectorID);
+        displayTx(config.collector_id);
     while (txAttempts > 0) {
-        errCode = router->sendtoWait((uint8_t*)buf, msgLen, collectorID);
+        errCode = router->sendtoWait((uint8_t*)buf, msgLen, config.collector_id);
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // It has been reliably delivered to the next node.
             // Now wait for a reply from the ultimate server
@@ -171,9 +172,9 @@ static void writeLogLine(int fromNode)
     char* line = logline(fromNode);
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
     Serial.println(line);
-    if (logfile) {
+    if (config.log_file) {
         digitalWrite(SD_CHIP_SELECT_PIN, LOW);
-        writeToSD(logfile, line);
+        writeToSD(config.log_file, line);
         digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
     }
 }
@@ -187,26 +188,26 @@ static uint32_t getDataByTypeName(char* type)
 {
     Serial.print("Getting data for type: "); Serial.println(type);
     if (!strcmp(type, "GPS_FIX")) {
-        if (!gpsModule) warnNoGPSConfig();
+        if (!config.gps_module) warnNoGPSConfig();
         return GPS.fix;
     }
     if (!strcmp(type, "GPS_SATS")) {
-        if (!gpsModule) warnNoGPSConfig();
+        if (!config.gps_module) warnNoGPSConfig();
         return GPS.satellites;
     }
     if (!strcmp(type, "GPS_SATFIX")) {
-        if (!gpsModule) warnNoGPSConfig();
+        if (!config.gps_module) warnNoGPSConfig();
         if (GPS.fix) return GPS.satellites;
         return -1 * GPS.satellites;
     }
     if (!strcmp(type, "GPS_LAT_DEG")){
-        if (!gpsModule) warnNoGPSConfig();
+        if (!config.gps_module) warnNoGPSConfig();
         Serial.println(GPS.lastNMEA());
         Serial.print("LATITUDE "); Serial.println(GPS.latitudeDegrees, DEC);
         return (int32_t)(roundf(GPS.latitudeDegrees * 1000));
     }
     if (!strcmp(type, "GPS_LON_DEG")) {
-        if (!gpsModule) warnNoGPSConfig();
+        if (!config.gps_module) warnNoGPSConfig();
         Serial.println(GPS.lastNMEA()); // These are looking pretty ugly. Looks like a bad
                                         // overwrite of NMEA is corrupting the string from
                                         // around the end of the longitude field on GPGGA strings
@@ -283,13 +284,13 @@ static uint32_t getRegisterData(char* registerName)
 static void fillCurrentMessageData()
 {
       clearBuffer();
-      msg->ver = protocolVersion;
+      msg->ver = config.protocol_version;
       msg->bat_100 = (int16_t)(roundf(batteryLevel() * 100));
       msg->timestamp = rtc.now().unixtime();
       msg->ram = freeRam();
       memcpy(msg->data, {0}, sizeof(msg->data));
 
-      if (gpsModule) {
+      if (config.gps_module) {
           /* If GPS_MODULE is set in config file, these data will default to the first
            *  3 data registers, but other configs can be set in the config file.
            */
@@ -313,7 +314,7 @@ static void fillCurrentMessageData()
 bool transmit()
 {
     fillCurrentMessageData();
-    printMessageData(nodeID);
+    printMessageData(config.node_id);
     return sendCurrentMessage();
 }
 
@@ -343,7 +344,7 @@ void receive()
   uint8_t len = sizeof(buf);
   uint8_t from;
   if (router->recvfromAckTimeout(buf, &len, 5000, &from)) {
-    if (nodeID == 1) {
+    if (config.node_id == 1) {
         Serial.print("got request from :");
         Serial.println(from, DEC);
         printMessageData(from);

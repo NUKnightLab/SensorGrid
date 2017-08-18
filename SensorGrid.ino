@@ -1,48 +1,12 @@
 #include "SensorGrid.h"
+#include "config.h"
 #include "display.h"
 #include <pt.h>
 
-#define NODE_TYPE_COLLECTOR 1
-#define NODE_TYPE_ROUTER 2
-#define NODE_TYPE_SENSOR 3
-#define NODE_TYPE_ORDERED_COLLECTOR 4
-#define NODE_TYPE_ORDERED_SENSOR_ROUTER 5
-
-/* Config defaults are strings so they can be passed to getConfig */
-static char* DEFAULT_NETWORK_ID = "1";
-static char* DEFAULT_NODE_ID = "1";
-static char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
-static char* DEFAULT_TX_POWER = "10";
-static char* DEFAULT_PROTOCOL_VERSION = "0.11";
-static char* DEFAULT_DISPLAY_TIMEOUT = "60";
-static char* DEFAULT_COLLECTOR_ID = "1";
-static char* DEFAULT_OLED = "0";
-static char* DEFAULT_LOG_FILE = "sensorgrid.log";
-static char* DEFAULT_TRANSMIT = "1";
-static char* DEFAULT_LOG_MODE = "NODE"; // NONE, NODE, NETWORK, ALL
 uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 uint8_t GROVE_AIR_QUALITY_1_3_PIN;
-
-/* vars set by config file */
-uint32_t networkID;
-uint32_t nodeID;
-float rf95Freq;
-uint8_t txPower;
-uint8_t nodeType;
-uint32_t collectorID;
-uint16_t protocolVersion;
-char* logfile;
-char* logMode;
-char* gpsModule;
-uint32_t displayTimeout;
-uint8_t hasOLED;
-uint8_t doTransmit;
-uint8_t chargeOnly;
-
 uint32_t oledActivated = 0;
 bool oledOn;
-
-char *nodeIds[254] = {0};
 
 RTC_PCF8523 rtc;
 Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
@@ -52,17 +16,20 @@ bool sensorSi1145Module = false;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 
 bool WiFiPresent = false;
-uint32_t lastDisplayTime = 0;
-uint32_t displayTime = 0;
+uint32_t display_time = 0;
+
+volatile int aButtonState = 0;
+volatile int bButtonState = 0;
+volatile int cButtonState = 0;
+
+/* 
+ * protothreads (https://github.com/fernandomalmeida/protothreads-arduino) 
+ */
 
 static struct pt radio_transmit_protothread;
 static struct pt update_display_protothread;
 static struct pt update_display_battery_protothread;
 static struct pt display_timeout_shutdown_protothread;
-
-volatile int aButtonState = 0;
-volatile int bButtonState = 0;
-volatile int cButtonState = 0;
 
 static int radioTransmitThread(struct pt *pt, int interval)
 {
@@ -111,7 +78,7 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    if ( displayTimeout > 0 && (millis() - oledActivated) > displayTimeout*1000) {
+    if ( config.display_timeout > 0 && (millis() - oledActivated) > config.display_timeout*1000) {
         oledOn = false;
         display.clearDisplay();
         display.display();
@@ -121,6 +88,10 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval)
   PT_END(pt);
 }
 
+/*
+ * interrupts
+ */
+ 
 void aButton_ISR()
 {
     aButtonState = !digitalRead(BUTTON_A);
@@ -128,7 +99,7 @@ void aButton_ISR()
         oledOn = !oledOn;
         if (oledOn) {
             oledActivated = millis();
-            displayTime = 0; // force immediate update - don't wait for next minute
+            display_time = 0; // force immediate update - don't wait for next minute
             updateDisplay();
             displayID();
             //updateDisplayBattery();
@@ -139,12 +110,17 @@ void aButton_ISR()
     }
 }
 
+
+/*
+ * setup and loop
+ */
+ 
 void setup()
 {
 
     randomSeed(analogRead(A0));
     
-    if (false) {
+    if (true) {
         while (!Serial); // only do this if connected to USB
     }
     Serial.begin(9600);
@@ -176,74 +152,20 @@ void setup()
     //setupGPS();
     //Serial.println(F("Starting RTC"));
     //rtc.begin(); // Always true. Don't check as per Adafruit tutorials
-    
     //flashLED(2, HIGH);
-
-    if (!readSDConfig(CONFIG_FILE)) {
-        networkID = (uint32_t)(atoi(getConfig("NETWORK_ID")));
-        nodeID = (uint32_t)(atoi(getConfig("NODE_ID")));
-        rf95Freq = (float)(atof(getConfig("RF95_FREQ")));
-        txPower = (uint8_t)(atoi(getConfig("TX_POWER")));
-        protocolVersion = atof(getConfig("PROTOCOL_VERSION"));
-        logfile = getConfig("LOGFILE", DEFAULT_LOG_FILE);
-        logMode = getConfig("LOGMODE", DEFAULT_LOG_MODE);
-        displayTimeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", DEFAULT_DISPLAY_TIMEOUT)));
-        gpsModule = getConfig("GPS_MODULE");
-        hasOLED = (uint8_t)(atoi(getConfig("DISPLAY", DEFAULT_OLED)));
-        doTransmit = (uint8_t)(atoi(getConfig("TRANSMIT", DEFAULT_TRANSMIT)));
-        nodeType = (uint8_t)(atoi(getConfig("NODE_TYPE")));
-        collectorID = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
-        SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
-        GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
-        chargeOnly = atoi(getConfig("CHARGE", "0"));
-
-        if (nodeType == NODE_TYPE_ORDERED_COLLECTOR) {
-            char* nodeIdsConfig = strdup(getConfig("ORDERED_NODE_IDS", ""));
-            if (nodeIdsConfig[0] == NULL) {
-                Serial.println("BAD CONFIGURATION. Node type ORDERED_COLLECTOR requires ORDERED_NODE_IDS");
-                while(1);
-            }
-            char **ap;
-            Serial.print("Separating string: "); Serial.println(nodeIdsConfig);
-            for (ap = nodeIds; (*ap = strsep(&nodeIdsConfig, ",")) != NULL;)
-                if (**ap != '\0')
-                    if (++ap >= &nodeIds[10])
-                        break;
-            Serial.println("Node IDs:");
-            for (int i=0; i<254 && nodeIds[i] != NULL; i++) {
-                if (i > 0)
-                    Serial.print(",");
-                Serial.print(nodeIds[i]);
-            }
-            Serial.println("");
-        }
-    } else {
-        Serial.println(F("Using default configs"));
-        networkID = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
-        nodeID = (uint32_t)(atoi(DEFAULT_NODE_ID));
-        rf95Freq = (float)(atof(DEFAULT_RF95_FREQ));
-        txPower = (uint8_t)(atoi(DEFAULT_TX_POWER));
-        protocolVersion = (float)(atof(DEFAULT_PROTOCOL_VERSION));
-        logfile = DEFAULT_LOG_FILE;
-        logMode = DEFAULT_LOG_MODE;
-        displayTimeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));
-        hasOLED = (uint8_t)(atoi(DEFAULT_OLED));
-        doTransmit = (uint8_t)(atoi(DEFAULT_TRANSMIT));
-        nodeType = (uint8_t)(atoi(getConfig("NODE_TYPE")));
-        collectorID = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));        
-    }
-
+    load_config();
+    Serial.println("Config loaded");
+    Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
     pinMode(RFM95_RST, OUTPUT);
     pinMode(BUTTON_A, INPUT_PULLUP);
     pinMode(BUTTON_B, INPUT_PULLUP);
-    pinMode(BUTTON_C, INPUT_PULLUP);
-    
+    pinMode(BUTTON_C, INPUT_PULLUP);  
     digitalWrite(LED, LOW);
     digitalWrite(RFM95_RST, HIGH);
     
-    if (hasOLED) {
-        Serial.print(F("Display timeout set to: ")); Serial.println(displayTimeout);
+    if (config.has_oled) {
+        Serial.print(F("Display timeout set to: ")); Serial.println(config.display_timeout);
         setupDisplay();
         oledOn = true;
         attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
@@ -255,11 +177,11 @@ void setup()
     } else {
         Serial.println(F("A9"));
     }
-    if (chargeOnly) {
+    if (config.charge_only) {
       return;
     }
     
-    if (gpsModule && nodeType != NODE_TYPE_ROUTER && nodeType != NODE_TYPE_COLLECTOR) {
+    if (config.gps_module && config.node_type != NODE_TYPE_ROUTER && config.node_type != NODE_TYPE_COLLECTOR) {
         setupGPS();
     } else {
         Serial.println(F("No GPS_MODULE specified in config .. Skipping GPS setup"));
@@ -304,17 +226,20 @@ void setup()
     }
     Serial.println(F("OK!"));
 
+    /* initialize protothreads */
     PT_INIT(&radio_transmit_protothread);
-    PT_INIT(&update_display_protothread);
-    PT_INIT(&update_display_battery_protothread);
-    PT_INIT(&display_timeout_shutdown_protothread);
+    if (config.has_oled) {
+        PT_INIT(&update_display_protothread);
+        PT_INIT(&update_display_battery_protothread);
+        PT_INIT(&display_timeout_shutdown_protothread);
+    }
 }
 
 void loop()
 {
-    if (chargeOnly) {
+    if (config.charge_only) {
       Serial.print(F("BAT: ")); Serial.println(batteryLevel());
-      if (hasOLED && oledOn)
+      if (config.has_oled && oledOn)
           updateDisplayBattery();
       delay(10000);
       return;
@@ -323,16 +248,17 @@ void loop()
     Serial.println(F("****"));
     printRam();
 
-    if (nodeType == NODE_TYPE_ROUTER || nodeType == NODE_TYPE_COLLECTOR) {
+    if (config.node_type == NODE_TYPE_ROUTER || config.node_type == NODE_TYPE_COLLECTOR) {
         receive();
-    } else if (nodeType == NODE_TYPE_SENSOR) {
+    } else if (config.node_type == NODE_TYPE_SENSOR) {
         radioTransmitThread(&radio_transmit_protothread, 10*1000);
-    } else if (nodeType == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
+    } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         waitForInstructions();
-    } else if (nodeType == NODE_TYPE_ORDERED_COLLECTOR) {
+    } else if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         uint32_t nextCollectTime = millis() + 60000;
-        for (int i=0; i<254 && nodeIds[i] != NULL; i++) {
-            collectFromNode(atoi(nodeIds[i]), nextCollectTime);
+        for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
+            Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
+            collectFromNode(config.node_ids[i], nextCollectTime);
         }
         if (nextCollectTime > millis()) {
             delay(nextCollectTime - millis());
@@ -340,11 +266,11 @@ void loop()
             Serial.println("WARNING: cycle period time too short to collect all node data!!!");
         }
     } else {
-        Serial.print("Unknown node type: "); Serial.println(nodeType, DEC);
+        Serial.print("Unknown node type: "); Serial.println(config.node_type, DEC);
         while(1);
     }
 
-    if (hasOLED) {
+    if (config.has_oled) {
         updateDisplayThread(&update_display_protothread, 1000);
         updateDisplayBatteryThread(&update_display_battery_protothread, 10 * 1000);
         displayTimeoutShutdownThread(&display_timeout_shutdown_protothread, 1000);
