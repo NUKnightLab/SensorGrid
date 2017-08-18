@@ -41,10 +41,7 @@ uint8_t hasOLED;
 uint8_t doTransmit;
 uint8_t chargeOnly;
 
-uint32_t lastTransmit = 0;
-uint32_t lastReTransmit = 0;
 uint32_t oledActivated = 0;
-uint32_t cButtonPressed = 0;
 bool oledOn;
 
 char *nodeIds[254] = {0};
