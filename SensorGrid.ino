@@ -9,11 +9,11 @@
 #define NODE_TYPE_ORDERED_SENSOR_ROUTER 5
 
 /* Config defaults are strings so they can be passed to getConfig */
-static const char* DEFAULT_NETWORK_ID = "1";
-static const char* DEFAULT_NODE_ID = "1";
-static const char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
-static const char* DEFAULT_TX_POWER = "10";
-static const char* DEFAULT_PROTOCOL_VERSION = "0.11";
+static char* DEFAULT_NETWORK_ID = "1";
+static char* DEFAULT_NODE_ID = "1";
+static char* DEFAULT_RF95_FREQ = "915.0";  // for U.S.
+static char* DEFAULT_TX_POWER = "10";
+static char* DEFAULT_PROTOCOL_VERSION = "0.11";
 static char* DEFAULT_DISPLAY_TIMEOUT = "60";
 static char* DEFAULT_COLLECTOR_ID = "1";
 static char* DEFAULT_OLED = "0";
@@ -22,8 +22,6 @@ static char* DEFAULT_TRANSMIT = "1";
 static char* DEFAULT_LOG_MODE = "NODE"; // NONE, NODE, NETWORK, ALL
 uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 uint8_t GROVE_AIR_QUALITY_1_3_PIN;
-
-static const bool RECEIVE = true;
 
 /* vars set by config file */
 uint32_t networkID;
@@ -61,6 +59,10 @@ static struct pt radio_transmit_protothread;
 static struct pt update_display_protothread;
 static struct pt update_display_battery_protothread;
 static struct pt display_timeout_shutdown_protothread;
+
+volatile int aButtonState = 0;
+volatile int bButtonState = 0;
+volatile int cButtonState = 0;
 
 static int radioTransmitThread(struct pt *pt, int interval)
 {
@@ -118,11 +120,6 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval)
   }
   PT_END(pt);
 }
-
-volatile int aButtonState = 0;
-volatile int bButtonState = 0;
-volatile int cButtonState = 0;
-
 
 void aButton_ISR()
 {
