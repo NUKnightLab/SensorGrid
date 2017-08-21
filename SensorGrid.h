@@ -14,7 +14,6 @@
 
 #define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
 #define MAX_NETWORK_SIZE 100
-#define RETRANSMIT_DELAY 1000 // ms. Needed for TX node to receive re-TX as ACK
 #define LED 13
 #define VBATPIN A7
 #define BUTTON_A 9
