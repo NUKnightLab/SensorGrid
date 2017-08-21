@@ -235,10 +235,10 @@ static uint32_t getDataByTypeName(char* type)
         return (int32_t)sensorSi1145UV.readUV();
     }
     if (!strcmp(type, "SHARP_GP2Y1010AU0F_DUST")) {
-        return (int32_t)(SHARP_GP2Y1010AU0F::readDustSensor()*100);
+        return (int32_t)(SHARP_GP2Y1010AU0F::read()*100);
     }
     if (!strcmp(type, "GROVE_AIR_QUALITY_1_3")) {
-        return (int32_t)(readGroveAirQualitySensor()*100);
+        return (int32_t)(GROVE_AIR_QUALITY_1_3::read()*100);
     }
     if (!strcmp(type, "FAKE_3")) {
         return 3333333;

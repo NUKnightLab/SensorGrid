@@ -149,7 +149,7 @@ void setup()
     //Serial.println(F("Starting RTC"));
     //rtc.begin(); // Always true. Don't check as per Adafruit tutorials
     //flashLED(2, HIGH);
-    load_config();
+    loadConfig();
     Serial.println("Config loaded");
     Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
@@ -194,7 +194,7 @@ void setup()
       WiFiPresent = false;
     }
 
-    setup_sensors();
+    setupSensors();
     
     if (sizeof(Message) > RH_RF95_MAX_MESSAGE_LEN) {
         fail(MESSAGE_STRUCT_TOO_LARGE);

@@ -8,13 +8,13 @@ namespace SHARP_GP2Y1010AU0F {
 
     static uint8_t dust_pin;
  
-    void setDustPin(uint8_t pin) {
+    void setDataPin(uint8_t pin) {
         Serial.print(F("Setting Sharp GP2Y1010AU0F pin to: "));
         Serial.println(pin, DEC);
         dust_pin = pin;
     }
     
-    void setupDustSensor()
+    void setup()
     {
         if (dust_pin) {
             pinMode(DUST_SENSOR_LED_POWER, OUTPUT);
@@ -22,7 +22,7 @@ namespace SHARP_GP2Y1010AU0F {
         }
     }
     
-    float readDustSensor()
+    float read()
     {
         static float dust_sense_vo_measured = 0;
         static float dust_sense_calc_voltage = 0;

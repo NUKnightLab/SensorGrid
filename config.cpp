@@ -3,7 +3,7 @@
 
 struct Config config;
 
-void load_config() {
+void loadConfig() {
     if (!readSDConfig(CONFIG_FILE)) {
         config.network_id = (uint32_t)(atoi(getConfig("NETWORK_ID")));
         config.node_id = (uint32_t)(atoi(getConfig("NODE_ID")));
@@ -19,9 +19,11 @@ void load_config() {
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         Serial.print("Set node type: "); Serial.println(config.node_type);
         config.collector_id = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
-        SHARP_GP2Y1010AU0F::setDustPin((uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN"))));
-        GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
         config.charge_only = atoi(getConfig("CHARGE", "0"));
+
+        /* sensor configs */
+        SHARP_GP2Y1010AU0F::setDataPin((uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN"))));
+        GROVE_AIR_QUALITY_1_3::setDataPin((uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN"))));
 
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
@@ -59,7 +61,7 @@ void load_config() {
     }
 }
 
-void setup_sensors() {
+void setupSensors() {
     Serial.println("--- Initializing Sensors ---");
 
     /* Adafruit Si7021 temperature/humidity breakout */
@@ -85,12 +87,10 @@ void setup_sensors() {
     */
 
     /* Sharp GP2Y1010AU0F dust */
-    SHARP_GP2Y1010AU0F::setupDustSensor();
+    SHARP_GP2Y1010AU0F::setup();
 
     /* Grove air quality 1.3 */
-    if (GROVE_AIR_QUALITY_1_3_PIN) {
-        setupGroveAirQualitySensor();
-    }
+    GROVE_AIR_QUALITY_1_3::setup();
 
 }
 

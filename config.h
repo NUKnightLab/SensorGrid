@@ -41,8 +41,8 @@ typedef struct Config {
     int node_ids[255];
 };
 
-extern void load_config();
-extern void setup_sensors();
+extern void loadConfig();
+extern void setupSensors();
 extern struct Config config;
 
 #endif
