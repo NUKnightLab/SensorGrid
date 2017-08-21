@@ -11,10 +11,8 @@
 #define RFM95_INT 3
 
 void setupRadio();
-//void printMessageData();
 bool postToAPI();
 bool sendCurrentMessage();
-void reTransmitOldestHistory();
 void receive();
 void waitForInstructions();
 void collectFromNode(int toID, uint32_t nextCollectTime);

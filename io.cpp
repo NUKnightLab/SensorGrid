@@ -316,15 +316,6 @@ static void fillCurrentMessageData()
       msg->data[9] = getRegisterData("DATA_9");
 }
 
-/*
-bool transmit()
-{
-    fillCurrentMessageData();
-    printMessageData(config.node_id);
-    return sendCurrentMessage();
-}
-*/
-
     /**
      * Note from old transmit function:
      * Unable to get WINC1500 and Adalogger to share SPI bus for logger writes.
@@ -352,8 +343,7 @@ void receive()
   uint8_t from;
   if (router->recvfromAckTimeout(buf, &len, 5000, &from)) {
     if (config.node_id == 1) {
-        Serial.print("got request from :");
-        Serial.println(from, DEC);
+        Serial.print(F("REC request from :")); Serial.println(from, DEC);
         printMessageData(from);
     } 
     if (router->sendtoWait(data, sizeof(data), from) != RH_ROUTER_ERROR_NONE)
@@ -368,7 +358,7 @@ void waitForInstructions()
   uint8_t len = sizeof(controlBuffer);
   uint8_t from;
   if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
-      Serial.print("Got request from "); Serial.println(from, DEC);
+      Serial.print(F("REC request from: ")); Serial.println(from, DEC);
       if (control->type == CONTROL_TYPE_SEND_DATA) {
           Serial.println("Received send-data request");
           sendCurrentMessage();
@@ -429,29 +419,29 @@ void collectFromNode(int toID, uint32_t nextCollectTime)
 
 void _writeToSD(char* filename, char* str)
 {
-  Serial.print(F("Init SD card .."));
-  if (!SD.begin(10)) {
-        Serial.println(F(" .. SD card init failed!"));
-        return;
-  }
-  if (false) {  // true to check available SD filespace
-      Serial.print("SD free: ");
-      uint32_t volFree = SD.vol()->freeClusterCount();
-      float fs = 0.000512*volFree*SD.vol()->blocksPerCluster();
-      Serial.println(fs);
-  }
-  File file;
-  Serial.print(F("Writing to ")); Serial.print(filename);
-  Serial.println(F(":")); Serial.println(str);
-  file = SD.open(filename, O_WRITE|O_APPEND|O_CREAT);
-  file.println(str);
-  file.close();
-  Serial.println("File closed");
+    Serial.print(F("Init SD card .."));
+    if (!SD.begin(10)) {
+          Serial.println(F(" .. SD card init failed!"));
+          return;
+    }
+    if (false) {  // true to check available SD filespace
+        Serial.print("SD free: ");
+        uint32_t volFree = SD.vol()->freeClusterCount();
+        float fs = 0.000512*volFree*SD.vol()->blocksPerCluster();
+        Serial.println(fs);
+    }
+    File file;
+    Serial.print(F("Writing to ")); Serial.print(filename);
+    Serial.println(F(":")); Serial.println(str);
+    file = SD.open(filename, O_WRITE|O_APPEND|O_CREAT);
+    file.println(str);
+    file.close();
+    Serial.println("File closed");
 }
 
 void writeToSD(char* filename, char* str)
 {
-  digitalWrite(8, HIGH);
-  _writeToSD(filename, str);
-  digitalWrite(8, LOW);
+    digitalWrite(8, HIGH);
+    _writeToSD(filename, str);
+    digitalWrite(8, LOW);
 }
