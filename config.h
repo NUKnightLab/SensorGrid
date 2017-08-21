@@ -2,7 +2,7 @@
 #define _CONFIG_H
 
 #include "SHARP_GP2Y1010AU0F.h"
-#include "GroveAirQuality.h"
+#include "GROVE_AIR_QUALITY_1_3.h"
 
 #define NODE_TYPE_COLLECTOR 1
 #define NODE_TYPE_ROUTER 2
