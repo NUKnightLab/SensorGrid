@@ -64,19 +64,11 @@ void loadConfig() {
 void setupSensors() {
     Serial.println("--- Initializing Sensors ---");
 
-    /* Adafruit Si1145 IR/UV/Vis light breakout */
-    /*
-    Serial.print(F("Si1145 "));
-    if (sensorSi1145UV.begin()) {
-        Serial.println(F("Found"));
-        sensorSi1145Module = true;
-    } else {
-        Serial.println(F("Not Found"));
-    }
-    */
-
     /* Adafruit Si7021 temperature/humidity breakout */
     ADAFRUIT_SI7021::setup();
+
+    /* Adafruit Si1145 IR/UV/Visible light breakout */
+    ADAFRUIT_SI1145::setup();
 
     /* Sharp GP2Y1010AU0F dust */
     SHARP_GP2Y1010AU0F::setup();

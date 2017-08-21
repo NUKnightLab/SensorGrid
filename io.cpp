@@ -226,13 +226,13 @@ static uint32_t getDataByTypeName(char* type)
         return (int32_t)(ADAFRUIT_SI7021::readHumidity()*100);
     }
     if (!strcmp(type, "SI1145_VIS")) {
-        return (int32_t)sensorSi1145UV.readVisible();
+        return (int32_t)ADAFRUIT_SI1145::readVisible();
     }
     if (!strcmp(type, "SI1145_IR")) {
-        return (int32_t)sensorSi1145UV.readIR();
+        return (int32_t)ADAFRUIT_SI1145::readIR();
     }
     if (!strcmp(type, "SI1145_UV")) {
-        return (int32_t)sensorSi1145UV.readUV();
+        return (int32_t)ADAFRUIT_SI1145::readUV();
     }
     if (!strcmp(type, "SHARP_GP2Y1010AU0F_DUST")) {
         return (int32_t)(SHARP_GP2Y1010AU0F::read()*100);

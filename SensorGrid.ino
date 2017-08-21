@@ -7,9 +7,6 @@ static uint32_t oled_activated_time = 0;
 bool oled_is_on;
 
 RTC_PCF8523 rtc;
-
-Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
-bool sensorSi1145Module = false;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 
 bool WiFiPresent = false;

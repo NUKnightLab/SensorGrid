@@ -1,9 +1,11 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
+#include "ADAFRUIT_SI7021.h"
+#include "ADAFRUIT_SI1145.h"
 #include "SHARP_GP2Y1010AU0F.h"
 #include "GROVE_AIR_QUALITY_1_3.h"
-#include "ADAFRUIT_SI7021.h"
+
 
 #define NODE_TYPE_COLLECTOR 1
 #define NODE_TYPE_ROUTER 2
