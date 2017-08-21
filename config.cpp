@@ -19,7 +19,7 @@ void load_config() {
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         Serial.print("Set node type: "); Serial.println(config.node_type);
         config.collector_id = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
-        SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
+        SHARP_GP2Y1010AU0F::setDustPin((uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN"))));
         GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
         config.charge_only = atoi(getConfig("CHARGE", "0"));
 
@@ -58,3 +58,39 @@ void load_config() {
         config.collector_id = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));        
     }
 }
+
+void setup_sensors() {
+    Serial.println("--- Initializing Sensors ---");
+
+    /* Adafruit Si7021 temperature/humidity breakout */
+    /*
+    Serial.print(F("Si7021 "));
+    if (sensorSi7021TempHumidity.begin()) {
+        Serial.println(F("Found"));
+        sensorSi7021Module = true;
+    } else {
+        Serial.println(F("Not Found"));
+    }
+    */
+
+    /* Adafruit Si1145 IR/UV/Vis light breakout */
+    /*
+    Serial.print(F("Si1145 "));
+    if (sensorSi1145UV.begin()) {
+        Serial.println(F("Found"));
+        sensorSi1145Module = true;
+    } else {
+        Serial.println(F("Not Found"));
+    }
+    */
+
+    /* Sharp GP2Y1010AU0F dust */
+    SHARP_GP2Y1010AU0F::setupDustSensor();
+
+    /* Grove air quality 1.3 */
+    if (GROVE_AIR_QUALITY_1_3_PIN) {
+        setupGroveAirQualitySensor();
+    }
+
+}
+

@@ -9,7 +9,6 @@
 #include <RTClib.h>
 #include <KnightLab_SDConfig.h>
 #include <KnightLab_GPS.h>
-#include "SHARP_GP2Y1010AU0F.h"
 #include "GroveAirQuality.h"
 #include "io.h"
 

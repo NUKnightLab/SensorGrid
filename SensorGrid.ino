@@ -3,7 +3,6 @@
 #include "display.h"
 #include <pt.h>
 
-uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 uint8_t GROVE_AIR_QUALITY_1_3_PIN;
 
 static uint32_t oled_activated_time = 0;
@@ -185,6 +184,7 @@ void setup()
     }
     rtc.begin();
     setupRadio();
+    
     char* ssid = getConfig("WIFI_SSID");
     if (ssid) {
       Serial.println(F("ssid is valid"));
@@ -194,30 +194,8 @@ void setup()
       WiFiPresent = false;
     }
 
-    Serial.print(F("Si7021 "));
-    if (sensorSi7021TempHumidity.begin()) {
-        Serial.println(F("Found"));
-        sensorSi7021Module = true;
-    } else {
-        Serial.println(F("Not Found"));
-    }
-
-    Serial.print(F("Si1145 "));
-    if (sensorSi1145UV.begin()) {
-        Serial.println(F("Found"));
-        sensorSi1145Module = true;
-    } else {
-        Serial.println(F("Not Found"));
-    }
-
-    if (SHARP_GP2Y1010AU0F_DUST_PIN) {
-        setupDustSensor();
-    }
-
-    if (GROVE_AIR_QUALITY_1_3_PIN) {
-        setupGroveAirQualitySensor();
-    }
-
+    setup_sensors();
+    
     if (sizeof(Message) > RH_RF95_MAX_MESSAGE_LEN) {
         fail(MESSAGE_STRUCT_TOO_LARGE);
     }

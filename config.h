@@ -1,6 +1,8 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
+#include "SHARP_GP2Y1010AU0F.h"
+
 #define NODE_TYPE_COLLECTOR 1
 #define NODE_TYPE_ROUTER 2
 #define NODE_TYPE_SENSOR 3
@@ -40,6 +42,7 @@ typedef struct Config {
 };
 
 extern void load_config();
+extern void setup_sensors();
 extern struct Config config;
 
 #endif

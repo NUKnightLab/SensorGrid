@@ -11,12 +11,11 @@
 #define DUST_SENSOR_LED_ON LOW
 #define DUST_SENSOR_LED_OFF HIGH
 
-extern float dustSenseVoMeasured;
-extern float dustSenseCalcVoltage;
-extern float dustDensity;
-extern uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 
-void setupDustSensor();
-float readDustSensor();
+namespace SHARP_GP2Y1010AU0F {
+    void setDustPin(uint8_t pin);
+    void setupDustSensor();
+    float readDustSensor();
+}
 
 #endif
