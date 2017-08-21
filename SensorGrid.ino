@@ -160,12 +160,6 @@ void setup()
         attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
     }
 
-    Serial.print(F("BAT: "));
-    if (VBATPIN == A7) {
-        Serial.println(F("A7"));
-    } else {
-        Serial.println(F("A9"));
-    }
     if (config.charge_only) {
       return;
     }
