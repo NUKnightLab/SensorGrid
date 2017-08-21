@@ -3,8 +3,6 @@
 #include "display.h"
 #include <pt.h>
 
-uint8_t GROVE_AIR_QUALITY_1_3_PIN;
-
 static uint32_t oled_activated_time = 0;
 bool oled_is_on;
 
