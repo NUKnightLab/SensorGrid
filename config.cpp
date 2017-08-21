@@ -59,6 +59,7 @@ void loadConfig() {
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         config.collector_id = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));
     }
+    Serial.println("Config loaded");
 }
 
 void setupSensors() {

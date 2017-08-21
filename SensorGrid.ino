@@ -142,8 +142,9 @@ void setup()
     //Serial.println(F("Starting RTC"));
     //rtc.begin(); // Always true. Don't check as per Adafruit tutorials
     //flashLED(2, HIGH);
+
     loadConfig();
-    Serial.println("Config loaded");
+
     Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
     pinMode(RFM95_RST, OUTPUT);
@@ -206,9 +207,6 @@ void loop()
       delay(10000);
       return;
     }
-
-    Serial.println(F("****"));
-    printRam();
 
     if (config.node_type == NODE_TYPE_ROUTER || config.node_type == NODE_TYPE_COLLECTOR) {
         receive();
