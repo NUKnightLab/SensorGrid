@@ -15,7 +15,6 @@
 /* Module defs */
 #include "WINC1500.h"
 
-
 #define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
 #define MAX_NETWORK_SIZE 100
 #define RETRANSMIT_DELAY 1000 // ms. Needed for TX node to receive re-TX as ACK
@@ -51,7 +50,6 @@ enum ERRORS {
 
 extern Adafruit_FeatherOLED display;
 extern uint32_t display_clock_time;
-
 
 typedef struct Message {
     uint16_t ver;
