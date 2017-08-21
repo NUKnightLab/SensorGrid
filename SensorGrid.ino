@@ -47,7 +47,6 @@ static int radioTransmitThread(struct pt *pt, int interval)
 static int updateDisplayBatteryThread(struct pt *pt, int interval)
 {
   static unsigned long timestamp = 0;
-  
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
@@ -61,7 +60,6 @@ static int updateDisplayBatteryThread(struct pt *pt, int interval)
 static int updateDisplayThread(struct pt *pt, int interval)
 {
   static unsigned long timestamp = 0;
-  
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
@@ -75,7 +73,6 @@ static int updateDisplayThread(struct pt *pt, int interval)
 static int displayTimeoutShutdownThread(struct pt *pt, int interval)
 {
   static unsigned long timestamp = 0;
-  
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
@@ -118,7 +115,6 @@ void aButton_ISR()
  
 void setup()
 {
-
     randomSeed(analogRead(A0));
     
     if (true) {
