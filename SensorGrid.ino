@@ -7,9 +7,8 @@ static uint32_t oled_activated_time = 0;
 bool oled_is_on;
 
 RTC_PCF8523 rtc;
-Adafruit_Si7021 sensorSi7021TempHumidity = Adafruit_Si7021();
+
 Adafruit_SI1145 sensorSi1145UV = Adafruit_SI1145();
-bool sensorSi7021Module = false;
 bool sensorSi1145Module = false;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 
@@ -104,7 +103,6 @@ void aButton_ISR()
         }
     }
 }
-
 
 /*
  * setup and loop

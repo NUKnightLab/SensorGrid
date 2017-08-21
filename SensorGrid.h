@@ -4,7 +4,6 @@
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
 #include <Adafruit_SI1145.h>
-#include <Adafruit_Si7021.h>
 #include <Adafruit_FeatherOLED.h>
 #include <RTClib.h>
 #include <KnightLab_SDConfig.h>
@@ -30,10 +29,8 @@
 extern bool oled_is_on;
 extern bool WiFiPresent;
 
-extern Adafruit_Si7021 sensorSi7021TempHumidity;
 extern Adafruit_SI1145 sensorSi1145UV;
 extern RTC_PCF8523 rtc;
-extern bool sensorSi7021Module;
 extern bool sensorSi1145Module;
 
 enum ERRORS {

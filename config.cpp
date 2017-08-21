@@ -27,7 +27,7 @@ void loadConfig() {
 
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
-        
+
         if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
             char* nodeIdsConfig = strdup(getConfig("ORDERED_NODE_IDS", ""));
             if (nodeIdsConfig[0] == NULL) {
@@ -57,23 +57,12 @@ void loadConfig() {
         config.has_oled = (uint8_t)(atoi(DEFAULT_OLED));
         config.do_transmit = (uint8_t)(atoi(DEFAULT_TRANSMIT));
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
-        config.collector_id = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));        
+        config.collector_id = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));
     }
 }
 
 void setupSensors() {
     Serial.println("--- Initializing Sensors ---");
-
-    /* Adafruit Si7021 temperature/humidity breakout */
-    /*
-    Serial.print(F("Si7021 "));
-    if (sensorSi7021TempHumidity.begin()) {
-        Serial.println(F("Found"));
-        sensorSi7021Module = true;
-    } else {
-        Serial.println(F("Not Found"));
-    }
-    */
 
     /* Adafruit Si1145 IR/UV/Vis light breakout */
     /*
@@ -85,6 +74,9 @@ void setupSensors() {
         Serial.println(F("Not Found"));
     }
     */
+
+    /* Adafruit Si7021 temperature/humidity breakout */
+    ADAFRUIT_SI7021::setup();
 
     /* Sharp GP2Y1010AU0F dust */
     SHARP_GP2Y1010AU0F::setup();
