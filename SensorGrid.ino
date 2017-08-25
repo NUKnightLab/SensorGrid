@@ -21,6 +21,7 @@ volatile int cButtonState = 0;
  */
 
 static struct pt radio_transmit_protothread;
+static struct pt update_clock_protothread;
 static struct pt update_display_protothread;
 static struct pt update_display_battery_protothread;
 static struct pt display_timeout_shutdown_protothread;
@@ -32,6 +33,25 @@ static int radioTransmitThread(struct pt *pt, int interval)
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     sendCurrentMessage();
+    timestamp = millis();
+  }
+  PT_END(pt);
+}
+
+static int updateClockThread(struct pt *pt, int interval)
+{
+  static unsigned long timestamp = 0;
+  PT_BEGIN(pt);
+  while(1) { // never stop 
+    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
+    int gps_year = GPS.year;
+    if (gps_year != 0 && gps_year != 80) {
+        uint32_t gps_time = DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds).unixtime();
+        uint32_t rtc_time = rtc.now().unixtime();
+        if (rtc_time - gps_time > 1 || gps_time - rtc_time > 1) { 
+            rtc.adjust(DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds));
+        }
+    }
     timestamp = millis();
   }
   PT_END(pt);
@@ -137,11 +157,6 @@ void setup()
      * But with PCF8523. However note that this example, and general RTC
      * library code uses Wire1
      */
-    //Serial.println(F("Starting GPS"));
-    //setupGPS();
-    //Serial.println(F("Starting RTC"));
-    //rtc.begin(); // Always true. Don't check as per Adafruit tutorials
-    //flashLED(2, HIGH);
 
     loadConfig();
 
@@ -165,11 +180,7 @@ void setup()
       return;
     }
     
-    if (config.gps_module && config.node_type != NODE_TYPE_ROUTER && config.node_type != NODE_TYPE_COLLECTOR) {
-        setupGPS();
-    } else {
-        Serial.println(F("No GPS_MODULE specified in config .. Skipping GPS setup"));
-    }
+    setupGPS();
     rtc.begin();
     setupRadio();
     
@@ -191,6 +202,7 @@ void setup()
 
     /* initialize protothreads */
     PT_INIT(&radio_transmit_protothread);
+    PT_INIT(&update_clock_protothread);
     if (config.has_oled) {
         PT_INIT(&update_display_protothread);
         PT_INIT(&update_display_battery_protothread);
@@ -201,11 +213,11 @@ void setup()
 void loop()
 {
     if (config.charge_only) {
-      Serial.print(F("BAT: ")); Serial.println(batteryLevel());
-      if (config.has_oled && oled_is_on)
-          updateDisplayBattery();
-      delay(10000);
-      return;
+        Serial.print(F("BAT: ")); Serial.println(batteryLevel());
+        if (config.has_oled && oled_is_on)
+            updateDisplayBattery();
+        delay(10000);
+        return;
     }
 
     if (config.node_type == NODE_TYPE_ROUTER || config.node_type == NODE_TYPE_COLLECTOR) {
@@ -230,20 +242,11 @@ void loop()
         while(1);
     }
 
+    updateClockThread(&update_clock_protothread, 1000);
+
     if (config.has_oled) {
         updateDisplayThread(&update_display_protothread, 1000);
         updateDisplayBatteryThread(&update_display_battery_protothread, 10 * 1000);
         displayTimeoutShutdownThread(&display_timeout_shutdown_protothread, 1000);
     }
-    
-    /*
-    int gpsYear = GPS.year;
-    if (gpsYear != 0 && gpsYear != 80) {
-        uint32_t gpsTime = DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds).unixtime();
-        uint32_t rtcTime = rtc.now().unixtime();
-        if (rtcTime - gpsTime > 1 || gpsTime - rtcTime > 1) { 
-          Serial.println("Setting RTC to GPS time");
-          rtc.adjust(DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds));
-        }
-    } */
 }
