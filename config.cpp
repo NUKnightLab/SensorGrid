@@ -72,8 +72,7 @@ void setupSensors() {
     ADAFRUIT_SI1145::setup();
 
     /* Sharp GP2Y1010AU0F dust */
-    if (config.SHARP_GP2Y1010AU0F_DUST_PIN)
-        SHARP_GP2Y1010AU0F::setup(config.SHARP_GP2Y1010AU0F_DUST_PIN);
+    SHARP_GP2Y1010AU0F::setup(config.SHARP_GP2Y1010AU0F_DUST_PIN);
 
     /* Grove air quality 1.3 */
     GROVE_AIR_QUALITY_1_3::setup(config.GROVE_AIR_QUALITY_1_3_PIN);
