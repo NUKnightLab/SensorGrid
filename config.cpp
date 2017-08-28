@@ -21,9 +21,8 @@ void loadConfig() {
         config.collector_id = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
         config.charge_only = atoi(getConfig("CHARGE", "0"));
 
-        /* sensor configs */
+        /* sensor configs will be loaded in call to setupSensors */
         SHARP_GP2Y1010AU0F::setDataPin((uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN"))));
-        //GROVE_AIR_QUALITY_1_3::setDataPin((uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN"))));
 
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
