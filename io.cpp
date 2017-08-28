@@ -172,9 +172,7 @@ static uint32_t getDataByTypeName(char* type)
     }
     if (!strcmp(type, "GPS_LON_DEG")) {
         if (!config.gps_module) warnNoGPSConfig();
-        Serial.println(GPS.lastNMEA()); // These are looking pretty ugly. Looks like a bad
-                                        // overwrite of NMEA is corrupting the string from
-                                        // around the end of the longitude field on GPGGA strings
+        Serial.println(GPS.lastNMEA());
         Serial.print(F("LONGITUDE ")); Serial.println(GPS.longitudeDegrees, DEC);
         return (int32_t)(roundf(GPS.longitudeDegrees * 1000));
     }
