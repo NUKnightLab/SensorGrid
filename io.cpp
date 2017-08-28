@@ -15,7 +15,6 @@ static RH_RF95 rf95(RFM95_CS, RFM95_INT);
 static RHMesh* router;
 
 static uint32_t MSG_ID = 0;
-static uint32_t lastAck = 0;
 static uint8_t msgLen = sizeof(Message);
 
 static uint8_t buf[sizeof(Message)] = {0};
