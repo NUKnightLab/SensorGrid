@@ -36,7 +36,7 @@ void setupRadio()
     
     rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
-        Serial.println("Router init failed");
+        Serial.println(F("Router init failed"));
         
     if (!rf95.setFrequency(config.rf95_freq)) {
         fail(LORA_FREQ_FAIL);
@@ -53,11 +53,11 @@ static void sleep(int sleepTime)
     // TODO: may need minimum allowed sleep time due to radio startup cost
     if (sleepTime > 0) {
         rf95.sleep();
-        Serial.println("Sleeping for: "); Serial.println(sleepTime);
+        Serial.println(F("Sleeping for: ")); Serial.println(sleepTime);
         // Note: this delay will prevent display timeout, display update, and other protothread calls
         delay(sleepTime); // TODO: this might not be the best way to sleep. Look at SleepyDog: https://github.com/adafruit/Adafruit_SleepyDog
     } else {
-        Serial.print("Got a bad sleep time: "); Serial.println(sleepTime);
+        Serial.print(F("Received bad sleep time: ")); Serial.println(sleepTime);
     }
 }
 
@@ -65,7 +65,7 @@ bool sendCurrentMessage()
 { 
     fillCurrentMessageData();
     printMessageData(config.node_id);
-    Serial.println("Sending current data");
+    Serial.println(F("Sending current data"));
     clearControlBuffer();
     uint8_t len = sizeof(controlBuffer);
     uint8_t from;
@@ -80,8 +80,8 @@ bool sendCurrentMessage()
             // It has been reliably delivered to the next node.
             // Now wait for a reply from the ultimate server
             if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
-                Serial.print("got reply from: "); Serial.print(from, DEC);
-                Serial.print("; rssi: "); Serial.println(rf95.lastRssi());
+                Serial.print(F("Received reply from: ")); Serial.print(from, DEC);
+                Serial.print(F("; rssi: ")); Serial.println(rf95.lastRssi());
                 if (oled_is_on)
                     displayRx(from, rf95.lastRssi());
                 if (control->type == CONTROL_TYPE_SLEEP) {
@@ -90,10 +90,10 @@ bool sendCurrentMessage()
                 }
                 success = true;
             } else {
-                Serial.println("recvfromAckTimeout: No reply, is collector running?");
+                Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
             }
         } else {
-           Serial.println("sendtoWait failed. Are the intermediate nodes running?");
+           Serial.println(F("sendtoWait failed. Are the intermediate nodes running?"));
         }
         router->printRoutingTable();
         if (success) {
@@ -101,11 +101,11 @@ bool sendCurrentMessage()
         } else {
           txAttempts--;
           if (txAttempts > 0) {
-              Serial.print("Retrying data transmission x"); Serial.println(5-txAttempts);
+              Serial.print(F("Retrying data transmission x")); Serial.println(5-txAttempts);
           }
         }
     }
-    Serial.println("Data transmission failed");
+    Serial.println(F("Data transmission failed"));
     return false;
 }
 
@@ -159,7 +159,7 @@ static void warnNoGPSConfig()
 
 static uint32_t getDataByTypeName(char* type)
 {
-    Serial.print("Getting data for type: "); Serial.println(type);
+    Serial.print(F("Getting data for type: ")); Serial.println(type);
     if (!strcmp(type, "GPS_FIX")) {
         if (!config.gps_module) warnNoGPSConfig();
         return GPS.fix;
@@ -176,7 +176,7 @@ static uint32_t getDataByTypeName(char* type)
     if (!strcmp(type, "GPS_LAT_DEG")){
         if (!config.gps_module) warnNoGPSConfig();
         Serial.println(GPS.lastNMEA());
-        Serial.print("LATITUDE "); Serial.println(GPS.latitudeDegrees, DEC);
+        Serial.print(F("LATITUDE ")); Serial.println(GPS.latitudeDegrees, DEC);
         return (int32_t)(roundf(GPS.latitudeDegrees * 1000));
     }
     if (!strcmp(type, "GPS_LON_DEG")) {
@@ -184,7 +184,7 @@ static uint32_t getDataByTypeName(char* type)
         Serial.println(GPS.lastNMEA()); // These are looking pretty ugly. Looks like a bad
                                         // overwrite of NMEA is corrupting the string from
                                         // around the end of the longitude field on GPGGA strings
-        Serial.print("LONGITUDE "); Serial.println(GPS.longitudeDegrees, DEC);
+        Serial.print(F("LONGITUDE ")); Serial.println(GPS.longitudeDegrees, DEC);
         return (int32_t)(roundf(GPS.longitudeDegrees * 1000));
     }
     if (!strcmp(type, "SI7021_TEMP")) {
@@ -316,7 +316,7 @@ void receive()
         printMessageData(from);
     } 
     if (router->sendtoWait(data, sizeof(data), from) != RH_ROUTER_ERROR_NONE)
-        Serial.println("sendtoWait failed");
+        Serial.println(F("sendtoWait failed"));
   } else {
     //Serial.println("Got nothing");
   }
@@ -327,9 +327,9 @@ void waitForInstructions()
   uint8_t len = sizeof(controlBuffer);
   uint8_t from;
   if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
-      Serial.print(F("REC request from: ")); Serial.println(from, DEC);
+      Serial.print(F("Recieved request from: ")); Serial.println(from, DEC);
       if (control->type == CONTROL_TYPE_SEND_DATA) {
-          Serial.println("Received send-data request");
+          Serial.println(F("Received send-data request"));
           sendCurrentMessage();
       } else if (control->type == CONTROL_TYPE_SLEEP) {
           sleep(control->data);
@@ -341,7 +341,7 @@ void waitForInstructions()
 
 void collectFromNode(int toID, uint32_t nextCollectTime)
 {
-    Serial.print("Sending data request to node "); Serial.println(toID);
+    Serial.print(F("Sending data request to node ")); Serial.println(toID);
     clearControlBuffer();
     clearBuffer();
     uint8_t msg_len = sizeof(Message);
@@ -367,23 +367,23 @@ void collectFromNode(int toID, uint32_t nextCollectTime)
                 control->data = nextCollectTime - millis();
                 // don't hold up for send-sleep failures but TODO: report these somehow
                 if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE)
-                    Serial.println("ACK sendtoWait failed");
+                    Serial.println(F("ACK sendtoWait failed"));
             } else {
-                Serial.println("recvfromAckTimeout: No reply, is collector running?");
+                Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
             }
         } else {
-           Serial.println("sendtoWait failed. Are the intermediate nodes running?");
+           Serial.println(F("sendtoWait failed. Are the intermediate nodes running?"));
         }
         if (success) {
           return;
         } else {
           txAttempts--;
           if (txAttempts > 0) {
-              Serial.print("Retrying request for data transmission x"); Serial.println(3-txAttempts);
+              Serial.print(F("Retrying request for data transmission x")); Serial.println(3-txAttempts);
           }
         }
     }
-    Serial.println("Request for data transmission failed");
+    Serial.println(F("Request for data transmission failed"));
     router->printRoutingTable();
 }
 
@@ -395,7 +395,7 @@ void _writeToSD(char* filename, char* str)
           return;
     }
     if (false) {  // true to check available SD filespace
-        Serial.print("SD free: ");
+        Serial.print(F("SD free: "));
         uint32_t volFree = SD.vol()->freeClusterCount();
         float fs = 0.000512*volFree*SD.vol()->blocksPerCluster();
         Serial.println(fs);
@@ -406,7 +406,7 @@ void _writeToSD(char* filename, char* str)
     file = SD.open(filename, O_WRITE|O_APPEND|O_CREAT);
     file.println(str);
     file.close();
-    Serial.println("File closed");
+    Serial.println(F("File closed"));
 }
 
 void writeToSD(char* filename, char* str)
