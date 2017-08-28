@@ -7,10 +7,14 @@
 
 namespace GROVE_AIR_QUALITY_1_3 {
 
-    static uint8_t _data_pin;
+    static uint8_t _data_pin = 0;
 
     void setup(uint8_t data_pin)
     {
+        if (!data_pin) {
+            Serial.println(F("Grove Air Quality 1.3 not configured"));
+            return;
+        }
         _data_pin = data_pin;
         Serial.print(F("Setting Grove Air Quality 1.3 pin to: "));
         Serial.println(_data_pin, DEC);
@@ -19,7 +23,11 @@ namespace GROVE_AIR_QUALITY_1_3 {
     
     float read()
     {
-        return analogRead(_data_pin) * 3.3 / 1024;
+        if (_data_pin) {
+            return analogRead(_data_pin) * 3.3 / 1024;
+        } else {
+            return 0.0;
+        }
     }
 }
 
