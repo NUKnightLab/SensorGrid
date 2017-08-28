@@ -26,9 +26,6 @@ static struct Message message = *msg;
 static char* charBuf = (char*)buf;
 uint8_t routingBuf[RH_MESH_MAX_MESSAGE_LEN];
 
-static void fillCurrentMessageData();
-static void printMessageData(int fromNode);
-
 static void clearBuffer()
 {
     memset(buf, 0, msgLen);
@@ -55,11 +52,6 @@ void setupRadio()
     rf95.setCADTimeout(2000);
     router->setTimeout(1000);
     delay(100);
-}
-
-bool channelActive()
-{
-  return rf95.isChannelActive();
 }
 
 static void sleep(int sleepTime)
@@ -123,7 +115,7 @@ bool sendCurrentMessage()
     return false;
 }
 
-static void printMessageData(int fromNode)
+void printMessageData(int fromNode)
 {
     Serial.print(F("FROM: ")); Serial.println(fromNode, DEC);
     Serial.print(F("VER: ")); Serial.println(msg->ver, DEC);
@@ -268,7 +260,7 @@ static uint32_t getRegisterData(char* registerName)
     }
 }
 
-static void fillCurrentMessageData()
+void fillCurrentMessageData()
 {
       clearBuffer();
       msg->ver = config.protocol_version;

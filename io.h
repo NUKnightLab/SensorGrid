@@ -17,6 +17,7 @@ void receive();
 void waitForInstructions();
 void collectFromNode(int toID, uint32_t nextCollectTime);
 void writeToSD(char* filename, char* str);
-bool channelActive();
+void fillCurrentMessageData();
+void printMessageData(int fromNode);
 
 #endif
