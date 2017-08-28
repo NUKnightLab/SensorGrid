@@ -11,14 +11,8 @@ static SdFat SD;
 #define SD_CHIP_SELECT_PIN 10
 #define RH_MESH_MAX_MESSAGE_LEN 60
 
-#define ROUTER_TYPE 1
-
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
-#if ROUTER_TYPE == 0
-static RHRouter* router;
-#else
 static RHMesh* router;
-#endif
 
 static uint32_t maxTimestamps[MAX_NETWORK_SIZE] = {0};
 static uint32_t MSG_ID = 0;
@@ -49,11 +43,7 @@ static void clearControlBuffer()
 
 void setupRadio()
 {
-    #if ROUTER_TYPE == 0
-        router = new RHRouter(rf95, config.node_id);
-    #else
-        router = new RHMesh(rf95, config.node_id);
-    #endif
+    router = new RHMesh(rf95, config.node_id);
     
     rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
@@ -66,12 +56,6 @@ void setupRadio()
     rf95.setTxPower(config.tx_power, false);
     rf95.setCADTimeout(2000);
     router->setTimeout(1000);
-
-    if (ROUTER_TYPE == 0) {
-        router->addRouteTo(1, 108);
-        router->addRouteTo(107, 108);
-        router->addRouteTo(108, 108);
-    }
     delay(100);
 }
 
