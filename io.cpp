@@ -1,12 +1,4 @@
 #include "io.h"
-#include "display.h"
-#include "config.h"
-#include <SPI.h>
-#include <SdFat.h>
-#include <RHDatagram.h>
-
-#define SD_CHIP_SELECT_PIN 10
-#define RH_MESH_MAX_MESSAGE_LEN 60
 
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
 static RHMesh* router;

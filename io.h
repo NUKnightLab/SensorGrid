@@ -4,8 +4,14 @@
 #include <RHMesh.h>
 #include <RHRouter.h>
 #include <RH_RF95.h>
-#include "SensorGrid.h"
+#include "display.h"
+#include "config.h"
+#include <SPI.h>
+#include <SdFat.h>
+#include <RHDatagram.h>
 
+#define SD_CHIP_SELECT_PIN 10
+#define RH_MESH_MAX_MESSAGE_LEN 60
 #define RFM95_CS 8
 #define RFM95_RST 4
 #define RFM95_INT 3
