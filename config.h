@@ -43,6 +43,7 @@ typedef struct Config {
     uint8_t node_type;
     uint8_t charge_only;
     int node_ids[255];
+    uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
 };
 
 extern void loadConfig();

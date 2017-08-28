@@ -17,12 +17,13 @@ void loadConfig() {
         config.has_oled = (uint8_t)(atoi(getConfig("DISPLAY", DEFAULT_OLED)));
         config.do_transmit = (uint8_t)(atoi(getConfig("TRANSMIT", DEFAULT_TRANSMIT)));
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
-        Serial.print("Set node type: "); Serial.println(config.node_type);
         config.collector_id = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
         config.charge_only = atoi(getConfig("CHARGE", "0"));
 
-        /* sensor configs will be loaded in call to setupSensors */
+        /* sensor configs */
+        config.SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
 
+        /* Node IDs on collector */
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
 
@@ -70,7 +71,8 @@ void setupSensors() {
     ADAFRUIT_SI1145::setup();
 
     /* Sharp GP2Y1010AU0F dust */
-    SHARP_GP2Y1010AU0F::setup((uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN"))));
+    if (config.SHARP_GP2Y1010AU0F_DUST_PIN)
+        SHARP_GP2Y1010AU0F::setup(config.SHARP_GP2Y1010AU0F_DUST_PIN);
 
     /* Grove air quality 1.3 */
     GROVE_AIR_QUALITY_1_3::setup((uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN"))));
