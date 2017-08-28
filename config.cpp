@@ -22,7 +22,6 @@ void loadConfig() {
         config.charge_only = atoi(getConfig("CHARGE", "0"));
 
         /* sensor configs will be loaded in call to setupSensors */
-        SHARP_GP2Y1010AU0F::setDataPin((uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN"))));
 
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
@@ -71,7 +70,7 @@ void setupSensors() {
     ADAFRUIT_SI1145::setup();
 
     /* Sharp GP2Y1010AU0F dust */
-    SHARP_GP2Y1010AU0F::setup();
+    SHARP_GP2Y1010AU0F::setup((uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN"))));
 
     /* Grove air quality 1.3 */
     GROVE_AIR_QUALITY_1_3::setup((uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN"))));
