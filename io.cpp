@@ -8,7 +8,6 @@
 #define SD_CHIP_SELECT_PIN 10
 #define RH_MESH_MAX_MESSAGE_LEN 60
 
-static SdFat SD;
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
 static RHMesh* router;
 static uint32_t MSG_ID = 0;
@@ -389,21 +388,22 @@ void collectFromNode(int toID, uint32_t nextCollectTime)
 
 void _writeToSD(char* filename, char* str)
 {
+    static SdFat sd;
     Serial.print(F("Init SD card .."));
-    if (!SD.begin(10)) {
+    if (!sd.begin(10)) {
           Serial.println(F(" .. SD card init failed!"));
           return;
     }
     if (false) {  // true to check available SD filespace
         Serial.print(F("SD free: "));
-        uint32_t volFree = SD.vol()->freeClusterCount();
-        float fs = 0.000512*volFree*SD.vol()->blocksPerCluster();
+        uint32_t volFree = sd.vol()->freeClusterCount();
+        float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
         Serial.println(fs);
     }
     File file;
     Serial.print(F("Writing to ")); Serial.print(filename);
     Serial.println(F(":")); Serial.println(str);
-    file = SD.open(filename, O_WRITE|O_APPEND|O_CREAT);
+    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);
     file.println(str);
     file.close();
     Serial.println(F("File closed"));
