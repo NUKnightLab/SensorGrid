@@ -23,7 +23,7 @@ void loadConfig() {
 
         /* sensor configs */
         SHARP_GP2Y1010AU0F::setDataPin((uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN"))));
-        GROVE_AIR_QUALITY_1_3::setDataPin((uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN"))));
+        //GROVE_AIR_QUALITY_1_3::setDataPin((uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN"))));
 
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
@@ -75,7 +75,7 @@ void setupSensors() {
     SHARP_GP2Y1010AU0F::setup();
 
     /* Grove air quality 1.3 */
-    GROVE_AIR_QUALITY_1_3::setup();
+    GROVE_AIR_QUALITY_1_3::setup((uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN"))));
 
 }
 

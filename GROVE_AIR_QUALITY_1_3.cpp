@@ -13,7 +13,7 @@ namespace GROVE_AIR_QUALITY_1_3 {
         data_pin = pin;
     }
 
-    void setup()
+    void setup(uint8_t data_pin)
     {
         if (data_pin) {
             Serial.print(F("Setting Grove Air Quality 1.3 pin to: "));
