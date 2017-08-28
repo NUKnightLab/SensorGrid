@@ -24,7 +24,6 @@ static struct Message *msg = (struct Message*)buf;
 static struct Control *control = (struct Control*)controlBuffer;
 static struct Message message = *msg;
 static char* charBuf = (char*)buf;
-uint8_t data[] = "Hello back from server";
 uint8_t routingBuf[RH_MESH_MAX_MESSAGE_LEN];
 
 static void fillCurrentMessageData();
@@ -322,6 +321,7 @@ static void fillCurrentMessageData()
 
 void receive()
 {
+  static uint8_t data[] = "ACK from server";
   uint8_t len = sizeof(buf);
   uint8_t from;
   if (router->recvfromAckTimeout(buf, &len, 5000, &from)) {
