@@ -1,22 +1,17 @@
 #include "io.h"
 #include "display.h"
 #include "config.h"
-
 #include <SPI.h>
-//#include <SD.h>
 #include <SdFat.h>
 #include <RHDatagram.h>
-static SdFat SD;
 
 #define SD_CHIP_SELECT_PIN 10
 #define RH_MESH_MAX_MESSAGE_LEN 60
 
+static SdFat SD;
 static RH_RF95 rf95(RFM95_CS, RFM95_INT);
 static RHMesh* router;
-
 static uint32_t MSG_ID = 0;
-static uint8_t msgLen = sizeof(Message);
-
 static uint8_t buf[sizeof(Message)] = {0};
 static uint8_t controlBuffer[sizeof(Control)] = {0};
 static struct Message *msg = (struct Message*)buf;
@@ -27,7 +22,7 @@ uint8_t routingBuf[RH_MESH_MAX_MESSAGE_LEN];
 
 static void clearBuffer()
 {
-    memset(buf, 0, msgLen);
+    memset(buf, 0, sizeof(Message));
 }
 
 static void clearControlBuffer()
@@ -80,7 +75,7 @@ bool sendCurrentMessage()
     if (oled_is_on)
         displayTx(config.collector_id);
     while (txAttempts > 0) {
-        errCode = router->sendtoWait((uint8_t*)buf, msgLen, config.collector_id);
+        errCode = router->sendtoWait((uint8_t*)buf, sizeof(Message), config.collector_id);
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // It has been reliably delivered to the next node.
             // Now wait for a reply from the ultimate server
@@ -349,6 +344,7 @@ void collectFromNode(int toID, uint32_t nextCollectTime)
     Serial.print("Sending data request to node "); Serial.println(toID);
     clearControlBuffer();
     clearBuffer();
+    uint8_t msg_len = sizeof(Message);
     uint8_t len = sizeof(controlBuffer);
     uint8_t from;
     uint8_t errCode;
@@ -360,7 +356,7 @@ void collectFromNode(int toID, uint32_t nextCollectTime)
         errCode = router->sendtoWait((uint8_t*)control, len, toID);
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // receive the data
-            if (router->recvfromAckTimeout(buf, &msgLen, 5000, &from)) {
+            if (router->recvfromAckTimeout(buf, &msg_len, 5000, &from)) {
                 Serial.print("got reply from : "); Serial.print(from, DEC);
                 Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
                 // TODO: send data to the API
