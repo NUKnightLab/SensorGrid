@@ -187,12 +187,6 @@ static uint32_t getDataByTypeName(char* type)
         Serial.print(F("LONGITUDE ")); Serial.println(GPS.longitudeDegrees, DEC);
         return (int32_t)(roundf(GPS.longitudeDegrees * 1000));
     }
-    if (!strcmp(type, "SI7021_TEMP")) {
-        return (int32_t)(ADAFRUIT_SI7021::readTemperature()*100);
-    }
-    if (!strcmp(type, "SI7021_HUMIDITY")) {
-        return (int32_t)(ADAFRUIT_SI7021::readHumidity()*100);
-    }
     if (!strcmp(type, "FAKE_3")) {
         return 3333333;
     }

@@ -70,7 +70,18 @@ void setupSensors() {
     sensor_config_head = sensor_config;
     
     /* Adafruit Si7021 temperature/humidity breakout */
-    ADAFRUIT_SI7021::setup();
+    if (ADAFRUIT_SI7021::setup()) { 
+        /* temperature */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "SI7021_TEMP";
+        sensor_config->read_function = &(ADAFRUIT_SI7021::readTemperature);
+        /* humidity */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "SI7021_HUMIDITY";
+        sensor_config->read_function = &(ADAFRUIT_SI7021::readHumidity);
+    }
 
     /* Adafruit Si1145 IR/UV/Visible light breakout */
     if (ADAFRUIT_SI1145::setup()) {

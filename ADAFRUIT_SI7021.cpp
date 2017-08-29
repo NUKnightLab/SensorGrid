@@ -6,24 +6,26 @@ namespace ADAFRUIT_SI7021 {
 
     static Adafruit_Si7021 sensor = Adafruit_Si7021();
 
-    void setup()
+    bool setup()
     {
         Serial.print(F("Si7021 "));
         if (sensor.begin()) {
             Serial.println(F("Found"));
+            return true;
         } else {
             Serial.println(F("Not Found"));
+            return false;
         }
     }
 
-    float readTemperature()
+    int32_t readTemperature()
     {
-        return sensor.readTemperature();
+        return (int32_t)(sensor.readTemperature()*100);
     }
 
-    float readHumidity()
+    int32_t readHumidity()
     {
-        return sensor.readHumidity();
+        return (int32_t)(sensor.readHumidity()*100);
     }
 }
 
