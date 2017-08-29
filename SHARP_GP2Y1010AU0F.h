@@ -13,8 +13,9 @@
 
 namespace SHARP_GP2Y1010AU0F {
     void setDataPin(uint8_t pin);
-    void setup(uint8_t data_pin);
-    float read();
+    bool setup(uint8_t data_pin);
+    float read_legacy();
+    int32_t read();
 }
 
 #endif

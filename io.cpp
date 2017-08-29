@@ -151,6 +151,18 @@ static void warnNoGPSConfig()
 static uint32_t getDataByTypeName(char* type)
 {
     Serial.print(F("Getting data for type: ")); Serial.println(type);
+
+    struct SensorConfig *sensor_config = sensor_config_head;
+    do {
+        Serial.println(sensor_config->id);
+        if (!strcmp(type, sensor_config->id)) {
+            int32_t val = sensor_config->read_function();
+            return val;
+        }
+        sensor_config = sensor_config->next;
+    } while (sensor_config != NULL);
+
+    
     if (!strcmp(type, "GPS_FIX")) {
         if (!config.gps_module) warnNoGPSConfig();
         return GPS.fix;
@@ -191,9 +203,6 @@ static uint32_t getDataByTypeName(char* type)
     if (!strcmp(type, "SI1145_UV")) {
         return (int32_t)ADAFRUIT_SI1145::readUV();
     }
-    if (!strcmp(type, "SHARP_GP2Y1010AU0F_DUST")) {
-        return (int32_t)(SHARP_GP2Y1010AU0F::read()*100);
-    }
     if (!strcmp(type, "GROVE_AIR_QUALITY_1_3")) {
         return (int32_t)(GROVE_AIR_QUALITY_1_3::read()*100);
     }
@@ -218,6 +227,7 @@ static uint32_t getDataByTypeName(char* type)
     if (!strcmp(type, "FAKE_9")) {
         return 9999999;
     }
+
     Serial.print(F("WARNING! Unknown named data type: ")); Serial.println(type);
     return 0;
 }

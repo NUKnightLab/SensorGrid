@@ -2,6 +2,7 @@
 #include "config.h"
 
 struct Config config;
+struct SensorConfig *sensor_config_head;
 
 void loadConfig() {
     if (!readSDConfig(CONFIG_FILE)) {
@@ -65,6 +66,9 @@ void loadConfig() {
 void setupSensors() {
     Serial.println("--- Initializing Sensors ---");
 
+    struct SensorConfig *sensor_config = new SensorConfig();
+    sensor_config_head = sensor_config;
+    
     /* Adafruit Si7021 temperature/humidity breakout */
     ADAFRUIT_SI7021::setup();
 
@@ -72,7 +76,12 @@ void setupSensors() {
     ADAFRUIT_SI1145::setup();
 
     /* Sharp GP2Y1010AU0F dust */
-    SHARP_GP2Y1010AU0F::setup(config.SHARP_GP2Y1010AU0F_DUST_PIN);
+    if (SHARP_GP2Y1010AU0F::setup(config.SHARP_GP2Y1010AU0F_DUST_PIN)) {
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "SHARP_GP2Y1010AU0F_DUST";
+        sensor_config->read_function = &(SHARP_GP2Y1010AU0F::read);
+    }
 
     /* Grove air quality 1.3 */
     GROVE_AIR_QUALITY_1_3::setup(config.GROVE_AIR_QUALITY_1_3_PIN);

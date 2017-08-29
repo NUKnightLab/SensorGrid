@@ -8,20 +8,24 @@ namespace SHARP_GP2Y1010AU0F {
 
     static uint8_t _data_pin = 0;
  
-    void setup(uint8_t data_pin)
+    bool setup(uint8_t data_pin)
     {
         if (!data_pin) {
             Serial.println(F("Sharp GP2Y1010AU0F  not configured"));
-            return;
+            return false;
         }
         _data_pin = data_pin;
         Serial.print(F("Setting Sharp GP2Y1010AU0F data pin to: "));
         Serial.println(_data_pin, DEC);
         pinMode(DUST_SENSOR_LED_POWER, OUTPUT);
         pinMode(_data_pin, INPUT);
+        return true;
     }
-    
-    float read()
+
+    /**
+     * Legacy read function returns a float value
+     */
+    float read_legacy()
     {
         if (_data_pin) {
             static float dust_sense_vo_measured = 0;
@@ -44,6 +48,24 @@ namespace SHARP_GP2Y1010AU0F {
             return dust_density;
         } else {
             return 0.0;
+        }
+    }
+
+    /**
+     * Get the analogRead value from the dust data pin
+     */
+    int32_t read() {
+        if (_data_pin) {
+            static float dust_sense_vo_measured = 0;
+            digitalWrite(DUST_SENSOR_LED_POWER, DUST_SENSOR_LED_ON);
+            delayMicroseconds(DUST_SENSOR_SAMPLING_TIME);
+            dust_sense_vo_measured = analogRead(_data_pin);
+            delayMicroseconds(DUST_SENSOR_DELTA_TIME);
+            digitalWrite(DUST_SENSOR_LED_POWER, DUST_SENSOR_LED_OFF);
+            delayMicroseconds(DUST_SENSOR_SLEEP_TIME);
+            return dust_sense_vo_measured;
+        } else {
+            return 0;
         }
     }
 }

@@ -51,4 +51,13 @@ extern void loadConfig();
 extern void setupSensors();
 extern struct Config config;
 
+typedef int32_t (*SensorReadFunction)();
+
+typedef struct SensorConfig {
+    char *id;
+    SensorReadFunction read_function;
+    struct SensorConfig *next;
+};
+extern struct SensorConfig *sensor_config_head;
+
 #endif

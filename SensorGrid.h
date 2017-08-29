@@ -57,6 +57,7 @@ typedef struct Control {
     uint8_t type;
     uint32_t data;
 };
+
 #else
     #error Unsupported architecture
 #endif
