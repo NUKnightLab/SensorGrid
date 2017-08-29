@@ -4,10 +4,10 @@
 #include <Adafruit_SI1145.h>
 
 namespace ADAFRUIT_SI1145 {
-    void setup();
-    float readVisible();
-    float readIR();
-    float readUV();
+    bool setup();
+    int32_t readVisible();
+    int32_t readIR();
+    int32_t readUV();
 }
 
 #endif

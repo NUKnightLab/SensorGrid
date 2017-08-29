@@ -73,7 +73,23 @@ void setupSensors() {
     ADAFRUIT_SI7021::setup();
 
     /* Adafruit Si1145 IR/UV/Visible light breakout */
-    ADAFRUIT_SI1145::setup();
+    if (ADAFRUIT_SI1145::setup()) {
+        /* visible light */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "SI1145_VIS";
+        sensor_config->read_function = &(ADAFRUIT_SI1145::readVisible);
+        /* IR */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "SI1145_IR";
+        sensor_config->read_function = &(ADAFRUIT_SI1145::readIR);
+        /* UV */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "SI1145_UV";
+        sensor_config->read_function = &(ADAFRUIT_SI1145::readUV);              
+    }
 
     /* Sharp GP2Y1010AU0F dust */
     if (SHARP_GP2Y1010AU0F::setup(config.SHARP_GP2Y1010AU0F_DUST_PIN)) {

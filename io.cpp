@@ -193,15 +193,6 @@ static uint32_t getDataByTypeName(char* type)
     if (!strcmp(type, "SI7021_HUMIDITY")) {
         return (int32_t)(ADAFRUIT_SI7021::readHumidity()*100);
     }
-    if (!strcmp(type, "SI1145_VIS")) {
-        return (int32_t)ADAFRUIT_SI1145::readVisible();
-    }
-    if (!strcmp(type, "SI1145_IR")) {
-        return (int32_t)ADAFRUIT_SI1145::readIR();
-    }
-    if (!strcmp(type, "SI1145_UV")) {
-        return (int32_t)ADAFRUIT_SI1145::readUV();
-    }
     if (!strcmp(type, "FAKE_3")) {
         return 3333333;
     }
