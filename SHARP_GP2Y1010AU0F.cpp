@@ -54,7 +54,8 @@ namespace SHARP_GP2Y1010AU0F {
     /**
      * Get the analogRead value from the dust data pin
      */
-    int32_t read() {
+    int32_t read()
+    {
         if (_data_pin) {
             static float dust_sense_vo_measured = 0;
             digitalWrite(DUST_SENSOR_LED_POWER, DUST_SENSOR_LED_ON);

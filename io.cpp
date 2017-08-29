@@ -154,7 +154,6 @@ static uint32_t getDataByTypeName(char* type)
 
     struct SensorConfig *sensor_config = sensor_config_head;
     do {
-        Serial.println(sensor_config->id);
         if (!strcmp(type, sensor_config->id)) {
             int32_t val = sensor_config->read_function();
             return val;
@@ -202,9 +201,6 @@ static uint32_t getDataByTypeName(char* type)
     }
     if (!strcmp(type, "SI1145_UV")) {
         return (int32_t)ADAFRUIT_SI1145::readUV();
-    }
-    if (!strcmp(type, "GROVE_AIR_QUALITY_1_3")) {
-        return (int32_t)(GROVE_AIR_QUALITY_1_3::read()*100);
     }
     if (!strcmp(type, "FAKE_3")) {
         return 3333333;

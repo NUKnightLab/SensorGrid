@@ -84,7 +84,11 @@ void setupSensors() {
     }
 
     /* Grove air quality 1.3 */
-    GROVE_AIR_QUALITY_1_3::setup(config.GROVE_AIR_QUALITY_1_3_PIN);
-
+    if (GROVE_AIR_QUALITY_1_3::setup(config.GROVE_AIR_QUALITY_1_3_PIN)) {
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "GROVE_AIR_QUALITY_1_3";
+        sensor_config->read_function = &(GROVE_AIR_QUALITY_1_3::read);
+    }
 }
 
