@@ -37,7 +37,7 @@ def data():
                 .sort('received_at', pymongo.DESCENDING))))
     # we should be checking data length. See Flask docs:
     # http://werkzeug.pocoo.org/docs/0.11/wrappers/#werkzeug.wrappers.BaseRequest.get_data
-    if request.json.get('ver') == '0.11': # json encoded message
+    if request.json.get('ver') == '1': # json encoded message
         msg = request.json
         ( ver, net, snd, orig, msg_id, bat, timestamp, data) = (
             float(msg['ver']), int(msg['net']), int(msg['snd']),

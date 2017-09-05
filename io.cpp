@@ -120,20 +120,20 @@ void printMessageData(int fromNode)
     Serial.print(F("    [9] ")); Serial.println(msg->data[9]);
 }
 
-static char* logline(int fromNode)
+static char* logline(int fromNode, int id)
 {
     char str[200]; // 155+16 is current theoretical max
     sprintf(str,
-        "%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
-        msg->ver, msg->net, fromNode, (float)(msg->bat_100)/100, msg->ram, msg->timestamp,
+        "%i,%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
+        msg->ver, msg->net, fromNode, id, (float)(msg->bat_100)/100, msg->ram, msg->timestamp,
         msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
         msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
     return str;
 }
 
-static void writeLogLine(int fromNode)
+static void writeLogLine(int fromNode, int id)
 {
-    char* line = logline(fromNode);
+    char* line = logline(fromNode, id);
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
     Serial.println(line);
     if (config.log_file) {
@@ -327,6 +327,9 @@ void collectFromNode(int toID, uint32_t nextCollectTime)
     uint8_t msg_len = sizeof(Message);
     uint8_t len = sizeof(controlBuffer);
     uint8_t from;
+    uint8_t dest;
+    uint8_t id;
+    uint8_t flags;
     uint8_t errCode;
     uint8_t txAttempts = 3;
     bool success = false;
@@ -336,11 +339,13 @@ void collectFromNode(int toID, uint32_t nextCollectTime)
         errCode = router->sendtoWait((uint8_t*)control, len, toID);
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // receive the data
-            if (router->recvfromAckTimeout(buf, &msg_len, 5000, &from)) {
+            if (router->recvfromAckTimeout(buf, &msg_len, 5000, &from, &dest, &id, &flags)) {
                 Serial.print("got reply from : "); Serial.print(from, DEC);
+                Serial.print(" Msg ID: "); Serial.print(id, DEC);
                 Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
                 // TODO: send data to the API
                 printMessageData(from);
+                writeLogLine(from, id);
                 success = true;
                 // ack with OK SLEEP
                 control->type = CONTROL_TYPE_SLEEP;
@@ -382,8 +387,7 @@ void _writeToSD(char* filename, char* str)
         Serial.println(fs);
     }
     File file;
-    Serial.print(F("Writing to ")); Serial.print(filename);
-    Serial.println(F(":")); Serial.println(str);
+    Serial.print(F("Writing log line to ")); Serial.println(filename);
     file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);
     file.println(str);
     file.close();
