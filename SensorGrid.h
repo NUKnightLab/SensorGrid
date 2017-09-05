@@ -47,7 +47,7 @@ extern uint32_t display_clock_time;
 typedef struct Message {
     uint16_t ver;
     uint16_t net;
-    uint8_t bat_100;
+    uint16_t bat_100;
     uint32_t timestamp;
     uint16_t ram;
     int32_t data[10]; /* -2147483648 through 2147483647 */
