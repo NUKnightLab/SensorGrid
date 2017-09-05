@@ -56,7 +56,7 @@ See these additional docs:
 
 ## Time settings
 
-All nodes must have the correct time. Time can be set with a GPS module. Once the time is set, the node can be deployed without the GPS if preferred.
+For proper created-at timestamping of data, node clocks can be set with a GPS module. Once the time is set, the node can be deployed without the GPS if preferred.
 
 To set the time, first initialize the GPS time:
 
@@ -94,7 +94,7 @@ Need to test this out some more, but some early indications that we are not get 
 TODO: Move these to a module notes doc
 
 ### LoRa (Feather)
-Note: 32u4 boards are no longer generally supported by SensorGrid. Be sure to get the M0/SAMD LoRa board which is Adafruit #3178
+Be sure to get the M0/SAMD LoRa board which is Adafruit #3178 (the 32u4 Feather boards are not supported for SensorGrid)
 
 Product: https://www.adafruit.com/products/3178
 Tutorial: https://learn.adafruit.com/adafruit-feather-m0-radio-with-lora-radio-module?view=all

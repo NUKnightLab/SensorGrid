@@ -9,9 +9,9 @@ A SensorGrid network consists of an ad-hoc deployment of one (actually usually a
 
   * sensor node
   * collector
-  * repeater
+  * router
 
-All nodes are, in effect, repeaters. So a node is *only* a repeater if it is not a sensor or collector. A node may be one, two, or all three of these roles.
+All nodes are, in effect, routers. So a node is *only* a router if it is not a sensor or collector. A node may be one, two, or all three of these roles.
 
 ### Sensor nodes
 
@@ -29,11 +29,11 @@ A collector may or may not also be a sensor. A collector is such in that, in add
 
 You will probably want at least one collector in your network
 
-### Repeater
+### Routers
 
-All nodes are repeaters. In addition to broadcasting their own data (in the case of sensor nodes) all SensorGrid nodes re-transmit received data, thus re-broadcasting it to the network.
+All nodes are routers. In addition to broadcasting their own data (in the case of sensor nodes) all SensorGrid nodes re-transmit received data, thus re-broadcasting it to the network.
 
-In some cases you may want additional repeater nodes that are neither sensors nor collectors. Repeater nodes serve the simple purpose of expanding the range of your SensorGrid network.
+In some cases you may want additional router nodes that are neither sensors nor collectors.
 
 ### Plan it!
 
@@ -81,6 +81,8 @@ Planning your layers includes:
   3. You will need an Adafruit Feather Tripler proto board (https://www.adafruit.com/products/3417)
 
 **Do you need WiFi?**
+
+(Note: WiFi development is currently on hold. Support TBD)
 
   **No:** The proto board selected above will be your base (or simply a single-stack configuration if no-extra proto). Thus your configuration is one of:
   1. Single-stack
