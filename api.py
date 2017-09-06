@@ -38,11 +38,11 @@ def data():
     # http://werkzeug.pocoo.org/docs/0.11/wrappers/#werkzeug.wrappers.BaseRequest.get_data
     if request.json.get('ver') == '1': # json encoded message
         msg = request.json
-        ( ver, net, orig, msg_id, bat, ram, timestamp, data) = (
-            int(msg['ver']), int(msg['net']),
-            int(msg['orig']), int(msg['id']),
-            float(msg['bat']), int(msg['ram']), int(msg['timestamp']),
-            [int(d) for d in msg['data']])
+        (ver, net, orig, msg_id, bat, ram, timestamp, data) = (
+            msg['ver'], msg['net'],
+            msg['orig'], msg['id'],
+            msg['bat'], msg['ram'], msg['timestamp'],
+            msg['data'])
     else: # raw struct message
         msg = request.get_data(cache=False)
         ver, net, orig, msg_id, bat_100, timestamp, \
