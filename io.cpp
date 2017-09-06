@@ -158,26 +158,9 @@ static uint32_t getDataByTypeName(char* type)
         sensor_config = sensor_config->next;
     } while (sensor_config != NULL);
 
-    if (!strcmp(type, "FAKE_3")) {
-        return 3333333;
-    }
-    if (!strcmp(type, "FAKE_4")) {
-        return 4444444;
-    }
-    if (!strcmp(type, "FAKE_5")) {
-        return 5555555;
-    }
-    if (!strcmp(type, "FAKE_6")) {
-        return 6666666;
-    }
-    if (!strcmp(type, "FAKE_7")) {
-        return 7777777;
-    }
-    if (!strcmp(type, "FAKE_8")) {
-        return 8888888;
-    }
-    if (!strcmp(type, "FAKE_9")) {
-        return 9999999;
+    int32_t constant_value = atoi(type);
+    if (constant_value) {
+        return constant_value;
     }
 
     Serial.print(F("WARNING! Unknown named data type: ")); Serial.println(type);
