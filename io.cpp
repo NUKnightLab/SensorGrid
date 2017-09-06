@@ -145,11 +145,6 @@ static void writeLogLine(int fromNode, int id)
     }
 }
 
-static void warnNoGPSConfig()
-{
-    Serial.println(F("WARNING! GPS data specified in data registers, but no GPS_MODULE in config"));
-}
-
 static uint32_t getDataByTypeName(char* type)
 {
     Serial.print(F("Getting data for type: ")); Serial.println(type);
@@ -163,32 +158,6 @@ static uint32_t getDataByTypeName(char* type)
         sensor_config = sensor_config->next;
     } while (sensor_config != NULL);
 
-    
-    if (!strcmp(type, "GPS_FIX")) {
-        if (!config.gps_module) warnNoGPSConfig();
-        return GPS.fix;
-    }
-    if (!strcmp(type, "GPS_SATS")) {
-        if (!config.gps_module) warnNoGPSConfig();
-        return GPS.satellites;
-    }
-    if (!strcmp(type, "GPS_SATFIX")) {
-        if (!config.gps_module) warnNoGPSConfig();
-        if (GPS.fix) return GPS.satellites;
-        return -1 * GPS.satellites;
-    }
-    if (!strcmp(type, "GPS_LAT_DEG")){
-        if (!config.gps_module) warnNoGPSConfig();
-        Serial.println(GPS.lastNMEA());
-        Serial.print(F("LATITUDE ")); Serial.println(GPS.latitudeDegrees, DEC);
-        return (int32_t)(roundf(GPS.latitudeDegrees * 1000));
-    }
-    if (!strcmp(type, "GPS_LON_DEG")) {
-        if (!config.gps_module) warnNoGPSConfig();
-        Serial.println(GPS.lastNMEA());
-        Serial.print(F("LONGITUDE ")); Serial.println(GPS.longitudeDegrees, DEC);
-        return (int32_t)(roundf(GPS.longitudeDegrees * 1000));
-    }
     if (!strcmp(type, "FAKE_3")) {
         return 3333333;
     }

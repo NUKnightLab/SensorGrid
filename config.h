@@ -1,6 +1,7 @@
 #ifndef _CONFIG_H
 #define _CONFIG_H
 
+#include "ADAFRUIT_ULTIMATE_GPS.h"
 #include "ADAFRUIT_SI7021.h"
 #include "ADAFRUIT_SI1145.h"
 #include "SHARP_GP2Y1010AU0F.h"

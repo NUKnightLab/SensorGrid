@@ -212,7 +212,6 @@ void setup()
       return;
     }
     
-    setupGPS();
     rtc.begin();
     setupRadio();
     

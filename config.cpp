@@ -68,7 +68,36 @@ void setupSensors() {
 
     struct SensorConfig *sensor_config = new SensorConfig();
     sensor_config_head = sensor_config;
-    
+
+    /* Adafruit Ultimate GPS FeatherWing */
+    if (ADAFRUIT_ULTIMATE_GPS::setup()) {
+        /* fix */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "GPS_FIX";
+        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::fix);
+        /* sats */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "GPS_SATS";
+        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::satellites);
+        /* satfix */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "GPS_SATFIX";
+        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::satfix);
+        /* latitude (degrees) */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "GPS_LAT_DEG";
+        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::latitudeDegrees);
+        /* longitude (degrees) */
+        sensor_config->next = new SensorConfig();
+        sensor_config = sensor_config->next;
+        sensor_config->id = "GPS_LON_DEG";
+        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::longitudeDegrees);
+    }
+
     /* Adafruit Si7021 temperature/humidity breakout */
     if (ADAFRUIT_SI7021::setup()) { 
         /* temperature */
