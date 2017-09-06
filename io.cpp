@@ -44,9 +44,11 @@ static void sleep(int sleepTime)
     // TODO: may need minimum allowed sleep time due to radio startup cost
     if (sleepTime > 0) {
         rf95.sleep();
+        GPS.standby();
         Serial.println(F("Sleeping for: ")); Serial.println(sleepTime);
         // Note: this delay will prevent display timeout, display update, and other protothread calls
         delay(sleepTime); // TODO: this might not be the best way to sleep. Look at SleepyDog: https://github.com/adafruit/Adafruit_SleepyDog
+        GPS.sendCommand(""); // empty sendCommand in lieu of wakeup b/c wakeup freezes. See: https://github.com/adafruit/Adafruit_GPS/issues/25
     } else {
         Serial.print(F("Received bad sleep time: ")); Serial.println(sleepTime);
     }
