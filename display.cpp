@@ -67,7 +67,7 @@ void updateGPSDisplay()
           display.print(GPS.fixquality, DEC);
           display.print(" sats:");
           display.print(GPS.satellites, DEC);
-
+          display.fillRect(0, 24, 128, 29, BLACK);
           display.setCursor(0,24);
           display.print("lt:"); display.print(GPS.latitudeDegrees, 3);
           display.print(" ln:"); display.print(GPS.longitudeDegrees, 3);
@@ -193,7 +193,7 @@ void displayMessage(char* message)
 
 void displayTx(int toID)
 {
-    display.fillRect(0, 24, 42, 29, BLACK);
+    display.fillRect(0, 24, 45, 29, BLACK);
     display.setCursor(0,24);
     display.print("TX:");
     display.print(toID, DEC);
