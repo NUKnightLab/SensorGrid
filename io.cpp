@@ -242,19 +242,9 @@ void fillCurrentMessageData()
       msg->timestamp = rtc.now().unixtime();
       msg->ram = freeRam();
       memcpy(msg->data, {0}, sizeof(msg->data));
-
-      if (config.gps_module) {
-          /* If GPS_MODULE is set in config file, these data will default to the first
-           *  3 data registers, but other configs can be set in the config file.
-           */
-          msg->data[0] = getRegisterData("DATA_0", "GPS_SATFIX");
-          msg->data[1] = getRegisterData("DATA_1", "GPS_LAT_DEG");
-          msg->data[2] = getRegisterData("DATA_2", "GPS_LON_DEG");
-      } else {
-          msg->data[0] = getRegisterData("DATA_0");
-          msg->data[1] = getRegisterData("DATA_1");
-          msg->data[2] = getRegisterData("DATA_2");
-      }
+      msg->data[0] = getRegisterData("DATA_0");
+      msg->data[1] = getRegisterData("DATA_1");
+      msg->data[2] = getRegisterData("DATA_2");
       msg->data[3] = getRegisterData("DATA_3");
       msg->data[4] = getRegisterData("DATA_4");
       msg->data[5] = getRegisterData("DATA_5");
