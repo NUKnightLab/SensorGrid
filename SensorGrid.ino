@@ -15,6 +15,7 @@ uint32_t display_clock_time = 0;
 volatile int aButtonState = 0;
 volatile int bButtonState = 0;
 volatile int cButtonState = 0;
+static bool shutdown_requested = false;
 
 /* 
  * protothreads (https://github.com/fernandomalmeida/protothreads-arduino) 
@@ -78,6 +79,7 @@ static int updateDisplayThread(struct pt *pt, int interval)
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     if (oled_is_on)
         updateDisplay();
+        shutdown_requested = false;
     timestamp = millis();
   }
   PT_END(pt);
@@ -91,6 +93,7 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval)
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     if ( config.display_timeout > 0 && (millis() - oled_activated_time) > config.display_timeout*1000) {
         oled_is_on = false;
+        shutdown_requested = false;
         display.clearDisplay();
         display.display();
     }
@@ -102,7 +105,7 @@ static int displayTimeoutShutdownThread(struct pt *pt, int interval)
 /*
  * interrupts
  */
- 
+
 void aButton_ISR()
 {
     aButtonState = !digitalRead(BUTTON_A);
@@ -114,10 +117,37 @@ void aButton_ISR()
             updateDisplay();
             displayID();
             //updateDisplayBattery();
+            shutdown_requested = false;
         } else {
             display.clearDisplay();
             display.display();
         }
+    }
+}
+
+void bButton_ISR()
+{
+    if (shutdown_requested) {
+        display.clearDisplay();
+        display.setCursor(0,24);
+        display.print("Shutdown OK");
+        display.display();
+        while(1);
+    }
+}
+
+void cButton_ISR()
+{
+    if (shutdown_requested) {
+        shutdown_requested = false;
+        display.fillRect(0, 24, 128, 29, BLACK);
+        display.display();
+    } else {
+        shutdown_requested = true;
+        display.fillRect(0, 24, 128, 29, BLACK);
+        display.setCursor(0,24);
+        display.print("B:Shutdown   C:Cancel");
+        display.display();
     }
 }
 
@@ -174,6 +204,8 @@ void setup()
         setupDisplay();
         oled_is_on = true;
         attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
+        attachInterrupt(BUTTON_B, bButton_ISR, FALLING);
+        attachInterrupt(BUTTON_C, cButton_ISR, FALLING);
     }
 
     if (config.charge_only) {
