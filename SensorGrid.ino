@@ -25,7 +25,7 @@ static struct pt radio_transmit_protothread;
 static struct pt update_clock_protothread;
 static struct pt update_display_protothread;
 static struct pt update_display_battery_protothread;
-static struct pt display_timeout_shutdown_protothread;
+static struct pt display_timeout_protothread;
 
 static int radioTransmitThread(struct pt *pt, int interval)
 {
@@ -85,7 +85,7 @@ static int updateDisplayThread(struct pt *pt, int interval)
   PT_END(pt);
 }
 
-static int displayTimeoutShutdownThread(struct pt *pt, int interval)
+static int displayTimeoutThread(struct pt *pt, int interval)
 {
   static unsigned long timestamp = 0;
   PT_BEGIN(pt);
@@ -116,7 +116,7 @@ void aButton_ISR()
             display_clock_time = 0; // force immediate update - don't wait for next minute
             updateDisplay();
             displayID();
-            //updateDisplayBattery();
+            updateDisplayBattery();
             shutdown_requested = false;
         } else {
             display.clearDisplay();
@@ -238,7 +238,7 @@ void setup()
     if (config.has_oled) {
         PT_INIT(&update_display_protothread);
         PT_INIT(&update_display_battery_protothread);
-        PT_INIT(&display_timeout_shutdown_protothread);
+        PT_INIT(&display_timeout_protothread);
     }
 }
 
@@ -279,6 +279,6 @@ void loop()
     if (config.has_oled) {
         updateDisplayThread(&update_display_protothread, 1000);
         updateDisplayBatteryThread(&update_display_battery_protothread, 10 * 1000);
-        displayTimeoutShutdownThread(&display_timeout_shutdown_protothread, 1000);
+        displayTimeoutThread(&display_timeout_protothread, 1000);
     }
 }
