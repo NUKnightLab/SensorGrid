@@ -7,7 +7,6 @@ import os
 import sys
 from struct import *
 
-history = []
 MONGO_DB_URI = os.environ.get('MONGO_DB_URI', 'mongodb://localhost:27017/')
 db = pymongo.MongoClient(MONGO_DB_URI).sensorgrid
 
@@ -39,10 +38,10 @@ def data():
     # http://werkzeug.pocoo.org/docs/0.11/wrappers/#werkzeug.wrappers.BaseRequest.get_data
     if request.json.get('ver') == '1': # json encoded message
         msg = request.json
-        ( ver, net, orig, msg_id, bat, timestamp, data) = (
+        ( ver, net, orig, msg_id, bat, ram, timestamp, data) = (
             int(msg['ver']), int(msg['net']),
             int(msg['orig']), int(msg['id']),
-            float(msg['bat']), int(msg['timestamp']),
+            float(msg['bat']), int(msg['ram']), int(msg['timestamp']),
             [int(d) for d in msg['data']])
     else: # raw struct message
         msg = request.get_data(cache=False)
@@ -50,7 +49,6 @@ def data():
             *data = unpack(PROTOCOL, msg)
         bat = bat_100 / 100.0
     sys.stdout.flush()
-    global history
     record = {
         'version': ver,
         'network': net,
@@ -58,21 +56,13 @@ def data():
         'received_at': datetime.datetime.now(),
         'node_id': orig,
         'battery': bat,
+        'ram': ram,
         'timestamp': timestamp,
         'created_at': datetime.datetime.fromtimestamp(timestamp),
         'data': [ int(i) for i in data ]
     }
-    history.append(record)
-    history = history[-30:]
     db.data.insert_one(record)
     return 'OK'
-
-
-@app.route('/report')
-def report():
-    return '<br/>'.join(
-        ['%s:: %s %sv %s %s %s' % (r['dt'], r['orig'], r['bat'],
-        r['timestamp'], r['datetime'], r['data']) for r in reversed(history)])
 
 
 if __name__ == '__main__':
