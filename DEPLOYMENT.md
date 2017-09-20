@@ -13,6 +13,13 @@ https://learn.adafruit.com/li-ion-and-lipoly-batteries?view=all
 
 ## Configuration
 
+SD card should have a root-level CONFIG.txt file with key-value configurations and the following restrictions:
+
+  - key-value pairs are each on a distinct line in the file
+  - key-values are separated by a single space
+  - no trailing whitespace. no blank lines
+  - no commenting format is currently supported
+  
 ### Currently supported configuration options
 
 The following configuration options are available
@@ -23,7 +30,7 @@ The following configuration options are available
 
 **NODE_ID** (1 - 255)
 
-**RF95_FREQ**
+**RF95_FREQ** 915.0
 
 Defaults to 915.0. This is currently the only supported radio frequency. For operation outside the US, please check your local ordinances to see if a different frequency is required. This may require a different radio module than the specified module.
 
@@ -45,24 +52,27 @@ OLED display timeout in seconds. Defaults to 60
 
 **NODE_TYPE** (1 - 5)
 
-Standard routing (requires dedicated router nodes):
+_Standard routing (requires dedicated router nodes)_
 
-  1 COLLECTOR: collector used for standard routing
+  1 COLLECTOR
+  
   2 ROUTER
+  
   3 SENSOR
 
-Ordered collection routing:
+_Ordered collection routing_
 
   4 ORDERED_COLLECTOR
+  
   5 ORDERED_SENSOR_ROUTER
 
 **COLLECTOR_ID**
 
-The ID of the collector this node sends data to (standard routing only)
+The ID of the collector this node sends data to (required for standard routing only)
 
 **ORDERED_NODE_IDS**
 
-Required only on an ordered collector node. Ordered comma-delimited list of nodes to collect from. (Ordered collection routing only)
+Required only on an ordered collector node. Ordered comma-delimited list of nodes to collect from. (Ordered collection routing only). Nodes should be ordered from the outside edge of the network toward the center in order to ensure network connectivity as ordered nodes will sleep after transmitting data.
 
 **DATA_0** .. **DATA_9**
 
