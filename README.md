@@ -35,6 +35,7 @@ If you can answer yes to these questions:
   * AdaFruit_SSD1306 https://github.com/adafruit/Adafruit_SSD1306
   * AdaFruit Feather_OLED https://github.com/adafruit/Adafruit_FeatherOLED
   * AdaFruit RTCLib https://github.com/adafruit/RTClib
+  * Arduino Protothreads https://github.com/fernandomalmeida/protothreads-arduino
 
 TODO: is it possible to make these optional?:
   * WiFi101
