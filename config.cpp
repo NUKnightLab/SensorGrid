@@ -20,6 +20,7 @@ void loadConfig() {
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         config.collector_id = (uint32_t)(atoi(getConfig("COLLECTOR_ID", DEFAULT_COLLECTOR_ID)));
         config.charge_only = atoi(getConfig("CHARGE", "0"));
+        config.collection_period = (uint32_t)(atoi(getConfig("COLLECTION_PERIOD")));
 
         /* sensor configs */
         config.SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
@@ -59,6 +60,7 @@ void loadConfig() {
         config.do_transmit = (uint8_t)(atoi(DEFAULT_TRANSMIT));
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         config.collector_id = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));
+        config.collection_period = (uint32_t)(atoi(DEFAULT_COLLECTION_PERIOD));
     }
     Serial.println("Config loaded");
 }
