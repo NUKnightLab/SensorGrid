@@ -23,6 +23,9 @@ static void clearControlBuffer()
 
 void setupRadio()
 {
+    Serial.print("Setting up radio with RadioHead Version ");
+    Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
+    Serial.println(RH_VERSION_MINOR, DEC);
     router = new RHMesh(rf95, config.node_id);
     
     rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
@@ -34,7 +37,7 @@ void setupRadio()
     }
     Serial.print(F("FREQ: ")); Serial.println(config.rf95_freq);
     rf95.setTxPower(config.tx_power, false);
-    //rf95.setCADTimeout(2000);
+    rf95.setCADTimeout(2000);
     router->setTimeout(1000);
     delay(100);
 }
