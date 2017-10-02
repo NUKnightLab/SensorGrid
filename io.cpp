@@ -34,7 +34,7 @@ void setupRadio()
     }
     Serial.print(F("FREQ: ")); Serial.println(config.rf95_freq);
     rf95.setTxPower(config.tx_power, false);
-    rf95.setCADTimeout(2000);
+    //rf95.setCADTimeout(2000);
     router->setTimeout(1000);
     delay(100);
 }

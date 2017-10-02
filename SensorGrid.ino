@@ -258,7 +258,7 @@ void loop()
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         waitForInstructions();
     } else if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-        uint32_t nextCollectTime = millis() + 60000;
+        uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
             collectFromNode(config.node_ids[i], nextCollectTime);

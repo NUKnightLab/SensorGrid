@@ -27,6 +27,7 @@
 #define DEFAULT_LOG_FILE "sensorgrid.log"
 #define DEFAULT_TRANSMIT "1"
 #define DEFAULT_LOG_MODE "NODE" // NONE, NODE, NETWORK, ALL
+#define DEFAULT_COLLECTION_PERIOD "60" //defaults to 60 sec
 
 typedef struct Config {
     uint32_t network_id;
@@ -46,6 +47,7 @@ typedef struct Config {
     int node_ids[255];
     uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
     uint8_t GROVE_AIR_QUALITY_1_3_PIN;
+    uint32_t collection_period; //in seconds
 };
 
 extern void loadConfig();
