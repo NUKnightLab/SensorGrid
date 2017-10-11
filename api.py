@@ -5,6 +5,7 @@ import datetime
 import pymongo
 import os
 import sys
+from delorean import parse
 from struct import *
 
 MONGO_DB_URI = os.environ.get('MONGO_DB_URI', 'mongodb://localhost:27017/')
@@ -30,9 +31,16 @@ def convert_mongo_id(record):
 @app.route('/data', methods=['GET', 'POST'])
 def data():
     if request.method == 'GET':
+        query = {}
+        limit = int(request.args.get('limit', 100))
+        if 'node_id' in request.args:
+            query['node_id'] = int(request.args['node_id'])
+        if 'before' in request.args:
+            before = parse(request.args['before']).datetime
+            query['received_at'] = { '$lt': before }
         return flask.json.jsonify(
-            list(map(convert_mongo_id, db.data.find(
-                limit=100)\
+            list(map(convert_mongo_id, db.data.find(query,
+                limit=limit)\
                 .sort('received_at', pymongo.DESCENDING))))
     # we should be checking data length. See Flask docs:
     # http://werkzeug.pocoo.org/docs/0.11/wrappers/#werkzeug.wrappers.BaseRequest.get_data
