@@ -8,6 +8,7 @@
 #include <KnightLab_SDConfig.h>
 #include <KnightLab_GPS.h>
 #include "io.h"
+#include <WiFi101.h>
 
 /* Module defs */
 #include "WINC1500.h"

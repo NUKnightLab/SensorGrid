@@ -16,6 +16,7 @@ volatile int aButtonState = 0;
 volatile int bButtonState = 0;
 volatile int cButtonState = 0;
 static bool shutdown_requested = false;
+WiFiClient client;
 
 /* 
  * protothreads (https://github.com/fernandomalmeida/protothreads-arduino) 
@@ -159,7 +160,7 @@ void setup()
 {
     randomSeed(analogRead(A0));
     
-    if (false) {
+    if (true) {
         while (!Serial); // only do this if connected to USB
     }
     Serial.begin(9600);
@@ -173,7 +174,6 @@ void setup()
      * rtc.begin() will not work (will hang) if RTC is not connected. To make
      * logger optional (not sure if this is really a goal), would need to provide
      * alt begin. E.g. from bhelterline https://github.com/adafruit/RTClib/issues/64
-
      boolean RTC_DS1307::begin(void) {
          Wire.begin();
          Wire.beginTransmission(DS1307_ADDRESS);
@@ -183,7 +183,6 @@ void setup()
          }
          return false;
      }
-
      * But with PCF8523. However note that this example, and general RTC
      * library code uses Wire1
      */
@@ -214,16 +213,27 @@ void setup()
     
     rtc.begin();
     setupRadio();
-    
-    char* ssid = getConfig("WIFI_SSID");
+
+    bool ssidPresent = false;    
+    char* ssid = "Knight Lab";
+    //char* ssid = getConfig("WIFI_SSID");
+    Serial.println(getConfig("WIFI_SSID"));
     if (ssid) {
       Serial.println(F("ssid is valid"));
-      WiFiPresent = setupWiFi(getConfig("WIFI_SSID", ""), getConfig("WIFI_PASS", ""));
+      WiFiPresent = true;
+      ssidPresent = true;
+      //WiFiPresent = setupWiFi(getConfig("WIFI_SSID", ""), getConfig("WIFI_PASS", ""));
     } else {
-      Serial.println(F("ssid is null"));
-      WiFiPresent = false;
+      Serial.println(("ssid is null"));
+      ssidPresent = false;
     }
-
+    
+    if (ssidPresent) {
+      //extern WiFiClient client; //initialize Ethernet client library
+      char* pass = getConfig("WIFI_PASS", "");
+      connectToServer(client,ssid,pass);
+    }
+    
     setupSensors();
     
     if (sizeof(Message) > RH_RF95_MAX_MESSAGE_LEN) {
@@ -261,7 +271,7 @@ void loop()
         uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
-            collectFromNode(config.node_ids[i], nextCollectTime);
+            collectFromNode(config.node_ids[i], nextCollectTime, client);
         }
         if (nextCollectTime > millis()) {
             delay(nextCollectTime - millis());

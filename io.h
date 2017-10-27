@@ -9,21 +9,25 @@
 #include <SPI.h>
 #include <SdFat.h>
 #include <RHDatagram.h>
+#include <WiFi101.h>
 
-#define SD_CHIP_SELECT_PIN 10
+#define SD_CHIP_SELECT_PIN 12
 #define RH_MESH_MAX_MESSAGE_LEN 60
-#define RFM95_CS 8
-#define RFM95_RST 4
-#define RFM95_INT 3
+#define RFM95_CS 10
+#define RFM95_RST 11
+#define RFM95_INT 6
 
 void setupRadio();
-bool postToAPI();
+void connectToServer(WiFiClient& client,char ssid[],char pass[]);
+void postToAPI(WiFiClient& client,int fromNode, int ID);
+void printWiFiStatus();
 bool sendCurrentMessage();
 void receive();
 void waitForInstructions();
-void collectFromNode(int toID, uint32_t nextCollectTime);
+void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client);
 void writeToSD(char* filename, char* str);
 void fillCurrentMessageData();
 void printMessageData(int fromNode);
+
 
 #endif
