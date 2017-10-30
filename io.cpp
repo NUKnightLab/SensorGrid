@@ -39,37 +39,10 @@ void setupRadio()
     delay(100);
 }
 
-void connectToServer(WiFiClient& client,char ssid[],char pass[]) {
-  int status = WL_IDLE_STATUS;
-  char server[] = "54.152.62.254"; //SensorGrid API IP Address
-  client;
-  WiFi.setPins(8,7,4,2);
-  if (WiFi.status() == WL_NO_SHIELD) {
-      Serial.println("WiFi shield not present");
-      //don't continue
-      while (true);
-     }
-
-  while (status!= WL_CONNECTED) {
-     Serial.print("Attempting to connect to SSID: ");
-     Serial.println(ssid);
-     status = WiFi.begin(ssid, pass);
-     delay(10000); //wait 10 seconds for connection
-     Serial.println("Connected to WiFi");
-     printWiFiStatus();
-     Serial.println("\nStarting connection to server...");
-     if (client.connect(server,9022)) {
-        Serial.println("connected to server");
-        }
-     else {
-      Serial.println("server conncetion failed");
-     }
-     }
-}
-
 void postToAPI(WiFiClient& client,int fromNode, int id) {
   //POST request
   //set up client
+  Serial.println("Starting to post to API...");
   char str[200];
   sprintf(str,
   "{\"ver\":%i,\"net\":%i,\"orig\":%i,\"id\":%i,\"bat\":%3.2f,\"ram\":%i,\"timestamp\":%i,\"data\":[%i,%i,%i,%i,%i,%i,%i,%i,%i,%i]}",
@@ -82,23 +55,15 @@ void postToAPI(WiFiClient& client,int fromNode, int id) {
    client.println(strlen(str));
    client.println();
    client.println(str);
-}
-
-void printWiFiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
+   Serial.println("Post to API completed.");
+   //check condition, reconnect to the wifi, and submit the data
+   while (client.available()) {
+      char c = client.read();
+      Serial.write(c);
+     }
+   if (!client.available()) {
+    Serial.println("Client not available.");
+   }
 }
 
 static void sleep(int sleepTime)
@@ -359,26 +324,15 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client)
                 // don't hold up for send-sleep failures but TODO: report these somehow
                 if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE)
                     Serial.println(F("ACK sendtoWait failed"));
-                    if (WL_CONNECTED) {
+                    
+                    if (client.connected()) {
                       postToAPI(client,from,id);
-                      /*
-                    //POST request
-                    //set up client
-                    char str[200];
-                    sprintf(str,
-                    "{\"ver\":%i,\"net\":%i,\"orig\":%i,\"id\":%i,\"bat\":%3.2f,\"ram\":%i,\"timestamp\":%i,\"data\":[%i,%i,%i,%i,%i,%i,%i,%i,%i,%i]}",
-                    msg->ver, msg->net, from, id, (float)(msg->bat_100)/100, msg->ram, msg->timestamp,
-                    msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
-                    msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
-                    client.println("POST /data HTTP/1.1");
-                    client.println("Content-Type: application/json");
-                    client.print("Content-Length: ");
-                    client.println(strlen(str));
-                    client.println();
-                    client.println(str); */
+                    } 
+                    else {
+                      Serial.println("Client not connected.");
                     }
             } else {
-                Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
+                Serial.println(F("recvfromAckTimeout: Link to node broken."));
             }
         } else {
            Serial.println(F("sendtoWait failed. Are the intermediate nodes running?"));
