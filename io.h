@@ -18,9 +18,7 @@
 #define RFM95_INT 6
 
 void setupRadio();
-void connectToServer(WiFiClient& client,char ssid[],char pass[]);
 void postToAPI(WiFiClient& client,int fromNode, int ID);
-void printWiFiStatus();
 bool sendCurrentMessage();
 void receive();
 void waitForInstructions();
