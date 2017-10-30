@@ -4,15 +4,21 @@ static bool WiFiPresent = false;
 
 WiFiClient WIFI_CLIENT;
 
-void printWifiStatus()
-{
-    Serial.print(F("SSID: "));
-    Serial.print(WiFi.SSID());
-    Serial.print(F("; IP: "));
-    Serial.print(WiFi.localIP());
-    Serial.print(F("; RSSI:"));
-    Serial.print(WiFi.RSSI());
-    Serial.println(F(" dBm"));
+void printWiFiStatus() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print your WiFi shield's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
 }
 
 static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass)
@@ -38,10 +44,38 @@ static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass)
     if (WiFi.status() != WL_CONNECTED) {
         Serial.println("WARNING: Could not connect to WiFi");
         return false;
-	}
+  }
     Serial.println(F("WIFI:\n   "));
     printWifiStatus();
-	return true;
+  return true;
+}
+
+void connectToServer(WiFiClient& client,char ssid[],char pass[]) {
+  int status = WL_IDLE_STATUS;
+  char server[] = "54.152.62.254"; //SensorGrid API IP Address
+  client;
+  WiFi.setPins(8,7,4,2);
+  if (WiFi.status() == WL_NO_SHIELD) {
+      Serial.println("WiFi shield not present");
+      //don't continue
+      while (true);
+     }
+
+  while (status!= WL_CONNECTED) {
+     Serial.print("Attempting to connect to SSID: ");
+     Serial.println(ssid);
+     status = WiFi.begin(ssid, pass);
+     delay(10000); //wait 10 seconds for connection
+     Serial.println("Connected to WiFi");
+     printWiFiStatus();
+     Serial.println("\nStarting connection to server...");
+     if (client.connect(server,9022)) {
+        Serial.println("connected to server");
+        }
+     else {
+      Serial.println("server conncetion failed");
+     }
+    }
 }
 
 extern "C" char *sbrk(int i);
@@ -81,9 +115,9 @@ static bool _postToAPI(const char* apiServer, const char* apiHost, const int api
 //bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen) {
 bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen)
 {
-	if (!WiFiPresent || !connectWiFi(wifi_ssid, wifi_pass)) {
-	   return false;
-	}
+  if (!WiFiPresent || !connectWiFi(wifi_ssid, wifi_pass)) {
+     return false;
+  }
     if (_postToAPI(apiServer, apiHost, apiPort, msg, msgLen)) {
         return true;
     } else {
