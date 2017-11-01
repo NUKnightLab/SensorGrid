@@ -16,9 +16,9 @@
 
 
 void printWifiStatus();
+void connectToServer(WiFiClient& client,char ssid[],char pass[]);
 // bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen);
 bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen);
 bool setupWiFi(const char* wifi_ssid, const char* wifi_pass);
-void connectToServer(WiFiClient& client,char ssid[],char pass[]);
 
 #endif
