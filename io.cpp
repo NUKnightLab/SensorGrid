@@ -39,9 +39,18 @@ void setupRadio()
     delay(100);
 }
 
+void reconnectClient(WiFiClient& client) {
+  //close conncetion before a new request
+  client.stop();
+  char server[] = "54.152.62.254"; //SensorGrid API IP Address
+  if (client.connect(server, 9022)) {
+    Serial.println("connecting...");
+  } else {
+    Serial.println("Failed to reconnect");
+  }
+}
+
 void postToAPI(WiFiClient& client,int fromNode, int id) {
-  //POST request
-  //set up client
   Serial.println("Starting to post to API...");
   char str[200];
   sprintf(str,
@@ -56,13 +65,15 @@ void postToAPI(WiFiClient& client,int fromNode, int id) {
    client.println();
    client.println(str);
    Serial.println("Post to API completed.");
-   //check condition, reconnect to the wifi, and submit the data
+   //for debugging
    while (client.available()) {
       char c = client.read();
       Serial.write(c);
      }
    if (!client.available()) {
     Serial.println("Client not available.");
+    client.println("Connection: close"); //close connection before sending a new request
+    client.println();
    }
 }
 
@@ -321,16 +332,16 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client)
                 // ack with OK SLEEP
                 control->type = CONTROL_TYPE_SLEEP;
                 control->data = nextCollectTime - millis();
-                // don't hold up for send-sleep failures but TODO: report these somehow
+                // don't hold up for send-sleep failures cd Sbut TODO: report these somehow
                 if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE)
                     Serial.println(F("ACK sendtoWait failed"));
-                    
-                    if (client.connected()) {
-                      postToAPI(client,from,id);
-                    } 
-                    else {
-                      Serial.println("Client not connected.");
+
+                    while (!client.connected()) {
+                      delay(1000);
+                      reconnectClient(client);
                     }
+                    postToAPI(client,from,id);
+
             } else {
                 Serial.println(F("recvfromAckTimeout: Link to node broken."));
             }
