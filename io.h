@@ -18,6 +18,7 @@
 #define RFM95_INT 6
 
 void setupRadio();
+void reconnectClient(WiFiClient& client);
 void postToAPI(WiFiClient& client,int fromNode, int ID);
 bool sendCurrentMessage();
 void receive();
