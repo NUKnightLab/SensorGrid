@@ -23,6 +23,9 @@ static void clearControlBuffer()
 
 void setupRadio()
 {
+    Serial.print("Setting up radio with RadioHead Version ");
+    Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
+    Serial.println(RH_VERSION_MINOR, DEC);
     router = new RHMesh(rf95, config.node_id);
     
     rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
@@ -66,15 +69,19 @@ void postToAPI(WiFiClient& client,int fromNode, int id) {
    client.println(str);
    Serial.println("Post to API completed.");
    //for debugging
+   if (!client.available()) {
+    Serial.println("Client not available.");
+    client.println();
+    delay(1000);
+    postToAPI(client, fromNode, id);
+   }
+   
    while (client.available()) {
       char c = client.read();
       Serial.write(c);
      }
-   if (!client.available()) {
-    Serial.println("Client not available.");
-    client.println("Connection: close"); //close connection before sending a new request
-    client.println();
-   }
+   client.println("Connection: close"); //close connection before sending a new request
+   
 }
 
 static void sleep(int sleepTime)
@@ -164,7 +171,7 @@ static char* logline(int fromNode, int id)
 {
     char str[200]; // 155+16 is current theoretical max
     sprintf(str,
-        "%i,%i,%i,%i,%3.2f,%i,%i,%i,%wii,%i,%i,%i,%i,%i,%i,%i,%i",
+        "%i,%i,%i,%i,%3.2f,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i,%i",
         msg->ver, msg->net, fromNode, id, (float)(msg->bat_100)/100, msg->ram, msg->timestamp,
         msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
         msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
@@ -332,14 +339,13 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client)
                 // ack with OK SLEEP
                 control->type = CONTROL_TYPE_SLEEP;
                 control->data = nextCollectTime - millis();
-                // don't hold up for send-sleep failures cd Sbut TODO: report these somehow
+                // don't hold up for send-sleep failures but TODO: report these somehow
                 if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE)
                     Serial.println(F("ACK sendtoWait failed"));
-
                     while (!client.connected()) {
-                      delay(1000);
                       reconnectClient(client);
                     }
+
                     postToAPI(client,from,id);
 
             } else {
