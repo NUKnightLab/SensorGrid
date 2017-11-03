@@ -26,6 +26,12 @@ void loadConfig() {
         config.SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         config.GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
 
+        /* radio and SD card pinouts */
+        config.SD_CHIP_SELECT_PIN = (uint32_t)(atoi(getConfig("SD_CHIP_SELECT_PIN", DEFAULT_SD_CHIP_SELECT_PIN)));
+        config.RFM95_CS = (uint32_t)(atoi(getConfig("RFM95_CS", DEFAULT_RFM95_CS)));
+        config.RFM95_RST = (uint32_t)(atoi(getConfig("RFM95_RST", DEFAULT_RFM95_RST)));
+        config.RFM95_INT = (uint32_t)(atoi(getConfig("RFM95_INT", DEFAULT_RFM95_INT)));
+
         /* Node IDs on collector */
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
@@ -61,6 +67,10 @@ void loadConfig() {
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
         config.collector_id = (uint32_t)(atoi(DEFAULT_COLLECTOR_ID));
         config.collection_period = (uint32_t)(atoi(DEFAULT_COLLECTION_PERIOD));
+        config.SD_CHIP_SELECT_PIN = (uint32_t)(atoi(DEFAULT_SD_CHIP_SELECT_PIN));
+        config.RFM95_CS = (uint32_t)(atoi(DEFAULT_RFM95_CS));
+        config.RFM95_RST = (uint32_t)(atoi(DEFAULT_RFM95_RST));
+        config.RFM95_INT = (uint32_t)(atoi(DEFAULT_RFM95_INT));
     }
     Serial.println("Config loaded");
 }
