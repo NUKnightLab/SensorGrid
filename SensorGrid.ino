@@ -188,15 +188,19 @@ void setup()
      */
 
     loadConfig();
+    Serial.println(config.SD_CHIP_SELECT_PIN);
+    Serial.println(config.RFM95_CS);
+    Serial.println(config.RFM95_RST);
+    Serial.println(config.RFM95_INT);
 
     Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
-    pinMode(RFM95_RST, OUTPUT);
+    pinMode(config.RFM95_RST, OUTPUT);
     pinMode(BUTTON_A, INPUT_PULLUP);
     pinMode(BUTTON_B, INPUT_PULLUP);
     pinMode(BUTTON_C, INPUT_PULLUP);  
     digitalWrite(LED, LOW);
-    digitalWrite(RFM95_RST, HIGH);
+    digitalWrite(config.RFM95_RST, HIGH);
     
     if (config.has_oled) {
         Serial.print(F("Display timeout set to: ")); Serial.println(config.display_timeout);
