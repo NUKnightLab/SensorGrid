@@ -28,6 +28,18 @@ def convert_mongo_id(record):
     return record
 
 
+@app.route('/battery', methods=['GET'])
+def battery():
+    node_id = int(request.args['node_id'])
+    query = { 'node_id': node_id }
+    r = '<html><body><h3>Node ID %s battery history</h3><table>' % node_id
+    r += '<tr><th>BAT</th><th>Time</th></tr>'
+    for record in db.data.find(query).sort('received_at', pymongo.ASCENDING):
+        r += '<tr><td>%s</td><td>%s</td></tr>' % (record['battery'], record['received_at'])
+    r += '</table></body>'
+    return r
+
+
 @app.route('/data', methods=['GET', 'POST'])
 def data():
     if request.method == 'GET':
@@ -38,10 +50,11 @@ def data():
         if 'before' in request.args:
             before = parse(request.args['before']).datetime
             query['received_at'] = { '$lt': before }
-        return flask.json.jsonify(
-            list(map(convert_mongo_id, db.data.find(query,
+        return flask.json.jsonify({
+            'data': list(map(convert_mongo_id, db.data.find(query,
                 limit=limit)\
-                .sort('received_at', pymongo.DESCENDING))))
+                .sort('received_at', pymongo.DESCENDING)))
+        })
     # we should be checking data length. See Flask docs:
     # http://werkzeug.pocoo.org/docs/0.11/wrappers/#werkzeug.wrappers.BaseRequest.get_data
     if request.json.get('ver') == 1: # json encoded message
