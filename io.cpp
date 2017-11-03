@@ -1,6 +1,7 @@
 #include "io.h"
 
-static RH_RF95 rf95(RFM95_CS, RFM95_INT);
+//static RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
+RH_RF95 rf95;
 static RHMesh* router;
 static uint32_t MSG_ID = 0;
 static uint8_t buf[sizeof(Message)] = {0};
@@ -23,6 +24,7 @@ static void clearControlBuffer()
 
 void setupRadio()
 {
+    rf95;
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
     Serial.println(RH_VERSION_MINOR, DEC);
@@ -184,9 +186,9 @@ static void writeLogLine(int fromNode, int id)
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
     Serial.println(line);
     if (config.log_file) {
-        digitalWrite(SD_CHIP_SELECT_PIN, LOW);
+        digitalWrite(config.SD_CHIP_SELECT_PIN, LOW);
         writeToSD(config.log_file, line);
-        digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+        digitalWrite(config.SD_CHIP_SELECT_PIN, HIGH);
     }
 }
 
@@ -342,12 +344,14 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client)
                 // don't hold up for send-sleep failures but TODO: report these somehow
                 if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE)
                     Serial.println(F("ACK sendtoWait failed"));
+
+                    if (WiFi.status() == WL_CONNECTED) {
                     while (!client.connected()) {
                       reconnectClient(client);
-                    }
-
+                      }
                     postToAPI(client,from,id);
-
+                    }
+                    
             } else {
                 Serial.println(F("recvfromAckTimeout: Link to node broken."));
             }
@@ -371,7 +375,7 @@ void _writeToSD(char* filename, char* str)
 {
     static SdFat sd;
     Serial.print(F("Init SD card .."));
-    if (!sd.begin(SD_CHIP_SELECT_PIN)) {
+    if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
           Serial.println(F(" .. SD card init failed!"));
           return;
     }
