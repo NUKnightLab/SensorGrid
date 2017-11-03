@@ -28,6 +28,10 @@
 #define DEFAULT_TRANSMIT "1"
 #define DEFAULT_LOG_MODE "NODE" // NONE, NODE, NETWORK, ALL
 #define DEFAULT_COLLECTION_PERIOD "60" //defaults to 60 sec
+#define DEFAULT_SD_CHIP_SELECT_PIN "10"
+#define DEFAULT_RFM95_CS "10"
+#define DEFAULT_RFM95_RST "11"
+#define DEFAULT_RFM95_INT "6"
 
 typedef struct Config {
     uint32_t network_id;
@@ -48,6 +52,10 @@ typedef struct Config {
     uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
     uint8_t GROVE_AIR_QUALITY_1_3_PIN;
     uint32_t collection_period; //in seconds
+    uint32_t SD_CHIP_SELECT_PIN;
+    uint32_t RFM95_CS;
+    uint32_t RFM95_RST;
+    uint32_t RFM95_INT;
 };
 
 extern void loadConfig();
