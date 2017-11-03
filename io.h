@@ -11,11 +11,14 @@
 #include <RHDatagram.h>
 #include <WiFi101.h>
 
-#define SD_CHIP_SELECT_PIN 12
+/*
+#define SD_CHIP_SELECT_PIN 10
 #define RH_MESH_MAX_MESSAGE_LEN 60
-#define RFM95_CS 10
+#define RFM95_CS 19
 #define RFM95_RST 11
-#define RFM95_INT 6
+#define RFM95_INT 6 */
+
+#define RH_MESH_MAX_MESSAGE_LEN 60
 
 void setupRadio();
 void reconnectClient(WiFiClient& client);
