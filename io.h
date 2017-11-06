@@ -20,13 +20,13 @@
 
 #define RH_MESH_MAX_MESSAGE_LEN 60
 
-void setupRadio();
+void setupRadio(RH_RF95 rf95);
 void reconnectClient(WiFiClient& client);
 void postToAPI(WiFiClient& client,int fromNode, int ID);
-bool sendCurrentMessage();
+bool sendCurrentMessage(RH_RF95 rf95);
 void receive();
-void waitForInstructions();
-void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client);
+void waitForInstructions(RH_RF95 rf95);
+void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, RH_RF95 rf95);
 void writeToSD(char* filename, char* str);
 void fillCurrentMessageData();
 void printMessageData(int fromNode);
