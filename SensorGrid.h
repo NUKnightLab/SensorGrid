@@ -7,6 +7,7 @@
 #include <RTClib.h>
 #include <KnightLab_SDConfig.h>
 #include <KnightLab_GPS.h>
+#include <Arduino.h>
 #include "io.h"
 #include <WiFi101.h>
 
@@ -16,7 +17,7 @@
 #define CONFIG_FILE "CONFIG.TXT" // Adalogger doesn't seem to like underscores in the name!!!
 #define MAX_NETWORK_SIZE 100
 #define LED 13
-#define VBATPIN A7
+#define VBATPIN 9
 #define BUTTON_A 9
 #define BUTTON_B 6
 #define BUTTON_C 5
