@@ -1,7 +1,6 @@
 #include "io.h"
 
 //static RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
-RH_RF95 rf95;
 static RHMesh* router;
 static uint32_t MSG_ID = 0;
 static uint8_t buf[sizeof(Message)] = {0};
@@ -22,9 +21,8 @@ static void clearControlBuffer()
     memset(controlBuffer, 0, sizeof(Control));
 }
 
-void setupRadio()
+void setupRadio(RH_RF95 rf95)
 {
-    rf95;
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
     Serial.println(RH_VERSION_MINOR, DEC);
@@ -86,7 +84,7 @@ void postToAPI(WiFiClient& client,int fromNode, int id) {
    
 }
 
-static void sleep(int sleepTime)
+static void sleep(int sleepTime, RH_RF95 rf95)
 {
     // TODO: may need minimum allowed sleep time due to radio startup cost
     if (sleepTime > 0) {
@@ -101,7 +99,7 @@ static void sleep(int sleepTime)
     }
 }
 
-bool sendCurrentMessage()
+bool sendCurrentMessage(RH_RF95 rf95)
 { 
     fillCurrentMessageData();
     printMessageData(config.node_id);
@@ -126,7 +124,7 @@ bool sendCurrentMessage()
                     displayRx(from, rf95.lastRssi());
                 if (control->type == CONTROL_TYPE_SLEEP) {
                     // TODO: there should be a minimum allowed sleep time due to radio startup cost
-                    sleep(control->data);
+                    sleep(control->data, rf95);
                 }
                 success = true;
             } else {
@@ -293,7 +291,7 @@ void receive()
   }
 }
 
-void waitForInstructions()
+void waitForInstructions(RH_RF95 rf95)
 {
   uint8_t len = sizeof(controlBuffer);
   uint8_t from;
@@ -301,16 +299,16 @@ void waitForInstructions()
       Serial.print(F("Recieved request from: ")); Serial.println(from, DEC);
       if (control->type == CONTROL_TYPE_SEND_DATA) {
           Serial.println(F("Received send-data request"));
-          sendCurrentMessage();
+          sendCurrentMessage(rf95);
       } else if (control->type == CONTROL_TYPE_SLEEP) {
-          sleep(control->data);
+          sleep(control->data, rf95);
       }
   } else {
     //Serial.println("Got nothing");
   }
 }
 
-void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client)
+void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, RH_RF95 rf95)
 {
     Serial.print(F("Sending data request to node ")); Serial.println(toID);
     clearControlBuffer();
