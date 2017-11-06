@@ -8,6 +8,7 @@ bool oled_is_on;
 
 RTC_PCF8523 rtc;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
+RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
 
 bool WiFiPresent = false;
 uint32_t display_clock_time = 0;
@@ -34,7 +35,7 @@ static int radioTransmitThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    sendCurrentMessage();
+    sendCurrentMessage(rf95);
     timestamp = millis();
   }
   PT_END(pt);
@@ -216,7 +217,7 @@ void setup()
     }
     
     rtc.begin();
-    setupRadio();
+    setupRadio(rf95);
 
     bool ssidPresent = false;    
     char* ssid = "Knight Lab";
@@ -270,12 +271,12 @@ void loop()
     } else if (config.node_type == NODE_TYPE_SENSOR) {
         radioTransmitThread(&radio_transmit_protothread, 10*1000);
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
-        waitForInstructions();
+        waitForInstructions(rf95);
     } else if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
-            collectFromNode(config.node_ids[i], nextCollectTime, client);
+            collectFromNode(config.node_ids[i], nextCollectTime, client, rf95);
         }
         if (nextCollectTime > millis()) {
             delay(nextCollectTime - millis());
