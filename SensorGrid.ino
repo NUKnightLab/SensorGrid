@@ -8,7 +8,7 @@ bool oled_is_on;
 
 RTC_PCF8523 rtc;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
-RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
+RH_RF95 *radio;
 
 bool WiFiPresent = false;
 uint32_t display_clock_time = 0;
@@ -35,7 +35,7 @@ static int radioTransmitThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    sendCurrentMessage(rf95);
+    sendCurrentMessage(*radio);
     timestamp = millis();
   }
   PT_END(pt);
@@ -194,6 +194,16 @@ void setup()
     Serial.println(config.RFM95_RST);
     Serial.println(config.RFM95_INT);
 
+    RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
+    radio = &rf95;
+    //Serial.println("Address of radio pointer: " radio);
+    //Serial.println("Address of rf95: " &rf95);
+    /*
+    if (rf95 === (*radio)) {
+      Serial.println("Value stored at *radio is the same as rf95");
+    } */
+    
+
     Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
     pinMode(config.RFM95_RST, OUTPUT);
@@ -217,7 +227,7 @@ void setup()
     }
     
     rtc.begin();
-    setupRadio(rf95);
+    setupRadio(*radio);
 
     bool ssidPresent = false;    
     char* ssid = "Knight Lab";
@@ -271,12 +281,12 @@ void loop()
     } else if (config.node_type == NODE_TYPE_SENSOR) {
         radioTransmitThread(&radio_transmit_protothread, 10*1000);
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
-        waitForInstructions(rf95);
+        waitForInstructions(*radio);
     } else if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
-            collectFromNode(config.node_ids[i], nextCollectTime, client, rf95);
+            collectFromNode(config.node_ids[i], nextCollectTime, client, *radio);
         }
         if (nextCollectTime > millis()) {
             delay(nextCollectTime - millis());
