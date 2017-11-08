@@ -196,13 +196,6 @@ void setup()
 
     RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
     radio = &rf95;
-    //Serial.println("Address of radio pointer: " radio);
-    //Serial.println("Address of rf95: " &rf95);
-    /*
-    if (rf95 === (*radio)) {
-      Serial.println("Value stored at *radio is the same as rf95");
-    } */
-    
 
     Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
