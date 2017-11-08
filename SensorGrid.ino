@@ -230,7 +230,6 @@ void setup()
       Serial.println(F("ssid is valid"));
       WiFiPresent = true;
       ssidPresent = true;
-      //WiFiPresent = setupWiFi(getConfig("WIFI_SSID", ""), getConfig("WIFI_PASS", ""));
     } else {
       Serial.println(("ssid is null"));
       ssidPresent = false;
