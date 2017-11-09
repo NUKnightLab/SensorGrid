@@ -9,6 +9,7 @@ bool oled_is_on;
 RTC_PCF8523 rtc;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 RH_RF95 *radio;
+char* ssid = "Knight Lab";
 
 bool WiFiPresent = false;
 uint32_t display_clock_time = 0;
@@ -223,7 +224,6 @@ void setup()
     setupRadio(*radio);
 
     bool ssidPresent = false;    
-    char* ssid = "Knight Lab";
     //char* ssid = getConfig("WIFI_SSID");
     Serial.println(getConfig("WIFI_SSID"));
     if (ssid) {
@@ -278,7 +278,7 @@ void loop()
         uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
-            collectFromNode(config.node_ids[i], nextCollectTime, client, *radio);
+            collectFromNode(config.node_ids[i], nextCollectTime, client, ssid, *radio);
         }
         if (nextCollectTime > millis()) {
             delay(nextCollectTime - millis());
