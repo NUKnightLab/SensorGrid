@@ -42,11 +42,10 @@ void setupRadio(RH_RF95 rf95)
     delay(100);
 }
 
-void reconnectClient(WiFiClient& client) {
+void reconnectClient(WiFiClient& client, char* ssid) {
   //close conncetion before a new request
   client.stop();
-  char server[] = "54.152.62.254"; //SensorGrid API IP Address
-  if (client.connect(server, 9022)) {
+  if (client.connect(ssid, 9022)) {
     Serial.println("connecting...");
   } else {
     Serial.println("Failed to reconnect");
@@ -110,6 +109,9 @@ bool sendCurrentMessage(RH_RF95 rf95)
     uint8_t errCode;
     uint8_t txAttempts = 5;
     bool success = false;
+    if (!router) {
+      Serial.println("Router not connected");
+    }
     if (oled_is_on)
         displayTx(config.collector_id);
     while (txAttempts > 0) {
@@ -308,7 +310,7 @@ void waitForInstructions(RH_RF95 rf95)
   }
 }
 
-void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, RH_RF95 rf95)
+void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid, RH_RF95 rf95)
 {
     Serial.print(F("Sending data request to node ")); Serial.println(toID);
     clearControlBuffer();
@@ -345,7 +347,7 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, RH_
 
                     if (WiFi.status() == WL_CONNECTED) {
                     while (!client.connected()) {
-                      reconnectClient(client);
+                      reconnectClient(client, ssid);
                       }
                     postToAPI(client,from,id);
                     }
