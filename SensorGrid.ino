@@ -195,8 +195,9 @@ void setup()
     Serial.println(config.RFM95_RST);
     Serial.println(config.RFM95_INT);
 
-    RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
-    radio = &rf95;
+    //RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
+    //radio = &rf95;
+    radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
 
     Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
@@ -225,6 +226,7 @@ void setup()
 
     bool ssidPresent = false;    
     //char* ssid = getConfig("WIFI_SSID");
+    
     Serial.println(getConfig("WIFI_SSID"));
     if (ssid) {
       Serial.println(F("ssid is valid"));
@@ -240,6 +242,7 @@ void setup()
       char* pass = getConfig("WIFI_PASS", "");
       connectToServer(client,ssid,pass);
     }
+    
     
     setupSensors();
     
