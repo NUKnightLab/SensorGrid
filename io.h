@@ -11,22 +11,15 @@
 #include <RHDatagram.h>
 #include <WiFi101.h>
 
-/*
-#define SD_CHIP_SELECT_PIN 10
-#define RH_MESH_MAX_MESSAGE_LEN 60
-#define RFM95_CS 19
-#define RFM95_RST 11
-#define RFM95_INT 6 */
-
 #define RH_MESH_MAX_MESSAGE_LEN 60
 
 void setupRadio(RH_RF95 rf95);
-void reconnectClient(WiFiClient& client);
+void reconnectClient(WiFiClient& client, char* ssid);
 void postToAPI(WiFiClient& client,int fromNode, int ID);
 bool sendCurrentMessage(RH_RF95 rf95);
 void receive();
 void waitForInstructions(RH_RF95 rf95);
-void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, RH_RF95 rf95);
+void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid, RH_RF95 rf95);
 void writeToSD(char* filename, char* str);
 void fillCurrentMessageData();
 void printMessageData(int fromNode);
