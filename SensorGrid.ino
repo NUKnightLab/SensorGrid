@@ -162,7 +162,7 @@ void setup()
 {
     randomSeed(analogRead(A0));
     
-    if (false) {
+    if (true) {
         while (!Serial); // only do this if connected to USB
     }
     Serial.begin(9600);

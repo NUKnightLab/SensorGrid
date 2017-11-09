@@ -26,6 +26,8 @@ void setupRadio(RH_RF95 rf95)
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
     Serial.println(RH_VERSION_MINOR, DEC);
+    Serial.print("Node ID: ");
+    Serial.println(config.node_id);
     router = new RHMesh(rf95, config.node_id);
     
     rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
@@ -330,6 +332,8 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, cha
         errCode = router->sendtoWait((uint8_t*)control, len, toID);
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // receive the data
+            Serial.print("Ready to receive from: ");
+            Serial.println(toID);
             if (router->recvfromAckTimeout(buf, &msg_len, 5000, &from, &dest, &id, &flags)) {
                 Serial.print("got reply from : "); Serial.print(from, DEC);
                 Serial.print(" Msg ID: "); Serial.print(id, DEC);
