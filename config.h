@@ -29,9 +29,9 @@
 #define DEFAULT_LOG_MODE "NODE" // NONE, NODE, NETWORK, ALL
 #define DEFAULT_COLLECTION_PERIOD "60" //defaults to 60 sec
 #define DEFAULT_SD_CHIP_SELECT_PIN "10"
-#define DEFAULT_RFM95_CS "10"
-#define DEFAULT_RFM95_RST "11"
-#define DEFAULT_RFM95_INT "6"
+#define DEFAULT_RFM95_CS "8"
+#define DEFAULT_RFM95_RST "4"
+#define DEFAULT_RFM95_INT "3"
 
 typedef struct Config {
     uint32_t network_id;
