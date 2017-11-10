@@ -1,6 +1,5 @@
 #include "io.h"
 
-//static RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
 static RHMesh* router;
 static uint32_t MSG_ID = 0;
 static uint8_t buf[sizeof(Message)] = {0};
@@ -316,7 +315,6 @@ void waitForInstructions(RH_RF95 rf95)
   }
 }
 
-//void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid, RH_RF95 rf95)
 void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid)
 {
     Serial.print(F("Sending data request to node ")); Serial.println(toID);
@@ -345,7 +343,7 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, cha
             if (router->recvfromAckTimeout(buf, &msg_len, 5000, &from, &dest, &id, &flags)) {
                 Serial.print("Received reply from : "); Serial.print(from, DEC);
                 Serial.print(" Msg ID: "); Serial.println(id, DEC);
-                // due to weird scoping problems w/ rf95, this is removed for now
+                // due to weird parameter passing problems w/ rf95, this is removed for now
                 //Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
                 printMessageData(from);
                 // TODO: to support logging we need to properly handle pulling the LoRa pin

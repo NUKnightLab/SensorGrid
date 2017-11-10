@@ -51,6 +51,11 @@ typedef struct Config {
     uint8_t node_type;
     uint8_t charge_only;
     int node_ids[255];
+    uint32_t collection_period; //in seconds
+    uint32_t SD_CHIP_SELECT_PIN;
+    uint32_t RFM95_CS;
+    uint32_t RFM95_RST;
+    uint32_t RFM95_INT;
 
     /* wifi collector */
     char *wifi_ssid;
@@ -61,11 +66,6 @@ typedef struct Config {
     /* sensors */
     uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
     uint8_t GROVE_AIR_QUALITY_1_3_PIN;
-    uint32_t collection_period; //in seconds
-    uint32_t SD_CHIP_SELECT_PIN;
-    uint32_t RFM95_CS;
-    uint32_t RFM95_RST;
-    uint32_t RFM95_INT;
 };
 
 extern void loadConfig();

@@ -274,7 +274,6 @@ void loop()
         uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
-            //collectFromNode(config.node_ids[i], nextCollectTime, client, ssid, *radio);
             collectFromNode(config.node_ids[i], nextCollectTime, client, config.wifi_ssid);
         }
         if (nextCollectTime > millis()) {
