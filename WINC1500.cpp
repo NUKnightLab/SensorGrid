@@ -50,11 +50,10 @@ static bool connectWiFi(const char* wifi_ssid, const char* wifi_pass)
   return true;
 }
 
-void connectToServer(WiFiClient& client,char ssid[],char pass[]) {
+void connectToServer(WiFiClient& client,char ssid[],char pass[], char host[], int port) {
   int status = WL_IDLE_STATUS;
-  char server[] = "54.152.62.254"; //SensorGrid API IP Address
-  client;
-  WiFi.setPins(8,7,4,2);
+  //client;
+  WiFi.setPins(WIFI_CS, WIFI_IRQ, WIFI_RST, WIFI_EN);
   if (WiFi.status() == WL_NO_SHIELD) {
       Serial.println("WiFi shield not present");
       //don't continue
@@ -64,12 +63,14 @@ void connectToServer(WiFiClient& client,char ssid[],char pass[]) {
   while (status!= WL_CONNECTED) {
      Serial.print("Attempting to connect to SSID: ");
      Serial.println(ssid);
+     Serial.print("Using password: ");
+     Serial.println(pass);
      status = WiFi.begin(ssid, pass);
      delay(10000); //wait 10 seconds for connection
      Serial.println("Connected to WiFi");
      printWiFiStatus();
      Serial.println("\nStarting connection to server...");
-     if (client.connect(server,9022)) {
+     if (client.connect(host, port)) {
         Serial.println("connected to server");
         }
      else {

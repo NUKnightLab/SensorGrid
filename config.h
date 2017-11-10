@@ -32,6 +32,8 @@
 #define DEFAULT_RFM95_CS "8"
 #define DEFAULT_RFM95_RST "4"
 #define DEFAULT_RFM95_INT "3"
+#define DEFAULT_WIFI_SSID "Knight Lab"
+#define DEFAULT_API_PORT "80"
 
 typedef struct Config {
     uint32_t network_id;
@@ -49,6 +51,14 @@ typedef struct Config {
     uint8_t node_type;
     uint8_t charge_only;
     int node_ids[255];
+
+    /* wifi collector */
+    char *wifi_ssid;
+    char *wifi_password;
+    char *api_host;
+    uint16_t api_port;
+
+    /* sensors */
     uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
     uint8_t GROVE_AIR_QUALITY_1_3_PIN;
     uint32_t collection_period; //in seconds

@@ -9,7 +9,6 @@ bool oled_is_on;
 RTC_PCF8523 rtc;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 RH_RF95 *radio;
-char* ssid = "Knight Lab";
 
 bool WiFiPresent = false;
 uint32_t display_clock_time = 0;
@@ -190,14 +189,16 @@ void setup()
      */
 
     loadConfig();
+    Serial.print("SD_CHIP_SELECT_PIN: ");
     Serial.println(config.SD_CHIP_SELECT_PIN);
+    Serial.print("RFM95_CS: ");
     Serial.println(config.RFM95_CS);
+    Serial.print("RFM95_RST: ");
     Serial.println(config.RFM95_RST);
+    Serial.print("RFM95_INT: ");
     Serial.println(config.RFM95_INT);
 
-    //RH_RF95 rf95(config.RFM95_CS, config.RFM95_INT);
-    //radio = &rf95;
-    radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
+
 
     Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
@@ -222,27 +223,19 @@ void setup()
     }
     
     rtc.begin();
+    radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
     setupRadio(*radio);
 
-    bool ssidPresent = false;    
-    //char* ssid = getConfig("WIFI_SSID");
-    
-    Serial.println(getConfig("WIFI_SSID"));
-    if (ssid) {
-      Serial.println(F("ssid is valid"));
-      WiFiPresent = true;
-      ssidPresent = true;
+    if (config.wifi_password) {
+        Serial.print("Attempting to connect to Wifi: ");
+        Serial.print(config.wifi_ssid);
+        Serial.print(" With password: ");
+        Serial.println(config.wifi_password);
+        connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port); 
+        WiFiPresent = true; // TODO: can we set this based on success of connect?
     } else {
-      Serial.println(("ssid is null"));
-      ssidPresent = false;
+        Serial.println("No WiFi configuration found");
     }
-    
-    if (ssidPresent) {
-      //extern WiFiClient client; //initialize Ethernet client library
-      char* pass = getConfig("WIFI_PASS", "");
-      connectToServer(client,ssid,pass);
-    }
-    
     
     setupSensors();
     
@@ -281,7 +274,8 @@ void loop()
         uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
-            collectFromNode(config.node_ids[i], nextCollectTime, client, ssid, *radio);
+            //collectFromNode(config.node_ids[i], nextCollectTime, client, ssid, *radio);
+            collectFromNode(config.node_ids[i], nextCollectTime, client, config.wifi_ssid);
         }
         if (nextCollectTime > millis()) {
             delay(nextCollectTime - millis());
