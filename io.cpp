@@ -1,6 +1,5 @@
 #include "io.h"
 
-static RH_RF95 rf95(RFM95_CS, RFM95_INT);
 static RHMesh* router;
 static uint32_t MSG_ID = 0;
 static uint8_t buf[sizeof(Message)] = {0};
@@ -21,11 +20,13 @@ static void clearControlBuffer()
     memset(controlBuffer, 0, sizeof(Control));
 }
 
-void setupRadio()
+void setupRadio(RH_RF95 rf95)
 {
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
     Serial.println(RH_VERSION_MINOR, DEC);
+    Serial.print("Node ID: ");
+    Serial.println(config.node_id);
     router = new RHMesh(rf95, config.node_id);
     
     rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
@@ -42,7 +43,52 @@ void setupRadio()
     delay(100);
 }
 
-static void sleep(int sleepTime)
+void reconnectClient(WiFiClient& client, char* ssid) {
+  //close conncetion before a new request
+  client.stop();
+  Serial.print("Reconnecting to ");
+  Serial.print(config.api_host);
+  Serial.print(":");
+  Serial.println(config.api_port);
+  if (client.connect(config.api_host, config.api_port)) {
+    Serial.println("connecting...");
+  } else {
+    Serial.println("Failed to reconnect");
+  }
+}
+
+void postToAPI(WiFiClient& client,int fromNode, int id) {
+  Serial.println("Starting to post to API...");
+  char str[200];
+  sprintf(str,
+  "{\"ver\":%i,\"net\":%i,\"orig\":%i,\"id\":%i,\"bat\":%3.2f,\"ram\":%i,\"timestamp\":%i,\"data\":[%i,%i,%i,%i,%i,%i,%i,%i,%i,%i]}",
+      msg->ver, msg->net, fromNode, id, (float)(msg->bat_100)/100, msg->ram, msg->timestamp,
+      msg->data[0], msg->data[1], msg->data[2], msg->data[3], msg->data[4],
+      msg->data[5], msg->data[6], msg->data[7], msg->data[8], msg->data[9]);
+   client.println("POST /data HTTP/1.1");
+   client.println("Content-Type: application/json");
+   client.print("Content-Length: ");
+   client.println(strlen(str));
+   client.println();
+   client.println(str);
+   Serial.println("Post to API completed.");
+   //for debugging
+   if (!client.available()) {
+    Serial.println("Client not available.");
+    client.println();
+    delay(1000);
+    postToAPI(client, fromNode, id);
+   }
+   
+   while (client.available()) {
+      char c = client.read();
+      Serial.write(c);
+     }
+   client.println("Connection: close"); //close connection before sending a new request
+   
+}
+
+static void sleep(int sleepTime, RH_RF95 rf95)
 {
     // TODO: may need minimum allowed sleep time due to radio startup cost
     if (sleepTime > 0) {
@@ -57,7 +103,7 @@ static void sleep(int sleepTime)
     }
 }
 
-bool sendCurrentMessage()
+bool sendCurrentMessage(RH_RF95 rf95)
 { 
     fillCurrentMessageData();
     printMessageData(config.node_id);
@@ -68,6 +114,9 @@ bool sendCurrentMessage()
     uint8_t errCode;
     uint8_t txAttempts = 5;
     bool success = false;
+    if (!router) {
+      Serial.println("Router not connected");
+    }
     if (oled_is_on)
         displayTx(config.collector_id);
     while (txAttempts > 0) {
@@ -82,7 +131,7 @@ bool sendCurrentMessage()
                     displayRx(from, rf95.lastRssi());
                 if (control->type == CONTROL_TYPE_SLEEP) {
                     // TODO: there should be a minimum allowed sleep time due to radio startup cost
-                    sleep(control->data);
+                    sleep(control->data, rf95);
                 }
                 success = true;
             } else {
@@ -142,9 +191,9 @@ static void writeLogLine(int fromNode, int id)
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
     Serial.println(line);
     if (config.log_file) {
-        digitalWrite(SD_CHIP_SELECT_PIN, LOW);
+        digitalWrite(config.SD_CHIP_SELECT_PIN, LOW);
         writeToSD(config.log_file, line);
-        digitalWrite(SD_CHIP_SELECT_PIN, HIGH);
+        digitalWrite(config.SD_CHIP_SELECT_PIN, HIGH);
     }
 }
 
@@ -249,7 +298,7 @@ void receive()
   }
 }
 
-void waitForInstructions()
+void waitForInstructions(RH_RF95 rf95)
 {
   uint8_t len = sizeof(controlBuffer);
   uint8_t from;
@@ -257,16 +306,16 @@ void waitForInstructions()
       Serial.print(F("Recieved request from: ")); Serial.println(from, DEC);
       if (control->type == CONTROL_TYPE_SEND_DATA) {
           Serial.println(F("Received send-data request"));
-          sendCurrentMessage();
+          sendCurrentMessage(rf95);
       } else if (control->type == CONTROL_TYPE_SLEEP) {
-          sleep(control->data);
+          sleep(control->data, rf95);
       }
   } else {
     //Serial.println("Got nothing");
   }
 }
 
-void collectFromNode(int toID, uint32_t nextCollectTime)
+void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid)
 {
     Serial.print(F("Sending data request to node ")); Serial.println(toID);
     clearControlBuffer();
@@ -283,29 +332,70 @@ void collectFromNode(int toID, uint32_t nextCollectTime)
     control->type = CONTROL_TYPE_SEND_DATA;
     while (txAttempts > 0) {
         // request the data
+        Serial.println("Getting sendToWait errCode");
         errCode = router->sendtoWait((uint8_t*)control, len, toID);
+        Serial.print("errCode: ");
+        Serial.println(errCode);
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // receive the data
+            Serial.print("Ready to receive from: ");
+            Serial.println(toID);
             if (router->recvfromAckTimeout(buf, &msg_len, 5000, &from, &dest, &id, &flags)) {
-                Serial.print("got reply from : "); Serial.print(from, DEC);
-                Serial.print(" Msg ID: "); Serial.print(id, DEC);
-                Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
-                // TODO: send data to the API
+                Serial.print("Received reply from : "); Serial.print(from, DEC);
+                Serial.print(" Msg ID: "); Serial.println(id, DEC);
+                // due to weird parameter passing problems w/ rf95, this is removed for now
+                //Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
                 printMessageData(from);
-                writeLogLine(from, id);
+                // TODO: to support logging we need to properly handle pulling the LoRa pin
+                //writeLogLine(from, id);
                 success = true;
                 // ack with OK SLEEP
                 control->type = CONTROL_TYPE_SLEEP;
                 control->data = nextCollectTime - millis();
                 // don't hold up for send-sleep failures but TODO: report these somehow
-                if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE)
+                if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE) {
                     Serial.println(F("ACK sendtoWait failed"));
+                }
+                if (WiFiPresent) {
+                    if (WiFi.status() == WL_CONNECTED) {
+                        while (!client.connected()) {
+                            reconnectClient(client, ssid);
+                        }
+                        postToAPI(client,from,id);
+                    }
+                } else {
+                    Serial.println("Collector Node with no WiFi configuration. Assuming serial collection");
+                }
             } else {
                 Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
             }
+        } else if (errCode == RH_ROUTER_ERROR_INVALID_LENGTH) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". INVALID LENGTH");
+        } else if (errCode == RH_ROUTER_ERROR_NO_ROUTE) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". NO ROUTE");
+        } else if (errCode == RH_ROUTER_ERROR_TIMEOUT) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". TIMEOUT");
+        } else if (errCode == RH_ROUTER_ERROR_NO_REPLY) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". NO REPLY");
+        } else if (errCode == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". UNABLE TO DELIVER");    
         } else {
-           Serial.println(F("sendtoWait failed. Are the intermediate nodes running?"));
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.print(". UNKNOWN ERROR CODE: ");
+            Serial.println(errCode, DEC);
         }
+ 
         if (success) {
           return;
         } else {
@@ -323,7 +413,7 @@ void _writeToSD(char* filename, char* str)
 {
     static SdFat sd;
     Serial.print(F("Init SD card .."));
-    if (!sd.begin(10)) {
+    if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
           Serial.println(F(" .. SD card init failed!"));
           return;
     }

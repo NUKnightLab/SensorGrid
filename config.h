@@ -28,6 +28,12 @@
 #define DEFAULT_TRANSMIT "1"
 #define DEFAULT_LOG_MODE "NODE" // NONE, NODE, NETWORK, ALL
 #define DEFAULT_COLLECTION_PERIOD "60" //defaults to 60 sec
+#define DEFAULT_SD_CHIP_SELECT_PIN "10"
+#define DEFAULT_RFM95_CS "8"
+#define DEFAULT_RFM95_RST "4"
+#define DEFAULT_RFM95_INT "3"
+#define DEFAULT_WIFI_SSID "Knight Lab"
+#define DEFAULT_API_PORT "80"
 
 typedef struct Config {
     uint32_t network_id;
@@ -45,9 +51,21 @@ typedef struct Config {
     uint8_t node_type;
     uint8_t charge_only;
     int node_ids[255];
+    uint32_t collection_period; //in seconds
+    uint32_t SD_CHIP_SELECT_PIN;
+    uint32_t RFM95_CS;
+    uint32_t RFM95_RST;
+    uint32_t RFM95_INT;
+
+    /* wifi collector */
+    char *wifi_ssid;
+    char *wifi_password;
+    char *api_host;
+    uint16_t api_port;
+
+    /* sensors */
     uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
     uint8_t GROVE_AIR_QUALITY_1_3_PIN;
-    uint32_t collection_period; //in seconds
 };
 
 extern void loadConfig();

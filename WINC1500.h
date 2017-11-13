@@ -1,5 +1,6 @@
 #ifndef WINC1500_H
 #define WINC1500_H
+#include <WiFi101.h>
 
 
 #if defined(__AVR_ATmega32U4__)
@@ -13,9 +14,13 @@
   #error Unsupported architecture
 #endif
 
+#define WIFI_CS 8
+#define WIFI_IRQ 7
+#define WIFI_RST 4
+#define WIFI_EN 2
 
 void printWifiStatus();
-// bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, uint8_t msgBytes[], uint8_t msgLen);
+void connectToServer(WiFiClient& client,char ssid[],char pass[], char host[], int port);
 bool postToAPI(const char* wifi_ssid, const char* wifi_pass, const char* apiServer, const char* apiHost, const int apiPort, char* msg, uint8_t msgLen);
 bool setupWiFi(const char* wifi_ssid, const char* wifi_pass);
 

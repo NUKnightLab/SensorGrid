@@ -8,6 +8,7 @@ bool oled_is_on;
 
 RTC_PCF8523 rtc;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
+RH_RF95 *radio;
 
 bool WiFiPresent = false;
 uint32_t display_clock_time = 0;
@@ -16,6 +17,7 @@ volatile int aButtonState = 0;
 volatile int bButtonState = 0;
 volatile int cButtonState = 0;
 static bool shutdown_requested = false;
+WiFiClient client;
 
 /* 
  * protothreads (https://github.com/fernandomalmeida/protothreads-arduino) 
@@ -33,7 +35,7 @@ static int radioTransmitThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    sendCurrentMessage();
+    sendCurrentMessage(*radio);
     timestamp = millis();
   }
   PT_END(pt);
@@ -173,7 +175,6 @@ void setup()
      * rtc.begin() will not work (will hang) if RTC is not connected. To make
      * logger optional (not sure if this is really a goal), would need to provide
      * alt begin. E.g. from bhelterline https://github.com/adafruit/RTClib/issues/64
-
      boolean RTC_DS1307::begin(void) {
          Wire.begin();
          Wire.beginTransmission(DS1307_ADDRESS);
@@ -183,21 +184,30 @@ void setup()
          }
          return false;
      }
-
      * But with PCF8523. However note that this example, and general RTC
      * library code uses Wire1
      */
 
     loadConfig();
+    Serial.print("SD_CHIP_SELECT_PIN: ");
+    Serial.println(config.SD_CHIP_SELECT_PIN);
+    Serial.print("RFM95_CS: ");
+    Serial.println(config.RFM95_CS);
+    Serial.print("RFM95_RST: ");
+    Serial.println(config.RFM95_RST);
+    Serial.print("RFM95_INT: ");
+    Serial.println(config.RFM95_INT);
+
+
 
     Serial.print("Node type: "); Serial.println(config.node_type);
     pinMode(LED, OUTPUT);
-    pinMode(RFM95_RST, OUTPUT);
+    pinMode(config.RFM95_RST, OUTPUT);
     pinMode(BUTTON_A, INPUT_PULLUP);
     pinMode(BUTTON_B, INPUT_PULLUP);
     pinMode(BUTTON_C, INPUT_PULLUP);  
     digitalWrite(LED, LOW);
-    digitalWrite(RFM95_RST, HIGH);
+    digitalWrite(config.RFM95_RST, HIGH);
     
     if (config.has_oled) {
         Serial.print(F("Display timeout set to: ")); Serial.println(config.display_timeout);
@@ -213,17 +223,20 @@ void setup()
     }
     
     rtc.begin();
-    setupRadio();
-    
-    char* ssid = getConfig("WIFI_SSID");
-    if (ssid) {
-      Serial.println(F("ssid is valid"));
-      WiFiPresent = setupWiFi(getConfig("WIFI_SSID", ""), getConfig("WIFI_PASS", ""));
-    } else {
-      Serial.println(F("ssid is null"));
-      WiFiPresent = false;
-    }
+    radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
+    setupRadio(*radio);
 
+    if (config.wifi_password) {
+        Serial.print("Attempting to connect to Wifi: ");
+        Serial.print(config.wifi_ssid);
+        Serial.print(" With password: ");
+        Serial.println(config.wifi_password);
+        connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port); 
+        WiFiPresent = true; // TODO: can we set this based on success of connect?
+    } else {
+        Serial.println("No WiFi configuration found");
+    }
+    
     setupSensors();
     
     if (sizeof(Message) > RH_RF95_MAX_MESSAGE_LEN) {
@@ -256,12 +269,12 @@ void loop()
     } else if (config.node_type == NODE_TYPE_SENSOR) {
         radioTransmitThread(&radio_transmit_protothread, 10*1000);
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
-        waitForInstructions();
+        waitForInstructions(*radio);
     } else if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
-            collectFromNode(config.node_ids[i], nextCollectTime);
+            collectFromNode(config.node_ids[i], nextCollectTime, client, config.wifi_ssid);
         }
         if (nextCollectTime > millis()) {
             delay(nextCollectTime - millis());
