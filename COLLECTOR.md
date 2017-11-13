@@ -26,9 +26,9 @@ It is important to note: in order to handle pin conflict issues, the modular con
 
 The LoRa CS, RST, and INT pins will need to be wired. The typical connections are:
 
- * CS 19
- * RST 11
- * INT 6
+ * CS 19 (flyout pin F)
+ * RST 11 (flyout pin A)
+ * INT 6 (flyout pin D)
 
 The collector configuration will require settings for the alternative pinouts, for the API endpoint, and for WiFi connectivity. An example configuration file follows:
 
@@ -36,9 +36,9 @@ The collector configuration will require settings for the alternative pinouts, f
 PROTOCOL_VERSION 1
 NODE_ID 1
 RF95_FREQ 915.0
-RFM95_CS 19 (flyout pin F)
-RFM95_RST 11 (flyout pin A)
-RFM95_INT 6 (flyout pin D)
+RFM95_CS 19
+RFM95_RST 11
+RFM95_INT 6
 TX_POWER 10
 LOGFILE sensorgrid.log
 DISPLAY 0
