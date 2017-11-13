@@ -51,5 +51,10 @@ API_HOST API.HOST.IP.ADDRESS
 API_PORT 80
 ```
 
-Note, you will need to set values for WIFI_SSID, WIFI_PASSWORD, and API_HOST. API_PORT is configurable and defaults to 80. Note that DNS is not currently supported, so an IP address is required for API_HOST
+Notes:
+
+  * You will need to set values for WIFI_SSID, WIFI_PASSWORD, and API_HOST
+  * WIFI_SSID currently cannot contain spaces in the name (to be fixed soon)
+  * API_PORT is configurable and defaults to 80
+  * Note that DNS is not currently supported, so an IP address is required for API_HOST
 
