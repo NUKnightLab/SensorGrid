@@ -32,7 +32,6 @@
 #define DEFAULT_RFM95_CS "8"
 #define DEFAULT_RFM95_RST "4"
 #define DEFAULT_RFM95_INT "3"
-#define DEFAULT_WIFI_SSID "Knight Lab"
 #define DEFAULT_API_PORT "80"
 
 typedef struct Config {
