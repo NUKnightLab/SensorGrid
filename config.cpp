@@ -4,8 +4,21 @@
 struct Config config;
 struct SensorConfig *sensor_config_head;
 
+/* We pull both pins 8 and 19 HIGH during SD card read. The default configuration
+ * on the integrated LoRa M0 uses pin 8 for RFM95 chip select, but the WiFi
+ * collector module with a LoRa wing uses pin 19 as the chip select. Since we have
+ * not yet read the config file, it could be either one.
+ *
+ * No other RFM95 CS alternates are supported at this time
+ */
 void loadConfig() {
+    int default_rfm_cs = atoi(DEFAULT_RFM95_CS);
+    int alt_rfm_cs = atoi(ALTERNATE_RFM95_CS);
+    digitalWrite(default_rfm_cs, HIGH);
+    digitalWrite(alt_rfm_cs, HIGH);
     if (!readSDConfig(CONFIG_FILE)) {
+        digitalWrite(default_rfm_cs, LOW);
+        digitalWrite(alt_rfm_cs, LOW);
         config.network_id = (uint32_t)(atoi(getConfig("NETWORK_ID")));
         config.node_id = (uint32_t)(atoi(getConfig("NODE_ID")));
         config.rf95_freq = (float)(atof(getConfig("RF95_FREQ")));

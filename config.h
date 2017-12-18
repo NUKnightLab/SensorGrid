@@ -30,6 +30,7 @@
 #define DEFAULT_COLLECTION_PERIOD "60" //defaults to 60 sec
 #define DEFAULT_SD_CHIP_SELECT_PIN "10"
 #define DEFAULT_RFM95_CS "8"
+#define ALTERNATE_RFM95_CS "19"
 #define DEFAULT_RFM95_RST "4"
 #define DEFAULT_RFM95_INT "3"
 #define DEFAULT_WIFI_SSID "Knight Lab"
