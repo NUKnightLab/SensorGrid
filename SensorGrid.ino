@@ -35,7 +35,7 @@ static int radioTransmitThread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) { // never stop 
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    sendCurrentMessage(*radio);
+    sendCurrentMessage(*radio, config.collector_id);
     timestamp = millis();
   }
   PT_END(pt);
@@ -161,7 +161,7 @@ void setup()
 {
     randomSeed(analogRead(A0));
     
-    if (false) {
+    if (true) {
         while (!Serial); // only do this if connected to USB
     }
     Serial.begin(9600);

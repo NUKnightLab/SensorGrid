@@ -16,7 +16,7 @@
 void setupRadio(RH_RF95 rf95);
 void reconnectClient(WiFiClient& client, char* ssid);
 void postToAPI(WiFiClient& client,int fromNode, int ID);
-bool sendCurrentMessage(RH_RF95 rf95);
+bool sendCurrentMessage(RH_RF95 rf95, int dest);
 void receive();
 void waitForInstructions(RH_RF95 rf95);
 void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid);

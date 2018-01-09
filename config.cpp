@@ -36,7 +36,7 @@ void loadConfig() {
         config.collection_period = (uint32_t)(atoi(getConfig("COLLECTION_PERIOD", DEFAULT_COLLECTION_PERIOD)));
 
         /* WiFi collector configs */
-        config.wifi_ssid = getConfig("WIFI_SSID", DEFAULT_WIFI_SSID);
+        config.wifi_ssid = getConfig("WIFI_SSID");
         config.wifi_password = getConfig("WIFI_PASSWORD");
         config.api_host = getConfig("API_HOST");
         config.api_port = (uint16_t)(atoi(getConfig("API_PORT", DEFAULT_API_PORT)));

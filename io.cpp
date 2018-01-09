@@ -103,7 +103,7 @@ static void sleep(int sleepTime, RH_RF95 rf95)
     }
 }
 
-bool sendCurrentMessage(RH_RF95 rf95)
+bool sendCurrentMessage(RH_RF95 rf95, int dest)
 { 
     fillCurrentMessageData();
     printMessageData(config.node_id);
@@ -120,7 +120,7 @@ bool sendCurrentMessage(RH_RF95 rf95)
     if (oled_is_on)
         displayTx(config.collector_id);
     while (txAttempts > 0) {
-        errCode = router->sendtoWait((uint8_t*)buf, sizeof(Message), config.collector_id);
+        errCode = router->sendtoWait((uint8_t*)buf, sizeof(Message), dest);
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // It has been reliably delivered to the next node.
             // Now wait for a reply from the ultimate server
@@ -306,7 +306,7 @@ void waitForInstructions(RH_RF95 rf95)
       Serial.print(F("Recieved request from: ")); Serial.println(from, DEC);
       if (control->type == CONTROL_TYPE_SEND_DATA) {
           Serial.println(F("Received send-data request"));
-          sendCurrentMessage(rf95);
+          sendCurrentMessage(rf95, from);
       } else if (control->type == CONTROL_TYPE_SLEEP) {
           sleep(control->data, rf95);
       }
@@ -315,8 +315,14 @@ void waitForInstructions(RH_RF95 rf95)
   }
 }
 
-void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid)
+void collectFromNodeWithSleep(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid)
 {
+    /**
+     * Full transaction cycle is currently not working. Data is received and sleep control apparently
+     * sent, however on the data node side, the sleep control acknowledgement fails and thus the
+     * node does not sleep. This function is currently not supported as a result. Instead, use
+     * collectFromNode and send sleep control signals separately.
+     */
     Serial.print(F("Sending data request to node ")); Serial.println(toID);
     clearControlBuffer();
     clearBuffer();
@@ -332,7 +338,8 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, cha
     control->type = CONTROL_TYPE_SEND_DATA;
     while (txAttempts > 0) {
         // request the data
-        Serial.println("Getting sendToWait errCode");
+        Serial.print("Getting sendToWait errCode: sendtToWait to ID: ");
+        Serial.println(toID, DEC);
         errCode = router->sendtoWait((uint8_t*)control, len, toID);
         Serial.print("errCode: ");
         Serial.println(errCode);
@@ -346,6 +353,12 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, cha
                 // due to weird parameter passing problems w/ rf95, this is removed for now
                 //Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
                 printMessageData(from);
+                if (toID != from) {
+                    Serial.print("Warning: from ID ");
+                    Serial.print(from, DEC);
+                    Serial.print(" does not match toID ");
+                    Serial.println(toID, DEC);
+                }
                 // TODO: to support logging we need to properly handle pulling the LoRa pin
                 //writeLogLine(from, id);
                 success = true;
@@ -353,9 +366,119 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, cha
                 control->type = CONTROL_TYPE_SLEEP;
                 control->data = nextCollectTime - millis();
                 // don't hold up for send-sleep failures but TODO: report these somehow
-                if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE) {
+                delay(1000);
+                Serial.print("Sending control message to ID: ");
+                Serial.print(from, DEC);
+                Serial.print(" Sleep: "); Serial.println(control->data);
+                //if (router->sendtoWait(controlBuffer, len, from) != RH_ROUTER_ERROR_NONE) {
+                if (router->sendtoWait((uint8_t*)control, len, from) != RH_ROUTER_ERROR_NONE) {
                     Serial.println(F("ACK sendtoWait failed"));
+                } else {
+                    Serial.print("Succesfully sent sleep control to ID: ");
+                    Serial.println(from, DEC);
+                    router->printRoutingTable();
                 }
+                /*
+                if (WiFiPresent) {
+                    if (WiFi.status() == WL_CONNECTED) {
+                        while (!client.connected()) {
+                            reconnectClient(client, ssid);
+                        }
+                        postToAPI(client,from,id);
+                    }
+                } else {
+                    Serial.println("Collector Node with no WiFi configuration. Assuming serial collection");
+                } */
+            } else {
+                Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
+            }
+        } else if (errCode == RH_ROUTER_ERROR_INVALID_LENGTH) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". INVALID LENGTH");
+        } else if (errCode == RH_ROUTER_ERROR_NO_ROUTE) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". NO ROUTE");
+        } else if (errCode == RH_ROUTER_ERROR_TIMEOUT) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". TIMEOUT");
+        } else if (errCode == RH_ROUTER_ERROR_NO_REPLY) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". NO REPLY");
+        } else if (errCode == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.println(". UNABLE TO DELIVER");    
+        } else {
+            Serial.print(F("Error receiving data from Node ID: "));
+            Serial.print(toID);
+            Serial.print(". UNKNOWN ERROR CODE: ");
+            Serial.println(errCode, DEC);
+        }
+ 
+        if (success) {
+          return;
+        } else {
+          txAttempts--;
+          if (txAttempts > 0) {
+              Serial.print(F("Retrying request for data transmission x")); Serial.println(3-txAttempts);
+          }
+        }
+    }
+    Serial.println(F("Request for data transmission failed"));
+    router->printRoutingTable();
+}
+
+void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, char* ssid)
+{
+    /**
+     * Full transaction cycle is currently not working. Data is received and sleep control apparently
+     * sent, however on the data node side, the sleep control acknowledgement fails and thus the
+     * node does not sleep. This function is currently not supported as a result. Instead, use
+     * collectFromNode and send sleep control signals separately.
+     */
+    Serial.print(F("Sending data request to node ")); Serial.println(toID);
+    clearControlBuffer();
+    clearBuffer();
+    uint8_t msg_len = sizeof(Message);
+    uint8_t len = sizeof(controlBuffer);
+    uint8_t from;
+    uint8_t dest;
+    uint8_t id;
+    uint8_t flags;
+    uint8_t errCode;
+    uint8_t txAttempts = 3;
+    bool success = false;
+    control->type = CONTROL_TYPE_SEND_DATA;
+    while (txAttempts > 0) {
+        // request the data
+        Serial.print("Getting sendToWait errCode: sendtToWait to ID: ");
+        Serial.println(toID, DEC);
+        errCode = router->sendtoWait((uint8_t*)control, len, toID);
+        Serial.print("errCode: ");
+        Serial.println(errCode);
+        if (errCode == RH_ROUTER_ERROR_NONE) {
+            // receive the data
+            Serial.print("Ready to receive from: ");
+            Serial.println(toID);
+            if (router->recvfromAckTimeout(buf, &msg_len, 5000, &from, &dest, &id, &flags)) {
+                Serial.print("Received reply from : "); Serial.print(from, DEC);
+                Serial.print(" Msg ID: "); Serial.println(id, DEC);
+                // due to weird parameter passing problems w/ rf95, this is removed for now
+                //Serial.print(" rssi: "); Serial.println(rf95.lastRssi());
+                printMessageData(from);
+                if (toID != from) {
+                    Serial.print("Warning: from ID ");
+                    Serial.print(from, DEC);
+                    Serial.print(" does not match toID ");
+                    Serial.println(toID, DEC);
+                }
+                // TODO: to support logging we need to properly handle pulling the LoRa pin
+                //writeLogLine(from, id);
+                success = true; 
                 if (WiFiPresent) {
                     if (WiFi.status() == WL_CONNECTED) {
                         while (!client.connected()) {
@@ -395,7 +518,6 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, cha
             Serial.print(". UNKNOWN ERROR CODE: ");
             Serial.println(errCode, DEC);
         }
- 
         if (success) {
           return;
         } else {
