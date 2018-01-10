@@ -1,7 +1,7 @@
 #include <RHMesh.h>
 #include <RHRouter.h>
 #include <RH_RF95.h>
-#define NODE_ID 3
+#define NODE_ID 14
 #define FREQ 915.00
 #define TX 5
 #define CAD 2000
@@ -43,9 +43,21 @@ void setup() {
 
 void loop() {
   uint8_t data[] = "Message";
-  Serial.println("Sending message");
-  if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
-      Serial.println("sendtoWait failed");
+  bool collector = false;
+  if (collector) {
+    Serial.println("Sending message");
+    if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
+        Serial.println("sendtoWait failed");
+    }
+    delay(10000);
+  } else {
+    uint8_t buf[RH_MESH_MAX_MESSAGE_LEN];
+    uint8_t from;
+    uint8_t len = sizeof(buf);
+    Serial.println("Waiting for request");
+    if (router->recvfromAckTimeout(data, &len, 5000, &from)) {
+        Serial.print("Request from: ");
+        Serial.println(from, DEC);
+    }
   }
-  delay(10000);
 }
