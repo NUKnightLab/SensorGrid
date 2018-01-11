@@ -130,6 +130,10 @@ bool sendCurrentMessage(int dest)
         if (errCode == RH_ROUTER_ERROR_NONE) {
             // It has been reliably delivered to the next node.
             // Now wait for a reply from the ultimate server
+            Serial.print("Successful send of data to: ");
+            Serial.println(dest, DEC);
+            success = true;
+            /*
             if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
                 Serial.print(F("Received reply from: ")); Serial.print(from, DEC);
                 Serial.print(F("; rssi: ")); Serial.println(radio->lastRssi());
@@ -139,10 +143,10 @@ bool sendCurrentMessage(int dest)
                     // TODO: there should be a minimum allowed sleep time due to radio startup cost
                     sleep(control->data);
                 }
-                success = true;
+                
             } else {
                 Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
-            }
+            } */
         } else {
            Serial.println(F("sendtoWait failed. Are the intermediate nodes running?"));
         }
