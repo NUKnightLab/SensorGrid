@@ -1,6 +1,7 @@
 #include "io.h"
 
 static RHMesh* router;
+static RH_RF95 *radio;
 static uint32_t MSG_ID = 0;
 static uint8_t buf[sizeof(Message)] = {0};
 static uint8_t controlBuffer[sizeof(Control)] = {0};
@@ -20,25 +21,27 @@ static void clearControlBuffer()
     memset(controlBuffer, 0, sizeof(Control));
 }
 
-void setupRadio(RH_RF95 rf95)
+//void setupRadio(RH_RF95 rf95)
+void setupRadio()
 {
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
     Serial.println(RH_VERSION_MINOR, DEC);
     Serial.print("Node ID: ");
     Serial.println(config.node_id);
-    router = new RHMesh(rf95, config.node_id);
+    radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
+    router = new RHMesh(*radio, config.node_id);
     
-    rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
+    radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
         Serial.println(F("Router init failed"));
         
-    if (!rf95.setFrequency(config.rf95_freq)) {
+    if (!radio->setFrequency(config.rf95_freq)) {
         fail(LORA_FREQ_FAIL);
     }
     Serial.print(F("FREQ: ")); Serial.println(config.rf95_freq);
-    rf95.setTxPower(config.tx_power, false);
-    rf95.setCADTimeout(2000);
+    radio->setTxPower(config.tx_power, false);
+    radio->setCADTimeout(2000);
     router->setTimeout(1000);
     delay(100);
 }
@@ -88,11 +91,13 @@ void postToAPI(WiFiClient& client,int fromNode, int id) {
    
 }
 
-static void sleep(int sleepTime, RH_RF95 rf95)
+//static void sleep(int sleepTime, RH_RF95 rf95)
+static void sleep(int sleepTime)
 {
     // TODO: may need minimum allowed sleep time due to radio startup cost
     if (sleepTime > 0) {
-        rf95.sleep();
+        //rf95.sleep();
+        radio->sleep();
         GPS.standby();
         Serial.println(F("Sleeping for: ")); Serial.println(sleepTime);
         // Note: this delay will prevent display timeout, display update, and other protothread calls
@@ -103,7 +108,8 @@ static void sleep(int sleepTime, RH_RF95 rf95)
     }
 }
 
-bool sendCurrentMessage(RH_RF95 rf95, int dest)
+//bool sendCurrentMessage(RH_RF95 rf95, int dest)
+bool sendCurrentMessage(int dest)
 { 
     fillCurrentMessageData();
     printMessageData(config.node_id);
@@ -126,12 +132,12 @@ bool sendCurrentMessage(RH_RF95 rf95, int dest)
             // Now wait for a reply from the ultimate server
             if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
                 Serial.print(F("Received reply from: ")); Serial.print(from, DEC);
-                Serial.print(F("; rssi: ")); Serial.println(rf95.lastRssi());
+                Serial.print(F("; rssi: ")); Serial.println(radio->lastRssi());
                 if (oled_is_on)
-                    displayRx(from, rf95.lastRssi());
+                    displayRx(from, radio->lastRssi());
                 if (control->type == CONTROL_TYPE_SLEEP) {
                     // TODO: there should be a minimum allowed sleep time due to radio startup cost
-                    sleep(control->data, rf95);
+                    sleep(control->data);
                 }
                 success = true;
             } else {
@@ -298,7 +304,8 @@ void receive()
   }
 }
 
-void waitForInstructions(RH_RF95 rf95)
+//void waitForInstructions(RH_RF95 rf95)
+void waitForInstructions()
 {
   uint8_t len = sizeof(controlBuffer);
   uint8_t from;
@@ -306,9 +313,9 @@ void waitForInstructions(RH_RF95 rf95)
       Serial.print(F("Recieved request from: ")); Serial.println(from, DEC);
       if (control->type == CONTROL_TYPE_SEND_DATA) {
           Serial.println(F("Received send-data request"));
-          sendCurrentMessage(rf95, from);
+          sendCurrentMessage(from);
       } else if (control->type == CONTROL_TYPE_SLEEP) {
-          sleep(control->data, rf95);
+          sleep(control->data);
       }
   } else {
     //Serial.println("Got nothing");

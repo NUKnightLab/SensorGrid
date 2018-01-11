@@ -8,7 +8,7 @@ bool oled_is_on;
 
 RTC_PCF8523 rtc;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
-RH_RF95 *radio;
+//RH_RF95 *radio;
 
 bool WiFiPresent = false;
 uint32_t display_clock_time = 0;
@@ -31,6 +31,7 @@ static struct pt display_timeout_protothread;
 
 static int radioTransmitThread(struct pt *pt, int interval)
 {
+  /* Temporarily removed SBB
   static unsigned long timestamp = 0;
   PT_BEGIN(pt);
   while(1) { // never stop 
@@ -39,6 +40,7 @@ static int radioTransmitThread(struct pt *pt, int interval)
     timestamp = millis();
   }
   PT_END(pt);
+  */
 }
 
 static int updateClockThread(struct pt *pt, int interval)
@@ -223,8 +225,9 @@ void setup()
     }
     
     rtc.begin();
-    radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
-    setupRadio(*radio);
+    //radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
+    //setupRadio(*radio);
+    setupRadio();
 
     if (config.wifi_password) {
         Serial.print("Attempting to connect to Wifi: ");
@@ -269,7 +272,8 @@ void loop()
     } else if (config.node_type == NODE_TYPE_SENSOR) {
         radioTransmitThread(&radio_transmit_protothread, 10*1000);
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
-        waitForInstructions(*radio);
+        //waitForInstructions(*radio);
+        waitForInstructions();
     } else if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         uint32_t nextCollectTime = millis() + (config.collection_period*1000);
         for (int i=0; i<254 && config.node_ids[i] != NULL; i++) {
