@@ -274,7 +274,8 @@ void loop()
             Serial.print("----- COLLECT FROM NODE ID: "); Serial.println(config.node_ids[i], DEC);
             collectFromNode(config.node_ids[i], nextCollectTime, client, config.wifi_ssid);
         }
-        if (nextCollectTime > millis()) {
+        if (nextCollectTime > (millis() + 1000)) {
+            delay(1000);
             broadcastSleep(nextCollectTime);
             delay(nextCollectTime - millis());
         } else {
