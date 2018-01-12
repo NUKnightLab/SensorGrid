@@ -297,6 +297,7 @@ void waitForInstructions()
   uint8_t len = sizeof(controlBuffer);
   uint8_t from;
   if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
+      uint32_t start_time = millis();
       Serial.print(F("Recieved request from: ")); Serial.println(from, DEC);
       if (control->type == CONTROL_TYPE_SEND_DATA) {
           Serial.println(F("Received send-data request"));
@@ -305,9 +306,10 @@ void waitForInstructions()
           if (control->id != last_control_id_received) {
               last_control_id_received = control->id;
               Serial.println("Re-broadcasting sleep control signal");
+              control->data = control->data - (millis() - start_time);
               router->sendtoWait((uint8_t*)control, sizeof(controlBuffer), RH_BROADCAST_ADDRESS);
           }
-          sleep(control->data);
+          sleep(control->data - (millis() - start_time));
       }
   } else {
     //Serial.println("Got nothing");
