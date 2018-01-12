@@ -56,6 +56,7 @@ typedef struct Message {
 };
 
 typedef struct Control {
+    uint8_t id;
     uint8_t type;
     uint32_t data;
 };
