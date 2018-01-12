@@ -102,6 +102,7 @@ static void sleep(int sleepTime)
         // Note: this delay will prevent display timeout, display update, and other protothread calls
         delay(sleepTime); // TODO: this might not be the best way to sleep. Look at SleepyDog: https://github.com/adafruit/Adafruit_SleepyDog
         GPS.sendCommand(""); // empty sendCommand in lieu of wakeup b/c wakeup freezes. See: https://github.com/adafruit/Adafruit_GPS/issues/25
+        Serial.println("Done sleeping");
     } else {
         Serial.print(F("Received bad sleep time: ")); Serial.println(sleepTime);
     }
@@ -359,7 +360,6 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, cha
                 // TODO: to support logging we need to properly handle pulling the LoRa pin
                 //writeLogLine(from, id);
                 success = true;
-                /*
                 if (WiFiPresent) {
                     if (WiFi.status() == WL_CONNECTED) {
                         while (!client.connected()) {
@@ -370,7 +370,6 @@ void collectFromNode(int toID, uint32_t nextCollectTime, WiFiClient& client, cha
                 } else {
                     Serial.println("Collector Node with no WiFi configuration. Assuming serial collection");
                 }
-                */
             } else {
                 Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
             }
