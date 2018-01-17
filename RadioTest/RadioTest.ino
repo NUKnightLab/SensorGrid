@@ -10,7 +10,7 @@
 #define INT 3
 #define COLLECTOR 14
 #define SENSOR 3
-#define NODE_TYPE COLLECTOR //SENSOR
+#define NODE_TYPE SENSOR //COLLECTOR
 
 static RHMesh* router;
 //RH_RF95 radio(CS, INT);
@@ -39,7 +39,15 @@ void setupRadio(RH_RF95 rf95)
     delay(100);
 }
 */
+unsigned checksum(void *buffer, size_t len, unsigned int seed)
+{
+      unsigned char *buf = (unsigned char *)buffer;
+      size_t i;
 
+      for (i = 0; i < len; ++i)
+            seed += (unsigned int)(*buf++);
+      return seed;
+}
 
 
 void setup() {
@@ -67,6 +75,9 @@ void loop() {
   uint8_t data[] = "Message";
   uint8_t dataSize = sizeof(data);
   uint8_t from;
+  unsigned long start = 0;
+  float duration = 0;
+  
   if (NODE_TYPE == COLLECTOR) {
     if (router->recvfromAck(data, &dataSize, &from)) {
       Serial.println("Sending acknowledgment...");
@@ -77,13 +88,18 @@ void loop() {
   }
   else if (NODE_TYPE == SENSOR) {
     Serial.println("Sending message...");
+    start = millis();
     if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
       Serial.println("sendtoWait failed");
     }
     else {
       Serial.println("No router error...");
       Serial.println("Acknowledgement received...");
+      duration = millis() - start;
+      Serial.print("Time it took to send: ");
+      Serial.println(duration);
+      duration = 0;
     }
   }
-  delay(100);
+  delay(1000);
 }
