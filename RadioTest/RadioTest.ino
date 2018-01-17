@@ -1,23 +1,23 @@
 #include <RHMesh.h>
 #include <RHRouter.h>
 #include <RH_RF95.h>
-#define NODE_ID 14
+#include <SPI.h>
 #define FREQ 915.00
 #define TX 5
 #define CAD 2000
 #define TIMEOUT 1000
 #define CS 8
 #define INT 3
+#define COLLECTOR 14
+#define SENSOR 3
+#define NODE_TYPE SENSOR //COLLECTOR
 
-#define CLIENT_ADDRESS 1
-#define SERVER_ADDRESS 2
-
-//static RHMesh* router;
-static RHRouter* router;
+static RHMesh* router;
+//RH_RF95 radio(CS, INT);
 RH_RF95 *radio;
-bool client = true; //client node
 
 
+/*
 void setupRadio(RH_RF95 rf95)
 {
     Serial.print("Setting up radio with RadioHead Version ");
@@ -25,17 +25,7 @@ void setupRadio(RH_RF95 rf95)
     Serial.println(RH_VERSION_MINOR, DEC);
     Serial.print("Node ID: ");
     Serial.println(NODE_ID);
-    //router = new RHMesh(rf95, NODE_ID); 
-
-    uint8_t thisAddr;
-    if (client) {
-      thisAddr = CLIENT_ADDRESS;
-    }
-    else {
-      thisAddr = SERVER_ADDRESS;
-    }
-    
-    router = new RHRouter(rf95, thisAddr);
+    router = new RHMesh(rf95, NODE_ID); 
     //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096); // doesn't work with RH 1.71
     if (!router->init())
         Serial.println("Router init failed");
@@ -46,61 +36,70 @@ void setupRadio(RH_RF95 rf95)
     rf95.setTxPower(TX, false);
     //rf95.setCADTimeout(CAD);
     router->setTimeout(TIMEOUT);
-
-    //manually add routes
-    router->addRouteTo(CLIENT_ADDRESS, CLIENT_ADDRESS);
-    router->addRouteTo(SERVER_ADDRESS, SERVER_ADDRESS);
     delay(100);
 }
+*/
+unsigned checksum(void *buffer, size_t len, unsigned int seed)
+{
+      unsigned char *buf = (unsigned char *)buffer;
+      size_t i;
 
-uint8_t buf[RH_MESH_MAX_MESSAGE_LEN];
+      for (i = 0; i < len; ++i)
+            seed += (unsigned int)(*buf++);
+      return seed;
+}
+
 
 void setup() {
     while (!Serial);
+    Serial.print("Setting up radio with RadioHead Version ");
+    Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
+    Serial.println(RH_VERSION_MINOR, DEC);
+    Serial.print("Node ID: ");
+    Serial.println(NODE_TYPE);
     radio = new RH_RF95(CS, INT);
-    setupRadio(*radio);
+    router = new RHMesh(*radio, NODE_TYPE);
+    if (!router->init())
+        Serial.println("Router init failed");
+    Serial.print(F("FREQ: ")); Serial.println(FREQ);
+    if (!radio->setFrequency(FREQ)) {
+        Serial.println("Radio frequency set failed");
+    } 
+    radio->setTxPower(TX, false);
+    //rf95.setCADTimeout(CAD);
+    router->setTimeout(TIMEOUT);
+    delay(100);
 }
 
 void loop() {
   uint8_t data[] = "Message";
-  bool collector = true;
-  if (collector) {
-    Serial.println("Sending message");
-    uint8_t len = sizeof(buf);
-    uint8_t from;
-    if (router->sendtoWait(data, sizeof(data), CLIENT_ADDRESS) != RH_ROUTER_ERROR_NONE) {
-        Serial.println("sendtoWait failed");
+  uint8_t dataSize = sizeof(data);
+  uint8_t from;
+  unsigned long start = 0;
+  float duration = 0;
+  
+  if (NODE_TYPE == COLLECTOR) {
+    if (router->recvfromAck(data, &dataSize, &from)) {
+      Serial.println("Sending acknowledgment...");
     }
     else {
-      if (router->recvfromAckTimeout(buf, &len, 5000, &from)) {
-        Serial.print("got reply from : 0x");
-        Serial.print(from, HEX);
-        Serial.print(": ");
-        Serial.println((char*)buf);
-      }
-      else {
-        Serial.println("No reply, is the server running?");
-      }
-    }
-    delay(10000);
-  } else {
-    uint8_t from;
-    uint8_t len = sizeof(buf);
-    Serial.println("Waiting for request");
-
-    if (router->recvfromAck(buf, &len, &from)) {
-        Serial.print("got reply from : 0x");
-        Serial.print(from, HEX);
-        Serial.print(": ");
-        Serial.println((char*)buf);
-
-        //wait for ACK to be sent to client
-        if (router->sendtoWait(data, sizeof(data), SERVER_ADDRESS) != RH_ROUTER_ERROR_NONE) {
-          Serial.println("Server send to wait failed...");
-        }
-    }
-    else {
-      Serial.println("recvfromAck failed. ACK not sent to client");
+      Serial.println("receive from ack failed");
     }
   }
+  else if (NODE_TYPE == SENSOR) {
+    Serial.println("Sending message...");
+    start = millis();
+    if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
+      Serial.println("sendtoWait failed");
+    }
+    else {
+      Serial.println("No router error...");
+      Serial.println("Acknowledgement received...");
+      duration = millis() - start;
+      Serial.print("Time it took to send: ");
+      Serial.println(duration);
+      duration = 0;
+    }
+  }
+  delay(1000);
 }
