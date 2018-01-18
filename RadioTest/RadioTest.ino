@@ -50,7 +50,26 @@ unsigned checksum(void *buffer, size_t len, unsigned int seed)
 }
 
 
+struct node {
+  int data;
+  struct node *next;
+};
+typedef struct node* head = (struct Node*)malloc(sizeof(struct node));
+head->data = 1;
+head->next = NULL;
+
 void setup() {
+    while (sizeof(&head) < 255) { //create linked list of size 255 to check max payload
+      typedef struct node* temp = (struct node*)malloc(sizeof(struct node));
+      temp->data = 1;
+      struct node* curr = head;
+      while (curr->next != NULL) {
+        curr = curr->next;
+      }
+      curr->next = temp;
+      temp->next = NULL;
+    }
+
     while (!Serial);
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
@@ -71,12 +90,20 @@ void setup() {
     delay(100);
 }
 
+unsigned int checkSize = 0;
+unsigned int beforeSending = 0;
+
 void loop() {
   uint8_t data[] = "Message";
   uint8_t dataSize = sizeof(data);
+  Serial.print("Size of data: ");
+  Serial.println(dataSize);
   uint8_t from;
   unsigned long start = 0;
   float duration = 0;
+  beforeSending += checksum(0, dataSize, beforeSending);
+  Serial.print("Checksum before sending message ");
+  Serial.println(beforeSending);
   
   if (NODE_TYPE == COLLECTOR) {
     if (router->recvfromAck(data, &dataSize, &from)) {
@@ -99,6 +126,9 @@ void loop() {
       Serial.print("Time it took to send: ");
       Serial.println(duration);
       duration = 0;
+      checkSize += checksum(0, dataSize, checkSize);
+      Serial.print("Printing checkSize: ");
+      Serial.println(checkSize);
     }
   }
   delay(1000);
