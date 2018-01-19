@@ -173,15 +173,12 @@ void setup() {
 
 
 void loop() {
-  unsigned int checkSize = 0;
-  unsigned int beforeSending = 0;
   //uint8_t data[] = "Message 1";
   i!=i;
   
   if (NODE_TYPE == COLLECTOR) {
-    struct Data *data;
-    data->id = 1;
-    if (send_message((uint8_t*)data, sensorArray[i])) {
+    Data data = { .id = 1 };
+    if (send_message((uint8_t*)&data, sensorArray[i])) {
         Serial.println("Sent data. Waiting for return data.");
         uint8_t len; //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
         uint8_t from;
