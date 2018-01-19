@@ -10,8 +10,8 @@
 #define INT 3
 #define COLLECTOR 14
 #define SENSOR 3
-//#define NODE_TYPE SENSOR //COLLECTOR
-#define NODE_TYPE COLLECTOR
+#define NODE_TYPE SENSOR //COLLECTOR
+//#define NODE_TYPE COLLECTOR
 
 static RHMesh* router;
 //RH_RF95 radio(CS, INT);
@@ -24,6 +24,16 @@ unsigned long hash(unsigned char *str)
     int c;
     while (c = *str++)
         hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    return hash;
+}
+
+unsigned long hash2(uint8_t* msg, uint8_t len)
+{
+    unsigned long hash = 5381;
+    int c;
+    for (int i=0; i++; i<len) {
+        hash = ((hash << 5) + hash) + c;
+    }
     return hash;
 }
 
@@ -153,7 +163,7 @@ void loop() {
   
   if (NODE_TYPE == COLLECTOR) {
  
-    if (send_message((uint8_t*)data, sensorArray[i])) {
+    if (send_message(data, sensorArray[i])) {
         Serial.println("Sent data. Waiting for return data.");
         uint8_t len;
         uint8_t from;
@@ -164,7 +174,7 @@ void loop() {
             Serial.print(" size: ");
             Serial.print(len, DEC);
             Serial.print(" hash: ");
-            Serial.println(hash(buf));
+            Serial.println(hash2(buf, len));
         }
     }
   } else if (NODE_TYPE == SENSOR) {
@@ -177,7 +187,9 @@ void loop() {
           Serial.print(" size: ");
           Serial.print(len, DEC);
           Serial.print(" hash: ");
-          Serial.println(hash(buf));
+          Serial.println(hash2(buf, len));
+          Serial.print("Message: ");
+          Serial.println((char*)buf);
           if (send_message(buf, from)) {
               Serial.println("Returned data");
           }
