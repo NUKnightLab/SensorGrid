@@ -119,37 +119,32 @@ bool sendCurrentMessage(RH_RF95 rf95, int dest)
     }
     if (oled_is_on)
         displayTx(config.collector_id);
-    while (txAttempts > 0) {
-        errCode = router->sendtoWait((uint8_t*)buf, sizeof(Message), dest);
-        if (errCode == RH_ROUTER_ERROR_NONE) {
-            // It has been reliably delivered to the next node.
-            // Now wait for a reply from the ultimate server
-            if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
-                Serial.print(F("Received reply from: ")); Serial.print(from, DEC);
-                Serial.print(F("; rssi: ")); Serial.println(rf95.lastRssi());
-                if (oled_is_on)
-                    displayRx(from, rf95.lastRssi());
-                if (control->type == CONTROL_TYPE_SLEEP) {
-                    // TODO: there should be a minimum allowed sleep time due to radio startup cost
-                    sleep(control->data, rf95);
-                }
-                success = true;
-            } else {
-                Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
+        
+    errCode = router->sendtoWait((uint8_t*)buf, sizeof(Message), dest);
+    if (errCode == RH_ROUTER_ERROR_NONE) {
+        // It has been reliably delivered to the next node.
+        // Now wait for a reply from the ultimate server
+        if (router->recvfromAckTimeout(controlBuffer, &len, 5000, &from)) {
+            Serial.print(F("Received reply from: ")); Serial.print(from, DEC);
+            Serial.print(F("; rssi: ")); Serial.println(rf95.lastRssi());
+            if (oled_is_on)
+                displayRx(from, rf95.lastRssi());
+            if (control->type == CONTROL_TYPE_SLEEP) {
+                // TODO: there should be a minimum allowed sleep time due to radio startup cost
+                sleep(control->data, rf95);
             }
+            success = true;
         } else {
-           Serial.println(F("sendtoWait failed. Are the intermediate nodes running?"));
+            Serial.println(F("recvfromAckTimeout: No reply, is collector running?"));
         }
-        router->printRoutingTable();
-        if (success) {
-          return true;
-        } else {
-          txAttempts--;
-          if (txAttempts > 0) {
-              Serial.print(F("Retrying data transmission x")); Serial.println(5-txAttempts);
-          }
-        }
+    } else {
+       Serial.println(F("sendtoWait failed. Are the intermediate nodes running?"));
     }
+    router->printRoutingTable();
+    if (success) {
+      return true;
+    }
+         
     Serial.println(F("Data transmission failed"));
     return false;
 }
