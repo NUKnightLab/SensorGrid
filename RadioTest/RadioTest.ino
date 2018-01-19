@@ -49,16 +49,18 @@ unsigned checksum(void *buffer, size_t len, unsigned int seed)
       return seed;
 }
 
-
+/*
 struct node {
   int data;
   struct node *next;
 };
-typedef struct node* head = (struct Node*)malloc(sizeof(struct node));
+node* head = (struct node*)malloc(sizeof(struct node));
 head->data = 1;
 head->next = NULL;
+*/
 
 void setup() {
+  /*
     while (sizeof(&head) < 255) { //create linked list of size 255 to check max payload
       typedef struct node* temp = (struct node*)malloc(sizeof(struct node));
       temp->data = 1;
@@ -68,7 +70,7 @@ void setup() {
       }
       curr->next = temp;
       temp->next = NULL;
-    }
+    } */
 
     while (!Serial);
     Serial.print("Setting up radio with RadioHead Version ");
@@ -90,10 +92,9 @@ void setup() {
     delay(100);
 }
 
-unsigned int checkSize = 0;
-unsigned int beforeSending = 0;
-
 void loop() {
+  unsigned int checkSize = 0;
+  unsigned int beforeSending = 0;
   uint8_t data[] = "Message";
   uint8_t dataSize = sizeof(data);
   Serial.print("Size of data: ");
@@ -108,6 +109,12 @@ void loop() {
   if (NODE_TYPE == COLLECTOR) {
     if (router->recvfromAck(data, &dataSize, &from)) {
       Serial.println("Sending acknowledgment...");
+      if (router->sendtoWait(data, sizeof(data), 3) != RH_ROUTER_ERROR_NONE) {
+        Serial.println("Failed to resend message...");
+      }
+      else {
+        Serial.println("Resending message...");
+      }
     }
     else {
       Serial.println("receive from ack failed");
@@ -122,6 +129,13 @@ void loop() {
     else {
       Serial.println("No router error...");
       Serial.println("Acknowledgement received...");
+      bool wait = true;
+      while (wait) {
+      if (router->recvfromAck(data, &dataSize, &from)) {
+        Serial.println("Message returned from sensor node");
+        wait = false;
+        }
+      }
       duration = millis() - start;
       Serial.print("Time it took to send: ");
       Serial.println(duration);
