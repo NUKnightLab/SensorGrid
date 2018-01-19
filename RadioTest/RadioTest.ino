@@ -49,8 +49,32 @@ unsigned checksum(void *buffer, size_t len, unsigned int seed)
       return seed;
 }
 
+<<<<<<< HEAD
+=======
+/*
+struct node {
+  int data;
+  struct node *next;
+};
+node* head = (struct node*)malloc(sizeof(struct node));
+head->data = 1;
+head->next = NULL;
+*/
+>>>>>>> a722cc0657fb907cc11f276a8a4dd771bd18efff
 
 void setup() {
+  /*
+    while (sizeof(&head) < 255) { //create linked list of size 255 to check max payload
+      typedef struct node* temp = (struct node*)malloc(sizeof(struct node));
+      temp->data = 1;
+      struct node* curr = head;
+      while (curr->next != NULL) {
+        curr = curr->next;
+      }
+      curr->next = temp;
+      temp->next = NULL;
+    } */
+
     while (!Serial);
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
@@ -71,9 +95,15 @@ void setup() {
     delay(100);
 }
 
+int sensorArray[2] = {2,3};
+int i=1;
+
 void loop() {
+  unsigned int checkSize = 0;
+  unsigned int beforeSending = 0;
   uint8_t data[] = "Message";
   uint8_t dataSize = sizeof(data);
+<<<<<<< HEAD
   uint8_t from;
   unsigned long start = 0;
   float duration = 0;
@@ -89,17 +119,77 @@ void loop() {
   else if (NODE_TYPE == SENSOR) {
     Serial.println("Sending message...");
     start = millis();
+=======
+  Serial.print("Size of data: ");
+  Serial.println(dataSize);
+  uint8_t from;
+  unsigned long start = 0;
+  float duration = 0;
+  beforeSending += checksum(0, dataSize, beforeSending);
+  Serial.print("Checksum before sending message ");
+  Serial.println(beforeSending);
+  i!=i;
+  
+  if (NODE_TYPE == COLLECTOR) {
+    if (router->sendtoWait(data, sizeof(data), i) != RH_ROUTER_ERROR_NONE) {
+      if (router->recvfromAck(data, &dataSize, &from)) {
+        Serial.println("Sending acknowledgment...");
+        if (router->sendtoWait(data, sizeof(data), (int)from) != RH_ROUTER_ERROR_NONE) {
+          Serial.println("Failed to resend message...");
+        }
+      else {
+        Serial.println("Resending message...");
+        }
+      }
+    else {
+      Serial.println("receive from ack failed");
+        } 
+      }
+    }
+  else if (NODE_TYPE == SENSOR) {
+    Serial.println("Sending message...");
+    start = millis();
+    bool wait = true;
+    while (wait) {
+    if (router->recvfromAck(data, &dataSize, &from)) {
+      Serial.println("Received notification to send message");
+      wait = false;
+      }
+    }
+>>>>>>> a722cc0657fb907cc11f276a8a4dd771bd18efff
     if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
       Serial.println("sendtoWait failed");
     }
     else {
+<<<<<<< HEAD
       Serial.println("No router error...");
       Serial.println("Acknowledgement received...");
+=======
+      bool wait = true;
+      while (wait) {
+      if (router->recvfromAck(data, &dataSize, &from)) {
+        Serial.println("Message returned from sensor node");
+        wait = false;
+        }
+      }
+      radio->sleep();
+      delay(1000);
+>>>>>>> a722cc0657fb907cc11f276a8a4dd771bd18efff
       duration = millis() - start;
       Serial.print("Time it took to send: ");
       Serial.println(duration);
       duration = 0;
+<<<<<<< HEAD
     }
   }
   delay(1000);
+=======
+      checkSize += checksum(0, dataSize, checkSize);
+      Serial.print("Printing checkSize: ");
+      Serial.println(checkSize);
+    }
+  }
+delay(1000);
+>>>>>>> a722cc0657fb907cc11f276a8a4dd771bd18efff
 }
+  
