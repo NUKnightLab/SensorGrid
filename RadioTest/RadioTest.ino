@@ -92,6 +92,9 @@ void setup() {
     delay(100);
 }
 
+int sensorArray[2] = {2,3};
+int i=1;
+
 void loop() {
   unsigned int checkSize = 0;
   unsigned int beforeSending = 0;
@@ -105,30 +108,38 @@ void loop() {
   beforeSending += checksum(0, dataSize, beforeSending);
   Serial.print("Checksum before sending message ");
   Serial.println(beforeSending);
+  i!=i;
   
   if (NODE_TYPE == COLLECTOR) {
-    if (router->recvfromAck(data, &dataSize, &from)) {
-      Serial.println("Sending acknowledgment...");
-      if (router->sendtoWait(data, sizeof(data), 3) != RH_ROUTER_ERROR_NONE) {
-        Serial.println("Failed to resend message...");
-      }
+    if (router->sendtoWait(data, sizeof(data), i) != RH_ROUTER_ERROR_NONE) {
+      if (router->recvfromAck(data, &dataSize, &from)) {
+        Serial.println("Sending acknowledgment...");
+        if (router->sendtoWait(data, sizeof(data), (int)from) != RH_ROUTER_ERROR_NONE) {
+          Serial.println("Failed to resend message...");
+        }
       else {
         Serial.println("Resending message...");
+        }
       }
-    }
     else {
       Serial.println("receive from ack failed");
+        } 
+      }
     }
-  }
   else if (NODE_TYPE == SENSOR) {
     Serial.println("Sending message...");
     start = millis();
+    bool wait = true;
+    while (wait) {
+    if (router->recvfromAck(data, &dataSize, &from)) {
+      Serial.println("Received notification to send message");
+      wait = false;
+      }
+    }
     if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
       Serial.println("sendtoWait failed");
     }
     else {
-      Serial.println("No router error...");
-      Serial.println("Acknowledgement received...");
       bool wait = true;
       while (wait) {
       if (router->recvfromAck(data, &dataSize, &from)) {
@@ -136,6 +147,8 @@ void loop() {
         wait = false;
         }
       }
+      radio->sleep();
+      delay(1000);
       duration = millis() - start;
       Serial.print("Time it took to send: ");
       Serial.println(duration);
@@ -145,5 +158,6 @@ void loop() {
       Serial.println(checkSize);
     }
   }
-  delay(1000);
+delay(1000);
 }
+  
