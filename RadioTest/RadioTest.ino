@@ -10,13 +10,45 @@
 #define INT 3
 #define COLLECTOR 14
 #define SENSOR 3
-#define NODE_TYPE SENSOR //COLLECTOR
+//#define NODE_TYPE SENSOR //COLLECTOR
+#define NODE_TYPE COLLECTOR
 
 static RHMesh* router;
 //RH_RF95 radio(CS, INT);
 RH_RF95 *radio;
 
 
+bool send_message(uint8_t* msg, uint8_t toID) {
+    uint8_t err = router->sendtoWait(msg, sizeof(msg), toID);
+    if (err == RH_ROUTER_ERROR_NONE) {
+        return true;
+    } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
+        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(toID);
+        Serial.println(". INVALID LENGTH");
+    } else if (err == RH_ROUTER_ERROR_NO_ROUTE) {
+        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(toID);
+        Serial.println(". NO ROUTE");
+    } else if (err == RH_ROUTER_ERROR_TIMEOUT) {
+        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(toID);
+        Serial.println(". TIMEOUT");
+    } else if (err == RH_ROUTER_ERROR_NO_REPLY) {
+        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(toID);
+        Serial.println(". NO REPLY");
+    } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
+        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(toID);
+        Serial.println(". UNABLE TO DELIVER");    
+    } else {
+        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(toID);
+        Serial.print(". UNKNOWN ERROR CODE: ");
+        Serial.println(err, DEC);
+    }
+}
 /*
 void setupRadio(RH_RF95 rf95)
 {
@@ -111,6 +143,14 @@ void loop() {
   i!=i;
   
   if (NODE_TYPE == COLLECTOR) {
+    if (send_message((uint8_t*)data, sensorArray[i])) {
+        Serial.println("Sent data. Waiting for return data.");
+        if (router->recvfromAck(data, &dataSize, &from)) {
+            Serial.println("Received return data");
+        }
+    }
+  }
+    /*
     if (router->sendtoWait(data, sizeof(data), i) != RH_ROUTER_ERROR_NONE) {
       if (router->recvfromAck(data, &dataSize, &from)) {
         Serial.println("Sending acknowledgment...");
@@ -125,21 +165,23 @@ void loop() {
       Serial.println("receive from ack failed");
         } 
       }
-    }
+    }*/
   else if (NODE_TYPE == SENSOR) {
-    Serial.println("Sending message...");
-    start = millis();
-    bool wait = true;
-    while (wait) {
-    if (router->recvfromAck(data, &dataSize, &from)) {
-      Serial.println("Received notification to send message");
-      wait = false;
+      //Serial.println("Sending message...");
+      //start = millis();
+      if (router->recvfromAck(data, &dataSize, &from)) {
+          Serial.println("Received notification to send message");
+          if (send_message(data, from)) {
+              Serial.println("Returned data");
+          }
       }
-    }
+  }
+    /*
     if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
       Serial.println("sendtoWait failed");
-    }
-    else {
+    } */
+    /*
+    if (send_message((uint8_t*)data, 14)) {
       bool wait = true;
       while (wait) {
       if (router->recvfromAck(data, &dataSize, &from)) {
@@ -157,7 +199,7 @@ void loop() {
       Serial.print("Printing checkSize: ");
       Serial.println(checkSize);
     }
-  }
-delay(1000);
+    */
+    delay(1000);
 }
   
