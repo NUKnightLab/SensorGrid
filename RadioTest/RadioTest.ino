@@ -18,8 +18,25 @@ static RHMesh* router;
 RH_RF95 *radio;
 
 
-bool send_message(uint8_t* msg, uint8_t toID) {
+unsigned long hash(unsigned char *str)
+{
+    unsigned long hash = 5381;
+    int c;
+    while (c = *str++)
+        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+    return hash;
+}
+
+bool send_message(uint8_t* msg, uint8_t toID)
+{
+    Serial.print("Sending message size: ");
+    Serial.print(sizeof(msg), DEC);
+    Serial.print(" hash: ");
+    Serial.println(hash(msg));
+    unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, sizeof(msg), toID);
+    Serial.print("Time to send: ");
+    Serial.println(millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
         return true;
     } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
@@ -71,11 +88,11 @@ void setupRadio(RH_RF95 rf95)
     delay(100);
 }
 */
+
 unsigned checksum(void *buffer, size_t len, unsigned int seed)
 {
       unsigned char *buf = (unsigned char *)buffer;
       size_t i;
-
       for (i = 0; i < len; ++i)
             seed += (unsigned int)(*buf++);
       return seed;
@@ -130,48 +147,38 @@ int i=1;
 void loop() {
   unsigned int checkSize = 0;
   unsigned int beforeSending = 0;
-  uint8_t data[] = "Message";
-  uint8_t dataSize = sizeof(data);
-  Serial.print("Size of data: ");
-  Serial.println(dataSize);
-  uint8_t from;
-  unsigned long start = 0;
-  float duration = 0;
-  beforeSending += checksum(0, dataSize, beforeSending);
-  Serial.print("Checksum before sending message ");
-  Serial.println(beforeSending);
+  uint8_t data[] = "Message 1";
+
   i!=i;
   
   if (NODE_TYPE == COLLECTOR) {
+ 
     if (send_message((uint8_t*)data, sensorArray[i])) {
         Serial.println("Sent data. Waiting for return data.");
-        if (router->recvfromAck(data, &dataSize, &from)) {
-            Serial.println("Received return data");
+        uint8_t len;
+        uint8_t from;
+        uint8_t buf[255] = {0};
+        if (router->recvfromAck(buf, &len, &from)) {
+            Serial.print("Received message from: ");
+            Serial.print(from, DEC);
+            Serial.print(" size: ");
+            Serial.print(len, DEC);
+            Serial.print(" hash: ");
+            Serial.println(hash(buf));
         }
     }
-  }
-    /*
-    if (router->sendtoWait(data, sizeof(data), i) != RH_ROUTER_ERROR_NONE) {
-      if (router->recvfromAck(data, &dataSize, &from)) {
-        Serial.println("Sending acknowledgment...");
-        if (router->sendtoWait(data, sizeof(data), (int)from) != RH_ROUTER_ERROR_NONE) {
-          Serial.println("Failed to resend message...");
-        }
-      else {
-        Serial.println("Resending message...");
-        }
-      }
-    else {
-      Serial.println("receive from ack failed");
-        } 
-      }
-    }*/
-  else if (NODE_TYPE == SENSOR) {
-      //Serial.println("Sending message...");
-      //start = millis();
-      if (router->recvfromAck(data, &dataSize, &from)) {
-          Serial.println("Received notification to send message");
-          if (send_message(data, from)) {
+  } else if (NODE_TYPE == SENSOR) {
+      uint8_t len;
+      uint8_t from;
+      uint8_t buf[255] = {0};
+      if (router->recvfromAck(buf, &len, &from)) {
+          Serial.print("Received message from: ");
+          Serial.print(from, DEC);
+          Serial.print(" size: ");
+          Serial.print(len, DEC);
+          Serial.print(" hash: ");
+          Serial.println(hash(buf));
+          if (send_message(buf, from)) {
               Serial.println("Returned data");
           }
       }
