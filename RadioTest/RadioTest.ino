@@ -155,13 +155,13 @@ void validate_recv_buffer(uint8_t len) {
     // some basic checks for sanity
     switch(recv_buf[0]) {
         case MESSAGE_TYPE_DATA:
-            if (len != sizeof(Data) + sizeof(int8_t)) {
+            if (len != sizeof(Data) + MESSAGE_OVERHEAD) {
                 Serial.print("WARNING: Received message of type DATA with incorrect size: ");
                 Serial.println(len, DEC);
             }
             break;
         case MESSAGE_TYPE_CONTROL:
-            if (len != sizeof(Control) + sizeof(int8_t)) {
+            if (len != sizeof(Control) + MESSAGE_OVERHEAD) {
                 Serial.print("WARNING: Received message of type CONTROL with incorrect size: ");
                 Serial.println(len, DEC);
             }
