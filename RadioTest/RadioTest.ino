@@ -7,6 +7,8 @@
 #define CAD 2000
 #define TIMEOUT 1000
 #define CS 8
+#define REQUIRED_RH_VERSION_MAJOR 1
+#define REQUIRED_RH_VERSION_MINOR 82
 #define INT 3
 #define COLLECTOR 14
 #define SENSOR 3
@@ -283,6 +285,18 @@ void setup() {
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
     Serial.println(RH_VERSION_MINOR, DEC);
+    /* TODO: Can RH version check be done at compile time? */
+    if (RH_VERSION_MAJOR != REQUIRED_RH_VERSION_MAJOR 
+        || RH_VERSION_MINOR != REQUIRED_RH_VERSION_MINOR) {
+        Serial.print("ABORTING: SensorGrid requires RadioHead version ");
+        Serial.print(REQUIRED_RH_VERSION_MAJOR, DEC); Serial.print(".");
+        Serial.println(REQUIRED_RH_VERSION_MINOR, DEC);
+        Serial.print("RadioHead ");
+        Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
+        Serial.print(RH_VERSION_MINOR, DEC);
+        Serial.println(" is installed");
+        while(1);
+    }
     Serial.print("Node ID: ");
     Serial.println(NODE_TYPE);
     router = new RHMesh(radio, NODE_TYPE);
