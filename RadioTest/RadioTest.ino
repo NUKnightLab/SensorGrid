@@ -151,13 +151,19 @@ void setup() {
 
 void loop() {
   //uint8_t data[] = "Message 1";
-  i!=i;
+  //i!=i;
   
   if (NODE_TYPE == COLLECTOR) {
-    Data data = { .id = 1, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
-    if (send_message((uint8_t*)&data, sensorArray[i])) {
+    uint8_t data_buffer[sizeof(Data)] = {0};
+    struct Data *data = (struct Data*)data_buffer;
+    //Data data = { .id = 1, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
+    data->id = 1;
+    //struct Data *dptr = &data;
+    uint8_t err = router->sendtoWait((uint8_t*)data, sizeof(Data), sensorArray[i]);
+    //if (send_message((uint8_t*)&data, sensorArray[i])) {
+    if (err == RH_ROUTER_ERROR_NONE) {
         Serial.println("Sent data. Waiting for return data.");
-        uint8_t len; //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
+        uint8_t len = sizeof(Data); //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
         uint8_t from;
         clear_recv_buffer();
         if (router->recvfromAck(recv_buf, &len, &from)) {
@@ -173,7 +179,7 @@ void loop() {
     }
     delay(5000);
   } else if (NODE_TYPE == SENSOR) {
-      uint8_t len; //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
+      uint8_t len = sizeof(Data); //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
       uint8_t from;
       clear_recv_buffer();
       if (router->recvfromAck(recv_buf, &len, &from)) {
