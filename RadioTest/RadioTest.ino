@@ -13,9 +13,10 @@
 //#define NODE_TYPE SENSOR //COLLECTOR
 #define NODE_TYPE COLLECTOR
 
+static RH_RF95 radio(CS, INT);
 static RHMesh* router;
 //RH_RF95 radio(CS, INT);
-RH_RF95 *radio;
+//RH_RF95 *radio;
 
 int sensorArray[2] = {2,3};
 
@@ -63,7 +64,7 @@ bool send_message(uint8_t* msg, uint8_t toID)
     Serial.print("Message ID: ");
     Serial.println( ((struct Data*)msg)->id);
     unsigned long start = millis();
-    uint8_t err = router->sendtoWait(msg, sizeof(msg), toID);
+    uint8_t err = router->sendtoWait(msg, sizeof(Data), toID);
     Serial.print("Time to send: ");
     Serial.println(millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
@@ -156,15 +157,16 @@ void setup() {
     Serial.println(RH_VERSION_MINOR, DEC);
     Serial.print("Node ID: ");
     Serial.println(NODE_TYPE);
-    radio = new RH_RF95(CS, INT);
-    router = new RHMesh(*radio, NODE_TYPE);
+    //RH_RF95 radio = new RH_RF95(CS, INT);
+    //RH_RF95 radio(CS, INT);
+    router = new RHMesh(radio, NODE_TYPE);
     if (!router->init())
         Serial.println("Router init failed");
     Serial.print(F("FREQ: ")); Serial.println(FREQ);
-    if (!radio->setFrequency(FREQ)) {
+    if (!radio.setFrequency(FREQ)) {
         Serial.println("Radio frequency set failed");
     } 
-    radio->setTxPower(TX, false);
+    radio.setTxPower(TX, false);
     //rf95.setCADTimeout(CAD);
     router->setTimeout(TIMEOUT);
     delay(100);
