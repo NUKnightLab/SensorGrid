@@ -12,8 +12,8 @@
 #define SENSOR 3
 #define MAX_MESSAGE_SIZE 255
 
-//#define NODE_TYPE SENSOR //COLLECTOR
-#define NODE_TYPE COLLECTOR
+#define NODE_TYPE SENSOR //COLLECTOR
+//#define NODE_TYPE COLLECTOR
 
 // test types
 #define BOUNCE_DATA_TEST 0
@@ -162,7 +162,7 @@ void validate_recv_buffer(uint8_t len) {
     }
 }
 
-int8_t receive_message(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
+int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
     clear_recv_buffer(); // this should not be generally necessary
     uint8_t len = MAX_MESSAGE_SIZE;
@@ -171,14 +171,34 @@ int8_t receive_message(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NUL
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
     }
     lock_recv_buffer(); // lock to be released by calling client
-    if (router->recvfromAckTimeout(recv_buf, &len, timeout, source, dest, id, flags)) {
-        validate_recv_buffer(len);
-        Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
-        Serial.print("; type: "); print_message_type(recv_buf[0]); Serial.println("");
-        return recv_buf[0];
+    if (timeout) {
+        if (router->recvfromAckTimeout(recv_buf, &len, timeout, source, dest, id, flags)) {
+            validate_recv_buffer(len);
+            Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
+            Serial.print("; type: "); print_message_type(recv_buf[0]); Serial.println("");
+            return recv_buf[0];
+        } else {
+            return MESSAGE_TYPE_NO_MESSAGE;
+        }
     } else {
-        return MESSAGE_TYPE_NO_MESSAGE;
+        if (router->recvfromAck(recv_buf, &len, source, dest, id, flags)) {
+            validate_recv_buffer(len);
+            Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
+            Serial.print("; type: "); print_message_type(recv_buf[0]); Serial.println("");
+            return recv_buf[0];
+        } else {
+            return MESSAGE_TYPE_NO_MESSAGE;
+        }
     }
+}
+
+
+int8_t receive(uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL) {
+    return _receive_message(NULL, source, dest, id, flags);
+}
+
+int8_t receive(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL) {
+    return _receive_message(timeout, source, dest, id, flags);
 }
 
 Data get_data_from_buffer() {
@@ -247,6 +267,7 @@ void setup() {
     radio.setTxPower(TX, false);
     //rf95.setCADTimeout(CAD);
     router->setTimeout(TIMEOUT);
+    Serial.println("");
     delay(100);
 }
 
@@ -268,7 +289,7 @@ void send_next_data_for_bounce() {
     if (send_data(data, sensorArray[sensor_index])) {
         Serial.println("-- Sent data. Waiting for return data.");
         uint8_t from;
-        int8_t msg_type = receive_message(5000, &from);
+        int8_t msg_type = receive(5000, &from);
         if (msg_type == MESSAGE_TYPE_DATA) {
             Data _data = get_data_from_buffer();
             unsigned long _hash = hash((uint8_t*)&_data, sizeof(Data));
@@ -288,16 +309,40 @@ void send_next_data_for_bounce() {
                 Serial.println(_data.id, DEC);
             }
         } else {
-            Serial.println("RECEIVED NON-DATA MESSAGE TYPE");
+            Serial.print("RECEIVED NON-DATA MESSAGE TYPE");
+            Serial.println(msg_type, DEC);
         }
         release_recv_buffer();
     }
 } /* send_next_data_for_bounce */
 
+void receive_data_to_bounce() {
+    uint8_t from;
+    int8_t msg_type = receive(&from);
+    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
+        // no-op
+    } else if (msg_type == MESSAGE_TYPE_DATA) {
+        Data _data = get_data_from_buffer();
+        unsigned long _hash = hash((uint8_t*)&_data, sizeof(Data));
+        Serial.print("Received message from: "); Serial.print(from, DEC);
+        Serial.print("; hash: "); Serial.print(_hash);
+        Serial.print("; Message ID: "); Serial.println(_data.id, DEC);
+        if (send_data(_data, from)) {
+            Serial.println("Returned data");
+            Serial.println("");
+        }
+    } else {
+            Serial.print("RECEIVED NON-DATA MESSAGE TYPE");
+            Serial.print(msg_type, DEC);
+            Serial.println("");
+    }
+    release_recv_buffer();
+}
+
 void loop() {
 
     if (NODE_TYPE == COLLECTOR) {
-        switch (TEST_TYPE){
+        switch (TEST_TYPE) {
             case BOUNCE_DATA_TEST:
                 send_next_data_for_bounce();
                 break;
@@ -308,24 +353,14 @@ void loop() {
         Serial.println("");
         delay(5000);
     } else if (NODE_TYPE == SENSOR) {
-      uint8_t len = MAX_MESSAGE_SIZE;
-      uint8_t from;
-      if (router->recvfromAck(recv_buf, &len, &from)) {
-          Data _data = ((Message*)recv_buf)->data;
-          Serial.print("Received message from: ");
-          Serial.print(from, DEC);
-          Serial.print(" length: ");
-          Serial.print(len, DEC);
-          Serial.print(" hash: ");
-          Serial.println(hash(recv_buf, len));
-          Serial.print("Message ID: ");
-          Serial.println(_data.id, DEC);
-          Serial.println("");
-          if (send_message(recv_buf, len, from)) {
-              Serial.println("Returned data");
-          }
-      }
-      release_recv_buffer();
+        switch (TEST_TYPE) {
+            case BOUNCE_DATA_TEST:
+                receive_data_to_bounce();
+                break;
+            default:
+                Serial.print("UNKOWN TEST TYPE: ");
+                Serial.println(TEST_TYPE);
+        }
     }
     /*
     if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
