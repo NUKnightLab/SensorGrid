@@ -12,6 +12,7 @@
 #define SENSOR 3
 //#define NODE_TYPE SENSOR //COLLECTOR
 #define NODE_TYPE COLLECTOR
+#define MAX_MESSAGE_SIZE 255
 
 static RH_RF95 radio(CS, INT);
 static RHMesh* router;
@@ -26,21 +27,20 @@ typedef struct Data {
     int16_t value;
 } data;
 
-uint8_t recv_buf[sizeof(Data)] = {0};
-int i=1;
+uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 
 static void clear_recv_buffer()
 {
-    memset(recv_buf, 0, sizeof(Data));
+    memset(recv_buf, 0, MAX_MESSAGE_SIZE);
 }
 
-unsigned long hash2(uint8_t* msg, uint8_t len)
+unsigned long hash(uint8_t* msg, uint8_t len)
 {
-    unsigned long hash = 5381;
-    for (i=0; i<len; i++){
-        hash = ((hash << 5) + hash) + msg[i];
+    unsigned long h = 5381;
+    for (int i=0; i<len; i++){
+        h = ((h << 5) + h) + msg[i];
     }
-    return hash;
+    return h;
 }
 
 bool send_message(uint8_t* msg, uint8_t toID)
@@ -48,11 +48,9 @@ bool send_message(uint8_t* msg, uint8_t toID)
     Serial.print("Sending message size: ");
     Serial.print(sizeof(msg), DEC);
     Serial.print(" hash: ");
-    Serial.println(hash2(msg, sizeof(Data)));
+    Serial.println(hash(msg, sizeof(Data)));
     Serial.print("Message ID: ");
     Serial.println( ((struct Data*)msg)->id);
-    for (int i=0; i<sizeof(Data); i++) Serial.print(msg[i], DEC);
-    Serial.println("");
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, sizeof(Data), toID);
     Serial.print("Time to send: ");
@@ -140,13 +138,14 @@ void setup() {
 }
 
 
+int sensor_index = 1;
 
 void loop() {
 
   if (NODE_TYPE == COLLECTOR) {
     Data data = { .id = 1, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
     clear_recv_buffer();
-    if (send_message((uint8_t*)&data, sensorArray[i])) {
+    if (send_message((uint8_t*)&data, sensorArray[sensor_index])) {
         Serial.println("Sent data. Waiting for return data.");
         uint8_t len = sizeof(Data); //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
         uint8_t from;
@@ -156,7 +155,7 @@ void loop() {
             Serial.print(" size: ");
             Serial.print(len, DEC);
             Serial.print(" hash: ");
-            Serial.println(hash2(recv_buf, sizeof(Data)));
+            Serial.println(hash(recv_buf, sizeof(Data)));
             Serial.print("Message ID: ");
             Serial.println( ((struct Data*)recv_buf)->id, DEC);
         }
@@ -172,11 +171,9 @@ void loop() {
           Serial.print(" size: ");
           Serial.print(len, DEC);
           Serial.print(" hash: ");
-          Serial.println(hash2(recv_buf, sizeof(Data)));
+          Serial.println(hash(recv_buf, sizeof(Data)));
           Serial.print("Message ID: ");
           Serial.println( ((struct Data*)recv_buf)->id, DEC);
-          Serial.print("Message bytes: ");
-          for (int i=0; i<sizeof(Data); i++) Serial.print(recv_buf[i], DEC);
           Serial.println("");
           if (send_message(recv_buf, from)) {
               Serial.println("Returned data");
