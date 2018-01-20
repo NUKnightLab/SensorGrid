@@ -12,12 +12,13 @@
 #define SENSOR 3
 #define MAX_MESSAGE_SIZE 255
 
-#define NODE_TYPE SENSOR //COLLECTOR
-//#define NODE_TYPE COLLECTOR
+//#define NODE_TYPE SENSOR //COLLECTOR
+#define NODE_TYPE COLLECTOR
 
 // test types
 #define BOUNCE_DATA_TEST 0
-#define TEST_TYPE BOUNCE_DATA_TEST
+#define CONTROL_SEND_DATA_TEST 1
+#define TEST_TYPE CONTROL_SEND_DATA_TEST
 
 
 /* *
@@ -30,6 +31,12 @@
 #define MESSAGE_TYPE_UNKNOWN -1
 #define MESSAGE_TYPE_MESSAGE_ERROR -2
 #define MESSAGE_TYPE_NONE_BUFFER_LOCK -3
+
+/**
+ * Control codes
+ */
+#define CONTROL_SEND_DATA 1
+#define CONTROL_NEXT_COLLECTION 2
 
 static RH_RF95 radio(CS, INT);
 static RHMesh* router;
@@ -201,6 +208,17 @@ int8_t receive(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8
     return _receive_message(timeout, source, dest, id, flags);
 }
 
+Control get_control_from_buffer() {
+    if (recv_buffer_avail) {
+        Serial.println("WARNING: Attempt to extract control from unlocked buffer");
+    }
+    if (recv_buf[0] != MESSAGE_TYPE_CONTROL) {
+        Serial.print("WARNING: Attempt to extract control from non-control type: ");
+        Serial.println(recv_buf[0], DEC);
+    }
+    return ((Message*)recv_buf)->control;
+}
+
 Data get_data_from_buffer() {
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract data from unlocked buffer");
@@ -216,6 +234,12 @@ bool send_data(Data data, uint8_t dest) {
     Message msg = { .message_type = MESSAGE_TYPE_DATA };
     msg.data = data;
     return send_message((uint8_t*)&msg, sizeof(Data) + sizeof(uint8_t), dest);
+}
+
+bool send_control(Control control, uint8_t dest) {
+    Message msg = { .message_type = MESSAGE_TYPE_CONTROL };
+    msg.control = control;
+    return send_message((uint8_t*)&msg, sizeof(Control) + sizeof(uint8_t), dest);
 }
 
 unsigned checksum(void *buffer, size_t len, unsigned int seed)
@@ -332,12 +356,73 @@ void receive_data_to_bounce() {
             Serial.println("");
         }
     } else {
-            Serial.print("RECEIVED NON-DATA MESSAGE TYPE");
+            Serial.print("RECEIVED NON-DATA MESSAGE TYPE: ");
             Serial.print(msg_type, DEC);
             Serial.println("");
     }
     release_recv_buffer();
-}
+} /* receive_data_to_bounce */
+
+void send_next_control_send_data() {
+    static uint8_t message_id = 0;
+    static int sensor_index = 1;
+    sensor_index = !sensor_index;
+    Control control = {
+        .id = ++message_id,
+        .code = CONTROL_SEND_DATA
+    };
+    Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
+    Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
+    if (send_control(control, sensorArray[sensor_index])) {
+        Serial.println("-- Sent control. Waiting for return data.");
+        uint8_t from;
+        int8_t msg_type = receive(5000, &from);
+        if (msg_type == MESSAGE_TYPE_DATA) {
+            Data _data = get_data_from_buffer();
+            Serial.print("Received return data from: "); Serial.print(from, DEC);
+            Serial.print("; Message ID: "); Serial.println( _data.id, DEC);
+        } else {
+            Serial.print("RECEIVED NON-DATA MESSAGE TYPE");
+            Serial.println(msg_type, DEC);
+        }
+        release_recv_buffer();
+    }
+} /* send_next_control_send_data */
+
+void receive_control_send_data() {
+    static uint8_t message_id = 0;
+    uint8_t from;
+    int8_t msg_type = receive(&from);
+    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
+        // no-op
+    } else if (msg_type == MESSAGE_TYPE_CONTROL) {
+        Control _control = get_control_from_buffer();
+        Serial.print("Received control message from: "); Serial.print(from, DEC);
+        Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
+        if (_control.code == CONTROL_SEND_DATA) {
+            Data data = {
+              .id = ++message_id,
+              .node_id = NODE_TYPE,
+              .timestamp = 12345,
+              .type = 111,
+              .value = 123
+            };
+            if (send_data(data, from)) {
+                Serial.println("Returned data");
+                Serial.println("");
+            }
+        } else {
+            Serial.print("Received unexpected CONTROL code: ");
+            Serial.println(_control.code, DEC);
+            Serial.println("");
+        }
+    } else {
+            Serial.print("RECEIVED NON-CONTROL MESSAGE TYPE: ");
+            Serial.print(msg_type, DEC);
+            Serial.println("");
+    }
+    release_recv_buffer();
+} /* receive_control_send_data */
 
 void loop() {
 
@@ -345,6 +430,9 @@ void loop() {
         switch (TEST_TYPE) {
             case BOUNCE_DATA_TEST:
                 send_next_data_for_bounce();
+                break;
+            case CONTROL_SEND_DATA_TEST:
+                send_next_control_send_data();
                 break;
             default:
                 Serial.print("UNKOWN TEST TYPE: ");
