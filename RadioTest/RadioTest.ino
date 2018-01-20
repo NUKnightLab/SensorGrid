@@ -10,8 +10,8 @@
 #define INT 3
 #define COLLECTOR 14
 #define SENSOR 3
-//#define NODE_TYPE SENSOR //COLLECTOR
-#define NODE_TYPE COLLECTOR
+#define NODE_TYPE SENSOR //COLLECTOR
+//#define NODE_TYPE COLLECTOR
 
 static RH_RF95 radio(CS, INT);
 static RHMesh* router;
@@ -196,6 +196,7 @@ void loop() {
             Serial.println( ((struct Data*)recv_buf)->id, DEC);
         }
     }
+    delay(5000);
   } else if (NODE_TYPE == SENSOR) {
       uint8_t len; //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
       uint8_t from;
@@ -209,6 +210,9 @@ void loop() {
           Serial.println(hash2(recv_buf, sizeof(Data)));
           Serial.print("Message ID: ");
           Serial.println( ((struct Data*)recv_buf)->id, DEC);
+          Serial.print("Message bytes: ");
+          for (int i=0; i<sizeof(Data); i++) Serial.print(recv_buf[i], DEC);
+          Serial.println("");
           if (send_message(recv_buf, from)) {
               Serial.println("Returned data");
           }
@@ -238,6 +242,5 @@ void loop() {
       Serial.println(checkSize);
     }
     */
-    delay(1000);
 }
   
