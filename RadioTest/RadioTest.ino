@@ -34,21 +34,11 @@ static void clear_recv_buffer()
     memset(recv_buf, 0, sizeof(Data));
 }
 
-unsigned long hash(unsigned char *str)
-{
-    unsigned long hash = 5381;
-    int c;
-    while (c = *str++)
-        hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-    return hash;
-}
-
 unsigned long hash2(uint8_t* msg, uint8_t len)
 {
     unsigned long hash = 5381;
-    int c;
-    for (int i=0; i++; i<len) {
-        hash = ((hash << 5) + hash) + c;
+    for (i=0; i<len; i++){
+        hash = ((hash << 5) + hash) + msg[i];
     }
     return hash;
 }
@@ -58,9 +48,11 @@ bool send_message(uint8_t* msg, uint8_t toID)
     Serial.print("Sending message size: ");
     Serial.print(sizeof(msg), DEC);
     Serial.print(" hash: ");
-    Serial.println(hash(msg));
+    Serial.println(hash2(msg, sizeof(Data)));
     Serial.print("Message ID: ");
     Serial.println( ((struct Data*)msg)->id);
+    for (int i=0; i<sizeof(Data); i++) Serial.print(msg[i], DEC);
+    Serial.println("");
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, sizeof(Data), toID);
     Serial.print("Time to send: ");
@@ -150,24 +142,16 @@ void setup() {
 
 
 void loop() {
-  //uint8_t data[] = "Message 1";
-  //i!=i;
-  
+
   if (NODE_TYPE == COLLECTOR) {
-    uint8_t data_buffer[sizeof(Data)] = {0};
-    struct Data *data = (struct Data*)data_buffer;
-    //Data data = { .id = 1, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
-    data->id = 1;
-    //struct Data *dptr = &data;
-    uint8_t err = router->sendtoWait((uint8_t*)data, sizeof(Data), sensorArray[i]);
-    //if (send_message((uint8_t*)&data, sensorArray[i])) {
-    if (err == RH_ROUTER_ERROR_NONE) {
+    Data data = { .id = 1, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
+    clear_recv_buffer();
+    if (send_message((uint8_t*)&data, sensorArray[i])) {
         Serial.println("Sent data. Waiting for return data.");
         uint8_t len = sizeof(Data); //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
         uint8_t from;
-        clear_recv_buffer();
-        if (router->recvfromAck(recv_buf, &len, &from)) {
-            Serial.print("Received message from: ");
+        if (router->recvfromAckTimeout(recv_buf, &len, 5000, &from)) {
+            Serial.print("Received return message from: ");
             Serial.print(from, DEC);
             Serial.print(" size: ");
             Serial.print(len, DEC);
