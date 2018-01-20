@@ -10,9 +10,10 @@
 #define INT 3
 #define COLLECTOR 14
 #define SENSOR 3
+#define MAX_MESSAGE_SIZE 255
 //#define NODE_TYPE SENSOR //COLLECTOR
 #define NODE_TYPE COLLECTOR
-#define MAX_MESSAGE_SIZE 255
+
 
 static RH_RF95 radio(CS, INT);
 static RHMesh* router;
@@ -46,9 +47,7 @@ unsigned long hash(uint8_t* msg, uint8_t len)
 bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
     Serial.print("Sending message length: ");
-    Serial.print(len, DEC);
-    Serial.print("; hash: ");
-    Serial.println(hash(msg, sizeof(Data)));
+    Serial.println(len, DEC);
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
     Serial.print("Time to send: ");
@@ -137,32 +136,51 @@ void setup() {
 
 
 int sensor_index = 1;
+uint8_t message_id = 0;
 
 void loop() {
 
   if (NODE_TYPE == COLLECTOR) {
-    Data data = { .id = 1, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
+    Data data = { .id = ++message_id, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
     clear_recv_buffer();
+    unsigned long hashof_sent = hash((uint8_t*)&data, sizeof(Data));
     Serial.print("Sending Message ID: ");
-    Serial.println(data.id, DEC);
+    Serial.print(data.id, DEC);
+    Serial.print("; hash: ");
+    Serial.println(hashof_sent);
     if (send_message((uint8_t*)&data, sizeof(Data), sensorArray[sensor_index])) {
         Serial.println("Sent data. Waiting for return data.");
-        uint8_t len = sizeof(Data); //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
+        uint8_t len = MAX_MESSAGE_SIZE;
         uint8_t from;
         if (router->recvfromAckTimeout(recv_buf, &len, 5000, &from)) {
+            Data* _data = (struct Data*)recv_buf;
+            unsigned long _hash = hash(recv_buf, len);
             Serial.print("Received return message from: ");
             Serial.print(from, DEC);
             Serial.print(" size: ");
             Serial.print(len, DEC);
             Serial.print("; hash: ");
-            Serial.print(hash(recv_buf, sizeof(Data)));
+            Serial.print(_hash);
             Serial.print("; Message ID: ");
-            Serial.println( ((struct Data*)recv_buf)->id, DEC);
+            Serial.println( _data->id, DEC);
+            if (_hash != hashof_sent) {
+                Serial.print("WARNING: Hash of received data does not match hash of sent. Sent: ");
+                Serial.print(hashof_sent, DEC);
+                Serial.print("; Received: ");
+                Serial.println(_hash, DEC);
+            }
+            if (_data->id != message_id) {
+                Serial.print("WARNING: Received message ID does not match sent message ID. Sent: ");
+                Serial.print(message_id, DEC);
+                Serial.print("; Received: ");
+                Serial.println(_data->id, DEC);
+            }
         }
     }
+    Serial.println("");
     delay(5000);
   } else if (NODE_TYPE == SENSOR) {
-      uint8_t len = sizeof(Data); //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
+      uint8_t len = sizeof(Data);
       uint8_t from;
       clear_recv_buffer();
       if (router->recvfromAck(recv_buf, &len, &from)) {
