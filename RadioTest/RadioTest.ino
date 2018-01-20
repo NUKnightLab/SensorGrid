@@ -382,7 +382,7 @@ void send_next_control_send_data() {
             Serial.print("Received return data from: "); Serial.print(from, DEC);
             Serial.print("; Message ID: "); Serial.println( _data.id, DEC);
         } else {
-            Serial.print("RECEIVED NON-DATA MESSAGE TYPE");
+            Serial.print("RECEIVED NON-DATA MESSAGE TYPE: ");
             Serial.println(msg_type, DEC);
         }
         release_recv_buffer();
