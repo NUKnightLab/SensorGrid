@@ -333,7 +333,7 @@ void send_next_data_for_bounce() {
                 Serial.println(_data.id, DEC);
             }
         } else {
-            Serial.print("RECEIVED NON-DATA MESSAGE TYPE");
+            Serial.print("RECEIVED NON-DATA MESSAGE TYPE: ");
             Serial.println(msg_type, DEC);
         }
         release_recv_buffer();
@@ -444,6 +444,9 @@ void loop() {
         switch (TEST_TYPE) {
             case BOUNCE_DATA_TEST:
                 receive_data_to_bounce();
+                break;
+            case CONTROL_SEND_DATA_TEST:
+                receive_control_send_data();
                 break;
             default:
                 Serial.print("UNKOWN TEST TYPE: ");
