@@ -43,16 +43,14 @@ unsigned long hash(uint8_t* msg, uint8_t len)
     return h;
 }
 
-bool send_message(uint8_t* msg, uint8_t toID)
+bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
-    Serial.print("Sending message size: ");
-    Serial.print(sizeof(msg), DEC);
-    Serial.print(" hash: ");
+    Serial.print("Sending message length: ");
+    Serial.print(len, DEC);
+    Serial.print("; hash: ");
     Serial.println(hash(msg, sizeof(Data)));
-    Serial.print("Message ID: ");
-    Serial.println( ((struct Data*)msg)->id);
     unsigned long start = millis();
-    uint8_t err = router->sendtoWait(msg, sizeof(Data), toID);
+    uint8_t err = router->sendtoWait(msg, len, toID);
     Serial.print("Time to send: ");
     Serial.println(millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
@@ -145,7 +143,9 @@ void loop() {
   if (NODE_TYPE == COLLECTOR) {
     Data data = { .id = 1, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
     clear_recv_buffer();
-    if (send_message((uint8_t*)&data, sensorArray[sensor_index])) {
+    Serial.print("Sending Message ID: ");
+    Serial.println(data.id, DEC);
+    if (send_message((uint8_t*)&data, sizeof(Data), sensorArray[sensor_index])) {
         Serial.println("Sent data. Waiting for return data.");
         uint8_t len = sizeof(Data); //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
         uint8_t from;
@@ -154,9 +154,9 @@ void loop() {
             Serial.print(from, DEC);
             Serial.print(" size: ");
             Serial.print(len, DEC);
-            Serial.print(" hash: ");
-            Serial.println(hash(recv_buf, sizeof(Data)));
-            Serial.print("Message ID: ");
+            Serial.print("; hash: ");
+            Serial.print(hash(recv_buf, sizeof(Data)));
+            Serial.print("; Message ID: ");
             Serial.println( ((struct Data*)recv_buf)->id, DEC);
         }
     }
@@ -168,14 +168,14 @@ void loop() {
       if (router->recvfromAck(recv_buf, &len, &from)) {
           Serial.print("Received message from: ");
           Serial.print(from, DEC);
-          Serial.print(" size: ");
+          Serial.print(" length: ");
           Serial.print(len, DEC);
           Serial.print(" hash: ");
           Serial.println(hash(recv_buf, sizeof(Data)));
           Serial.print("Message ID: ");
           Serial.println( ((struct Data*)recv_buf)->id, DEC);
           Serial.println("");
-          if (send_message(recv_buf, from)) {
+          if (send_message(recv_buf, len, from)) {
               Serial.println("Returned data");
           }
       }
