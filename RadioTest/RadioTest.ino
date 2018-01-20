@@ -3,20 +3,18 @@
 #include <RH_RF95.h>
 #include <SPI.h>
 #define FREQ 915.00
-#define TX 5
+#define TX 13
 #define CAD 2000
 #define TIMEOUT 1000
 #define CS 8
 #define INT 3
 #define COLLECTOR 14
 #define SENSOR 3
-#define NODE_TYPE SENSOR //COLLECTOR
-//#define NODE_TYPE COLLECTOR
+//#define NODE_TYPE SENSOR //COLLECTOR
+#define NODE_TYPE COLLECTOR
 
 static RH_RF95 radio(CS, INT);
 static RHMesh* router;
-//RH_RF95 radio(CS, INT);
-//RH_RF95 *radio;
 
 int sensorArray[2] = {2,3};
 
@@ -96,28 +94,6 @@ bool send_message(uint8_t* msg, uint8_t toID)
         Serial.println(err, DEC);
     }
 }
-/*
-void setupRadio(RH_RF95 rf95)
-{
-    Serial.print("Setting up radio with RadioHead Version ");
-    Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
-    Serial.println(RH_VERSION_MINOR, DEC);
-    Serial.print("Node ID: ");
-    Serial.println(NODE_ID);
-    router = new RHMesh(rf95, NODE_ID); 
-    //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096); // doesn't work with RH 1.71
-    if (!router->init())
-        Serial.println("Router init failed");
-    Serial.print(F("FREQ: ")); Serial.println(FREQ);
-    if (!rf95.setFrequency(FREQ)) {
-        Serial.println("Radio frequency set failed");
-    } 
-    rf95.setTxPower(TX, false);
-    //rf95.setCADTimeout(CAD);
-    router->setTimeout(TIMEOUT);
-    delay(100);
-}
-*/
 
 unsigned checksum(void *buffer, size_t len, unsigned int seed)
 {
@@ -157,9 +133,8 @@ void setup() {
     Serial.println(RH_VERSION_MINOR, DEC);
     Serial.print("Node ID: ");
     Serial.println(NODE_TYPE);
-    //RH_RF95 radio = new RH_RF95(CS, INT);
-    //RH_RF95 radio(CS, INT);
     router = new RHMesh(radio, NODE_TYPE);
+    //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
         Serial.println("Router init failed");
     Serial.print(F("FREQ: ")); Serial.println(FREQ);
@@ -179,7 +154,7 @@ void loop() {
   i!=i;
   
   if (NODE_TYPE == COLLECTOR) {
-    Data data = { .id = 1 };
+    Data data = { .id = 1, .node_id = 10, .timestamp = 12345, .type = 111, .value = 123};
     if (send_message((uint8_t*)&data, sensorArray[i])) {
         Serial.println("Sent data. Waiting for return data.");
         uint8_t len; //recvfromAck should be copying length of payload to len, but doesn't seem to be doing so
