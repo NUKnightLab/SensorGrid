@@ -12,55 +12,39 @@
 #define SENSOR 3
 #define MAX_MESSAGE_SIZE 255
 
+//#define NODE_TYPE SENSOR //COLLECTOR
+#define NODE_TYPE COLLECTOR
+
 /* *
  *  Message types:
  *  Not using enum for message types to ensure small numeric size
  */
+#define MESSAGE_TYPE_NO_MESSAGE 0
 #define MESSAGE_TYPE_CONTROL 1 
 #define MESSAGE_TYPE_DATA 2
+#define MESSAGE_TYPE_UNKNOWN -1
+#define MESSAGE_TYPE_MESSAGE_ERROR -2
 
-//#define NODE_TYPE SENSOR //COLLECTOR
-#define NODE_TYPE COLLECTOR
-
-enum MessageType { DATA, CONTROL };
 static RH_RF95 radio(CS, INT);
 static RHMesh* router;
 
 int sensorArray[2] = {2,3};
 
 typedef struct Control {
-    //uint8_t message_type;
     uint8_t id;
     uint8_t code;
 } control_struct;
 
 typedef struct Data {
-    //uint8_t message_type; // MESSAGE_TYPE_DATA
     uint8_t id; // 1-255 indicates Data$
     uint8_t node_id;
     uint8_t timestamp;
     uint8_t type;
     int16_t value;
 };
-/*
-Data InitData(uint8_t id, uint8_t node_id = 0, uint8_t timestamp = 0, uint8_t type = 0, int16_t value = 0)
-{
-    return Data{
-        .message_type = MESSAGE_TYPE_DATA,
-        .id = id,
-        .node_id = node_id,
-        .timestamp = timestamp,
-        .type = type,
-        .value = value
-    };
-} */
-//struct DataStruct Data = { .message_type = MESSAGE_TYPE_DATA };
-
-//Data = { .message_type = MESSAGE_TYPE_DATA };
-//typedef struct DataStructDef 
 
 typedef struct Message {
-    uint8_t message_type;
+    int8_t message_type;
     union {
       struct Control control;
       struct Data data;
@@ -74,6 +58,16 @@ static void clear_recv_buffer()
     memset(recv_buf, 0, MAX_MESSAGE_SIZE);
 }
 
+void print_message_type(uint8_t num) {
+    if (num == MESSAGE_TYPE_CONTROL) {
+        Serial.print("CONTROL");
+    } else if (num == MESSAGE_TYPE_DATA) {
+        Serial.print("DATA");
+    } else {
+        Serial.print("UNKOWN");
+    }
+}
+
 unsigned long hash(uint8_t* msg, uint8_t len)
 {
     unsigned long h = 5381;
@@ -85,7 +79,9 @@ unsigned long hash(uint8_t* msg, uint8_t len)
 
 bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
-    Serial.print("Sending message length: ");
+    Serial.print("Sending message type: ");
+    print_message_type(msg[0]);
+    Serial.print("; length: ");
     Serial.println(len, DEC);
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
@@ -94,37 +90,64 @@ bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     if (err == RH_ROUTER_ERROR_NONE) {
         return true;
     } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
-        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(F("Error sending message to Node ID: "));
         Serial.print(toID);
         Serial.println(". INVALID LENGTH");
+        return false;
     } else if (err == RH_ROUTER_ERROR_NO_ROUTE) {
-        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(F("Error sending message to Node ID: "));
         Serial.print(toID);
         Serial.println(". NO ROUTE");
+        return false;
     } else if (err == RH_ROUTER_ERROR_TIMEOUT) {
-        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(F("Error sending message to Node ID: "));
         Serial.print(toID);
         Serial.println(". TIMEOUT");
+        return false;
     } else if (err == RH_ROUTER_ERROR_NO_REPLY) {
-        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(F("Error sending message to Node ID: "));
         Serial.print(toID);
         Serial.println(". NO REPLY");
+        return false;
     } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
-        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(F("Error sending message to Node ID: "));
         Serial.print(toID);
-        Serial.println(". UNABLE TO DELIVER");    
+        Serial.println(". UNABLE TO DELIVER");
+        return false;   
     } else {
-        Serial.print(F("Error receiving data from Node ID: "));
+        Serial.print(F("Error sending message to Node ID: "));
         Serial.print(toID);
         Serial.print(". UNKNOWN ERROR CODE: ");
         Serial.println(err, DEC);
+        return false;
     }
 }
+
+int8_t receive_message(int timeout) {
+    clear_recv_buffer(); // this should not be generally necessary
+    uint8_t len = MAX_MESSAGE_SIZE;
+    uint8_t from;
+    if (router->recvfromAckTimeout(recv_buf, &len, timeout, &from)) {
+        Serial.print("Received message from: ");
+        Serial.print(from, DEC);
+        Serial.print(" size: ");
+        Serial.print(len, DEC);
+        Serial.print("; type: ");
+        print_message_type(recv_buf[0]); Serial.println("");
+        return recv_buf[0];
+    } else {
+        return MESSAGE_TYPE_NO_MESSAGE;
+    }
+}
+
+Data get_data_from_buffer() {
+    return ((Message*)recv_buf)->data;
+}       
 
 bool send_data(Data data, uint8_t dest) {
     Message msg = { .message_type = MESSAGE_TYPE_DATA };
     msg.data = data;
-    return send_message((uint8_t*)&msg, sizeof(Message), dest);
+    return send_message((uint8_t*)&msg, sizeof(Data) + sizeof(uint8_t), dest);
 }
 
 unsigned checksum(void *buffer, size_t len, unsigned int seed)
@@ -187,7 +210,6 @@ void loop() {
 
   if (NODE_TYPE == COLLECTOR) {
     Data data = {
-        //.message_type = MESSAGE_TYPE_DATA,
         .id = ++message_id,
         .node_id = 10,
         .timestamp = 12345,
@@ -200,15 +222,16 @@ void loop() {
     Serial.print(data.id, DEC);
     Serial.print("; hash: ");
     Serial.println(hashof_sent);
-    //if (send_message((uint8_t*)&data, sizeof(Data), sensorArray[sensor_index])) {
     if (send_data(data, sensorArray[sensor_index])) {
         Serial.println("Sent data. Waiting for return data.");
         uint8_t len = MAX_MESSAGE_SIZE;
         uint8_t from;
-        if (router->recvfromAckTimeout(recv_buf, &len, 5000, &from)) {
-            //Data* _data = (Data*)recv_buf;
-            Data _data = ((Message*)recv_buf)->data;
-            unsigned long _hash = hash(recv_buf, len);
+        //if (router->recvfromAckTimeout(recv_buf, &len, 5000, &from)) {
+        int8_t msg_type = receive_message(5000);
+        if (msg_type == MESSAGE_TYPE_DATA) {
+            //Data _data = ((Message*)recv_buf)->data;
+            Data _data = get_data_from_buffer();
+            unsigned long _hash = hash((uint8_t*)&_data, sizeof(Data));
             Serial.print("Received return message from: ");
             Serial.print(from, DEC);
             Serial.print(" size: ");
@@ -229,6 +252,8 @@ void loop() {
                 Serial.print("; Received: ");
                 Serial.println(_data.id, DEC);
             }
+        } else {
+            Serial.println("RECEIVED NON-DATA MESSAGE TYPE");
         }
     }
     Serial.println("");
@@ -246,7 +271,6 @@ void loop() {
           Serial.print(" hash: ");
           Serial.println(hash(recv_buf, len));
           Serial.print("Message ID: ");
-          //Serial.println( ((struct Data*)recv_buf)->id, DEC);
           Serial.println(_data.id, DEC);
           Serial.println("");
           if (send_message(recv_buf, len, from)) {
