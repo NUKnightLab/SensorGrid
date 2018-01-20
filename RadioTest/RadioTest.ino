@@ -12,8 +12,8 @@
 #define SENSOR 3
 #define MAX_MESSAGE_SIZE 255
 
-//#define NODE_TYPE SENSOR //COLLECTOR
-#define NODE_TYPE COLLECTOR
+#define NODE_TYPE SENSOR //COLLECTOR
+//#define NODE_TYPE COLLECTOR
 
 // test types
 #define BOUNCE_DATA_TEST 0
@@ -237,7 +237,7 @@ bool send_data(Data data, uint8_t dest) {
     Message msg = { .message_type = MESSAGE_TYPE_DATA };
     msg.data = data;
     uint8_t len = sizeof(Data) + MESSAGE_OVERHEAD;
-    return send_message((uint8_t*)&msg, sizeof(Data) + sizeof(uint8_t), dest);
+    return send_message((uint8_t*)&msg, len, dest);
 }
 
 bool send_control(Control control, uint8_t dest) {
