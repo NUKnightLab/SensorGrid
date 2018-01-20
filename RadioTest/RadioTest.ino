@@ -46,7 +46,7 @@ int sensorArray[2] = {2,3};
 typedef struct Control {
     uint8_t id;
     uint8_t code;
-} control_struct;
+};
 
 typedef struct Data {
     uint8_t id; // 1-255 indicates Data$
@@ -63,6 +63,9 @@ typedef struct Message {
       struct Data data;
     };
 };
+
+uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Data);
+uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_MESSAGE_PAYLOAD;
 
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
@@ -233,13 +236,15 @@ Data get_data_from_buffer() {
 bool send_data(Data data, uint8_t dest) {
     Message msg = { .message_type = MESSAGE_TYPE_DATA };
     msg.data = data;
+    uint8_t len = sizeof(Data) + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, sizeof(Data) + sizeof(uint8_t), dest);
 }
 
 bool send_control(Control control, uint8_t dest) {
     Message msg = { .message_type = MESSAGE_TYPE_CONTROL };
     msg.control = control;
-    return send_message((uint8_t*)&msg, sizeof(Control) + sizeof(uint8_t), dest);
+    uint8_t len = sizeof(Control) + MESSAGE_OVERHEAD;
+    return send_message((uint8_t*)&msg, len, dest);
 }
 
 unsigned checksum(void *buffer, size_t len, unsigned int seed)
