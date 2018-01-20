@@ -180,7 +180,7 @@ void loop() {
     Serial.println("");
     delay(5000);
   } else if (NODE_TYPE == SENSOR) {
-      uint8_t len = sizeof(Data);
+      uint8_t len = MAX_MESSAGE_SIZE;
       uint8_t from;
       clear_recv_buffer();
       if (router->recvfromAck(recv_buf, &len, &from)) {
@@ -189,7 +189,7 @@ void loop() {
           Serial.print(" length: ");
           Serial.print(len, DEC);
           Serial.print(" hash: ");
-          Serial.println(hash(recv_buf, sizeof(Data)));
+          Serial.println(hash(recv_buf, len));
           Serial.print("Message ID: ");
           Serial.println( ((struct Data*)recv_buf)->id, DEC);
           Serial.println("");
