@@ -2,6 +2,10 @@
 #include <RHRouter.h>
 #include <RH_RF95.h>
 #include <SPI.h>
+
+/* SET THIS FOR EACH NODE */
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+
 #define FREQ 915.00
 #define TX 13
 #define CAD_TIMEOUT 1000
@@ -16,8 +20,10 @@
 #define NETWORK_ID 3
 #define SENSORGRID_VERSION 1
 
-/* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+/* Overall max message size is somewhere between 244 and 248 bytes. 248 will cause invalid length error */
+#define MAX_DATA_RECORDS 40
+#define MAX_CONTROL_RECORDS 2
+#define MAX_CONTROL_NODES 50
 
 // test types
 #define BOUNCE_DATA_TEST 0
@@ -54,6 +60,7 @@ int node_type;
 typedef struct Control {
     uint8_t id;
     uint8_t code;
+    uint8_t nodes[MAX_CONTROL_NODES];
 };
 
 typedef struct Data {
@@ -73,10 +80,6 @@ typedef struct Message {
       struct Data data;
     };
 };
-
-/* Overall max message size is somewhere between 244 and 248 bytes. 248 will cause invalid length error */
-#define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_RECORDS 120
 
 typedef struct MultidataMessage {
     uint8_t sensorgrid_version;
