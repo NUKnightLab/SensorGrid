@@ -130,6 +130,19 @@ unsigned checksum(void *buffer, size_t len, unsigned int seed)
       return seed;
 }
 
+extern "C" char *sbrk(int i);
+static int free_ram()
+{
+    char stack_dummy = 0;
+    return &stack_dummy - sbrk(0);
+}
+
+void print_ram()
+{
+    Serial.print("Avail RAM: ");
+    Serial.println(free_ram(), DEC);
+}
+
 /* END OF UTILS */
 
 /* **** RECEIVE FUNCTIONS. THESE FUNCTIONS HAVE DIRECT ACCESS TO recv_buf **** */
@@ -576,7 +589,7 @@ void receive_multidata_control()
         Serial.println(len, DEC);
         /* iterate the control records */
         for (int i=0; i<len; i++) {
-            Serial.print(" -- CONTROL INDEX: "); Serial.println(i, DEC);
+            Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
             Control _control = _control_array[i];
             Serial.print("Received control message from: "); Serial.print(from, DEC);
             Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
@@ -603,8 +616,8 @@ void receive_multidata_control()
                 Serial.println(_control.code, DEC);
                 Serial.println("");
             }
-            Serial.println("");
         }
+        print_ram();
     } else {
             Serial.print("RECEIVED NON-CONTROL MESSAGE TYPE: ");
             Serial.print(msg_type, DEC);
@@ -686,6 +699,7 @@ void loop() {
                 Serial.println(TEST_TYPE);
         }
         Serial.println("");
+        print_ram();
         delay(5000);
     } else if (node_type == SENSOR) {
         switch (TEST_TYPE) {
@@ -703,29 +717,5 @@ void loop() {
                 Serial.println(TEST_TYPE);
         }
     }
-    /*
-    if (router->sendtoWait(data, sizeof(data), 14) != RH_ROUTER_ERROR_NONE) {
-      Serial.println("sendtoWait failed");
-    } */
-    /*
-    if (send_message((uint8_t*)data, 14)) {
-      bool wait = true;
-      while (wait) {
-      if (router->recvfromAck(data, &dataSize, &from)) {
-        Serial.println("Message returned from sensor node");
-        wait = false;
-        }
-      }
-      radio->sleep();
-      delay(1000);
-      duration = millis() - start;
-      Serial.print("Time it took to send: ");
-      Serial.println(duration);
-      duration = 0;
-      checkSize += checksum(0, dataSize, checkSize);
-      Serial.print("Printing checkSize: ");
-      Serial.println(checkSize);
-    }
-    */
 }
   
