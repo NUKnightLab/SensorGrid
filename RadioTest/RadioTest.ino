@@ -35,8 +35,9 @@
 #define MESSAGE_TYPE_UNKNOWN -1
 #define MESSAGE_TYPE_MESSAGE_ERROR -2
 #define MESSAGE_TYPE_NONE_BUFFER_LOCK -3
-#define MESSAGE_TYPE_WRONG_NETWORK -4 // for testing only. Normally we will just skip messages from other networks
-#define MESSAGE_TYPE_WRONG_VERSION -5
+#define MESSAGE_TYPE_WRONG_VERSION -4
+#define MESSAGE_TYPE_WRONG_NETWORK -5 // for testing only. Normally we will just skip messages from other networks
+
 
 /**
  * Control codes
@@ -63,8 +64,8 @@ typedef struct Data {
 };
 
 typedef struct Message {
-    uint8_t network_id;
     uint8_t sensorgrid_version;
+    uint8_t network_id;
     int8_t message_type;
     union {
       struct Control control;
@@ -194,15 +195,15 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, &len, timeout, source, dest, id, flags)) {
             _msg = (Message*)recv_buf;
+             if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
+                Serial.print("WARNING: Received message with wrong firmware version: ");
+                Serial.println(_msg->sensorgrid_version, DEC);
+                return MESSAGE_TYPE_WRONG_VERSION;
+            }           
             if ( _msg->network_id != NETWORK_ID ) {
                 Serial.print("WARNING: Received message from wrong network: ");
                 Serial.println(_msg->network_id, DEC);
                 return MESSAGE_TYPE_WRONG_NETWORK;
-            }
-            if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
-                Serial.print("WARNING: Received message with wrong firmware version: ");
-                Serial.println(_msg->sensorgrid_version, DEC);
-                return MESSAGE_TYPE_WRONG_VERSION;
             }
             validate_recv_buffer(len);
             Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
@@ -214,15 +215,15 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
     } else {
         if (router->recvfromAck(recv_buf, &len, source, dest, id, flags)) {
             _msg = (Message*)recv_buf;
-            if ( _msg->network_id != NETWORK_ID ) {
-                Serial.print("WARNING: Received message from wrong network: ");
-                Serial.println(_msg->network_id, DEC);
-                return MESSAGE_TYPE_WRONG_NETWORK;
-            }
             if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
                 Serial.print("WARNING: Received message with wrong firmware version: ");
                 Serial.println(_msg->sensorgrid_version, DEC);
                 return MESSAGE_TYPE_WRONG_VERSION;
+            }
+            if ( _msg->network_id != NETWORK_ID ) {
+                Serial.print("WARNING: Received message from wrong network: ");
+                Serial.println(_msg->network_id, DEC);
+                return MESSAGE_TYPE_WRONG_NETWORK;
             }
             validate_recv_buffer(len);
             Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
@@ -269,8 +270,8 @@ Data get_data_from_buffer() {
 
 bool send_data(Data data, uint8_t dest) {
     Message msg = {
-        .network_id = NETWORK_ID,
         .sensorgrid_version = SENSORGRID_VERSION,
+        .network_id = NETWORK_ID,
         .message_type = MESSAGE_TYPE_DATA
     };
     msg.data = data;
@@ -280,8 +281,8 @@ bool send_data(Data data, uint8_t dest) {
 
 bool send_control(Control control, uint8_t dest) {
     Message msg = {
-        .network_id = NETWORK_ID,
         .sensorgrid_version = SENSORGRID_VERSION,
+        .network_id = NETWORK_ID,
         .message_type = MESSAGE_TYPE_CONTROL
     };
     msg.control = control;
