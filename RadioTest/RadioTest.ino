@@ -22,8 +22,8 @@
 
 /* Overall max message size is somewhere between 244 and 248 bytes. 248 will cause invalid length error */
 #define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_RECORDS 2
-#define MAX_CONTROL_NODES 50
+#define MAX_CONTROL_RECORDS 3
+#define MAX_CONTROL_NODES 78
 
 // test types
 #define BOUNCE_DATA_TEST 0
