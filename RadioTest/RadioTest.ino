@@ -337,18 +337,6 @@ bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     }
 }
 
-bool send_data(Data data, uint8_t dest)
-{
-    Message msg = {
-        .sensorgrid_version = SENSORGRID_VERSION,
-        .network_id = NETWORK_ID,
-        .message_type = MESSAGE_TYPE_DATA
-    };
-    msg.data = data;
-    uint8_t len = sizeof(Data) + MESSAGE_OVERHEAD;
-    return send_message((uint8_t*)&msg, len, dest);
-}
-
 bool send_control(Control control, uint8_t dest)
 {
     Message msg = {
@@ -358,6 +346,18 @@ bool send_control(Control control, uint8_t dest)
     };
     msg.control = control;
     uint8_t len = sizeof(Control) + MESSAGE_OVERHEAD;
+    return send_message((uint8_t*)&msg, len, dest);
+}
+
+bool send_data(Data data, uint8_t dest)
+{
+    Message msg = {
+        .sensorgrid_version = SENSORGRID_VERSION,
+        .network_id = NETWORK_ID,
+        .message_type = MESSAGE_TYPE_DATA
+    };
+    msg.data = data;
+    uint8_t len = sizeof(Data) + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
@@ -373,6 +373,20 @@ bool send_multidata_control(Control control, uint8_t dest)
     msg.control[1] = control;
     msg.len = 2;
     uint8_t len = sizeof(Control)*2 + MULTIDATA_MESSAGE_OVERHEAD;
+    return send_message((uint8_t*)&msg, len, dest);
+}
+
+bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
+{
+    MultidataMessage msg = {
+        .sensorgrid_version = SENSORGRID_VERSION,
+        .network_id = NETWORK_ID,
+        .message_type = MESSAGE_TYPE_DATA,
+        .len = array_size,
+    };
+    memcpy(msg.data, data, sizeof(Data)*array_size);
+    //msg.data = *data;
+    uint8_t len = sizeof(Data)*array_size + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
@@ -569,14 +583,18 @@ void receive_multidata_control()
             if (_control.code == CONTROL_NONE) {
                 Serial.println("Received NO-OP control. Doing nothing");
             } else if (_control.code == CONTROL_SEND_DATA) {
-                Data data = {
-                  .id = ++message_id,
-                  .node_id = NODE_ID,
-                  .timestamp = 12345,
-                  .type = 111,
-                  .value = 123
-                };
-                if (send_data(data, from)) {
+                int NUM_DATA_RECORDS = 10;
+                Data data[NUM_DATA_RECORDS];
+                for (int data_i=0; data_i<NUM_DATA_RECORDS; data_i++) {
+                    data[data_i] = {
+                      .id = ++message_id,
+                      .node_id = NODE_ID,
+                      .timestamp = 12345,
+                      .type = 111,
+                      .value = 123 
+                    };
+                }
+                if (send_multidata_data(data, NUM_DATA_RECORDS, from)) {
                     Serial.println("Returned data");
                     Serial.println("");
                 }
