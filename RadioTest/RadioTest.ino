@@ -74,7 +74,7 @@ typedef struct Message {
     };
 };
 
-#define MAX_DATA_RECORDS 10
+#define MAX_DATA_RECORDS 40
 #define MAX_CONTROL_RECORDS 10
 
 typedef struct MultidataMessage {
@@ -596,7 +596,7 @@ void receive_multidata_control()
             if (_control.code == CONTROL_NONE) {
                 Serial.println("Received NO-OP control. Doing nothing");
             } else if (_control.code == CONTROL_SEND_DATA) {
-                int NUM_DATA_RECORDS = 10;
+                int NUM_DATA_RECORDS = MAX_DATA_RECORDS;
                 Data data[NUM_DATA_RECORDS];
                 for (int data_i=0; data_i<NUM_DATA_RECORDS; data_i++) {
                     data[data_i] = {
