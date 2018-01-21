@@ -22,7 +22,8 @@
 // test types
 #define BOUNCE_DATA_TEST 0
 #define CONTROL_SEND_DATA_TEST 1
-#define TEST_TYPE CONTROL_SEND_DATA_TEST
+#define MULTIDATA_TEST 2
+#define TEST_TYPE MULTIDATA_TEST
 
 /* *
  *  Message types:
@@ -42,6 +43,7 @@
  */
 #define CONTROL_SEND_DATA 1
 #define CONTROL_NEXT_COLLECTION 2
+#define CONTROL_NONE 3 // no-op used for testing
 
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
@@ -72,8 +74,24 @@ typedef struct Message {
     };
 };
 
+#define MAX_DATA_RECORDS 10
+#define MAX_CONTROL_RECORDS 10
+
+typedef struct MultidataMessage {
+    uint8_t sensorgrid_version;
+    uint8_t network_id;
+    int8_t message_type;
+    uint8_t len;
+    union {
+      struct Control control[MAX_CONTROL_RECORDS];
+      struct Data data[MAX_DATA_RECORDS];
+    };
+};
+
 uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Data);
 uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_MESSAGE_PAYLOAD;
+uint8_t MAX_MULIDATA_MESSAGE_PAYLOAD = sizeof(MultidataMessage);
+uint8_t MULTIDATA_MESSAGE_OVERHEAD = sizeof(MultidataMessage) - MAX_DATA_RECORDS * MAX_MESSAGE_PAYLOAD;
 
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
@@ -325,6 +343,21 @@ bool send_control(Control control, uint8_t dest)
     return send_message((uint8_t*)&msg, len, dest);
 }
 
+bool send_multidata_control(Control control, uint8_t dest)
+{
+    MultidataMessage msg = {
+        .sensorgrid_version = SENSORGRID_VERSION,
+        .network_id = NETWORK_ID,
+        .message_type = MESSAGE_TYPE_CONTROL
+    };
+    Control noopControl = { .id = 0, .code = CONTROL_NONE };
+    msg.control[0] = noopControl;
+    msg.control[1] = control;
+    msg.len = 2;
+    uint8_t len = sizeof(Control)*2 + MULTIDATA_MESSAGE_OVERHEAD;
+    return send_message((uint8_t*)&msg, len, dest);
+}
+
 /* END OF SEND  FUNCTIONS */
 
 
@@ -471,6 +504,32 @@ void receive_control_send_data()
     release_recv_buffer();
 } /* receive_control_send_data */
 
+void send_next_multidata_control() {
+    static uint8_t message_id = 0;
+    static int sensor_index = 1;
+    sensor_index = !sensor_index;
+    Control control = {
+        .id = ++message_id,
+        .code = CONTROL_SEND_DATA
+    };
+    Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
+    Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
+    if (send_multidata_control(control, sensorArray[sensor_index])) {
+        Serial.println("-- Sent control. Waiting for return data.");
+        uint8_t from;
+        int8_t msg_type = receive(5000, &from);
+        if (msg_type == MESSAGE_TYPE_DATA) {
+            Data _data = get_data_from_buffer();
+            Serial.print("Received return data from: "); Serial.print(from, DEC);
+            Serial.print("; Message ID: "); Serial.println( _data.id, DEC);
+        } else {
+            Serial.print("RECEIVED NON-DATA MESSAGE TYPE: ");
+            Serial.println(msg_type, DEC);
+        }
+        release_recv_buffer();
+    }
+} /* send_next_multidata_control */
+
 /* END OF TEST FUNCTIONS */
 
 /* **** SETUP and LOOP **** */
@@ -535,6 +594,9 @@ void loop() {
                 break;
             case CONTROL_SEND_DATA_TEST:
                 send_next_control_send_data();
+                break;
+            case MULTIDATA_TEST:
+                send_next_multidata_control();
                 break;
             default:
                 Serial.print("UNKNOWN TEST TYPE: ");
