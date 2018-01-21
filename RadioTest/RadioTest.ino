@@ -4,7 +4,7 @@
 #include <SPI.h>
 #define FREQ 915.00
 #define TX 13
-#define CAD 2000
+#define CAD_TIMEOUT 1000
 #define TIMEOUT 1000
 #define RF95_CS 8
 #define REQUIRED_RH_VERSION_MAJOR 1
@@ -692,7 +692,7 @@ void setup() {
         Serial.println("Radio frequency set failed");
     } 
     radio.setTxPower(TX, false);
-    //rf95.setCADTimeout(CAD);
+    radio.setCADTimeout(CAD_TIMEOUT);
     router->setTimeout(TIMEOUT);
     Serial.println("");
     delay(100);
