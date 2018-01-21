@@ -13,9 +13,10 @@
 #define COLLECTOR 14
 #define SENSOR 3
 #define MAX_MESSAGE_SIZE 255
+#define NETWORK_ID 3
 
-#define NODE_TYPE SENSOR //COLLECTOR
-//#define NODE_TYPE COLLECTOR
+//#define NODE_TYPE SENSOR //COLLECTOR
+#define NODE_TYPE COLLECTOR
 
 // test types
 #define BOUNCE_DATA_TEST 0
@@ -33,6 +34,7 @@
 #define MESSAGE_TYPE_UNKNOWN -1
 #define MESSAGE_TYPE_MESSAGE_ERROR -2
 #define MESSAGE_TYPE_NONE_BUFFER_LOCK -3
+#define MESSAGE_TYPE_WRONG_NETWORK -4 // for testing only. Normally we will just skip messages from other networks
 
 /**
  * Control codes
@@ -59,6 +61,7 @@ typedef struct Data {
 };
 
 typedef struct Message {
+    uint8_t network_id;
     int8_t message_type;
     union {
       struct Control control;
@@ -85,7 +88,8 @@ static void clear_recv_buffer()
     memset(recv_buf, 0, MAX_MESSAGE_SIZE);
 }
 
-void print_message_type(uint8_t num) {
+void print_current_message_type() {
+    int8_t num = ((Message*)recv_buf)->message_type;
     switch (num) {
         case MESSAGE_TYPE_CONTROL:
             Serial.print("CONTROL");
@@ -94,7 +98,7 @@ void print_message_type(uint8_t num) {
             Serial.print("DATA");
             break;
         default:
-            Serial.print("UNKOWN");
+            Serial.print("UNKNOWN");
     }
 }
 
@@ -110,7 +114,7 @@ unsigned long hash(uint8_t* msg, uint8_t len)
 bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
     Serial.print("Sending message type: ");
-    print_message_type(msg[0]);
+    print_current_message_type();
     Serial.print("; length: ");
     Serial.println(len, DEC);
     unsigned long start = millis();
@@ -155,7 +159,8 @@ bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 
 void validate_recv_buffer(uint8_t len) {
     // some basic checks for sanity
-    switch(recv_buf[0]) {
+    int8_t message_type = ((Message*)recv_buf)->message_type;
+    switch(message_type) {
         case MESSAGE_TYPE_DATA:
             if (len != sizeof(Data) + MESSAGE_OVERHEAD) {
                 Serial.print("WARNING: Received message of type DATA with incorrect size: ");
@@ -170,7 +175,7 @@ void validate_recv_buffer(uint8_t len) {
             break;
         default:
             Serial.print("WARNING: Received message of unknown type: ");
-            Serial.println(recv_buf[0]);
+            Serial.println(message_type);
     }
 }
 
@@ -185,10 +190,16 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
     lock_recv_buffer(); // lock to be released by calling client
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, &len, timeout, source, dest, id, flags)) {
+            uint8_t network_id = ((Message*)recv_buf)->network_id;
+            if ( network_id != NETWORK_ID ) {
+                Serial.print("WARNING: Received message from wrong network: ");
+                Serial.println(network_id, DEC);
+                return MESSAGE_TYPE_WRONG_NETWORK;
+            }
             validate_recv_buffer(len);
             Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
-            Serial.print("; type: "); print_message_type(recv_buf[0]); Serial.println("");
-            return recv_buf[0];
+            Serial.print("; type: "); print_current_message_type(); Serial.println("");
+            return ((Message*)recv_buf)->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
         }
@@ -196,8 +207,8 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
         if (router->recvfromAck(recv_buf, &len, source, dest, id, flags)) {
             validate_recv_buffer(len);
             Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
-            Serial.print("; type: "); print_message_type(recv_buf[0]); Serial.println("");
-            return recv_buf[0];
+            Serial.print("; type: "); print_current_message_type(); Serial.println("");
+            return ((Message*)recv_buf)->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
         }
@@ -217,9 +228,10 @@ Control get_control_from_buffer() {
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract control from unlocked buffer");
     }
-    if (recv_buf[0] != MESSAGE_TYPE_CONTROL) {
+    int8_t message_type = ((Message*)recv_buf)->message_type;
+    if ( message_type != MESSAGE_TYPE_CONTROL) {
         Serial.print("WARNING: Attempt to extract control from non-control type: ");
-        Serial.println(recv_buf[0], DEC);
+        Serial.println(message_type, DEC);
     }
     return ((Message*)recv_buf)->control;
 }
@@ -228,22 +240,23 @@ Data get_data_from_buffer() {
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract data from unlocked buffer");
     }
-    if (recv_buf[0] != MESSAGE_TYPE_DATA) {
+    int8_t message_type = ((Message*)recv_buf)->message_type;
+    if (message_type != MESSAGE_TYPE_DATA) {
         Serial.print("WARNING: Attempt to extract data from non-data type: ");
-        Serial.println(recv_buf[0], DEC);
+        Serial.println(message_type, DEC);
     }
     return ((Message*)recv_buf)->data;
 }       
 
 bool send_data(Data data, uint8_t dest) {
-    Message msg = { .message_type = MESSAGE_TYPE_DATA };
+    Message msg = { .network_id = NETWORK_ID, .message_type = MESSAGE_TYPE_DATA };
     msg.data = data;
     uint8_t len = sizeof(Data) + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
 bool send_control(Control control, uint8_t dest) {
-    Message msg = { .message_type = MESSAGE_TYPE_CONTROL };
+    Message msg = { .network_id = NETWORK_ID, .message_type = MESSAGE_TYPE_CONTROL };
     msg.control = control;
     uint8_t len = sizeof(Control) + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
@@ -454,7 +467,7 @@ void loop() {
                 send_next_control_send_data();
                 break;
             default:
-                Serial.print("UNKOWN TEST TYPE: ");
+                Serial.print("UNKNOWN TEST TYPE: ");
                 Serial.println(TEST_TYPE);
         }
         Serial.println("");
@@ -468,7 +481,7 @@ void loop() {
                 receive_control_send_data();
                 break;
             default:
-                Serial.print("UNKOWN TEST TYPE: ");
+                Serial.print("UNKNOWN TEST TYPE: ");
                 Serial.println(TEST_TYPE);
         }
     }
