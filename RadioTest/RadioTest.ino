@@ -29,7 +29,8 @@
 #define BOUNCE_DATA_TEST 0
 #define CONTROL_SEND_DATA_TEST 1
 #define MULTIDATA_TEST 2
-#define TEST_TYPE MULTIDATA_TEST
+#define AGGREGATE_DATA_COLLECTION_TEST 3
+#define TEST_TYPE AGGREGATE_DATA_COLLECTION_TEST
 
 /* *
  *  Message types:
@@ -50,6 +51,7 @@
 #define CONTROL_SEND_DATA 1
 #define CONTROL_NEXT_COLLECTION 2
 #define CONTROL_NONE 3 // no-op used for testing
+#define CONTROL_AGGREGATE_SEND_DATA 4
 
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
@@ -647,6 +649,39 @@ void receive_multidata_control()
     release_recv_buffer();
 } /* receive_control_send_data */
 
+void send_next_aggregate_data_request()
+{
+    static uint8_t message_id = 0;
+    Control control[MAX_CONTROL_RECORDS];
+    control[0] = { .id = 0, .code = CONTROL_NONE };
+    control[1] = { .id = ++message_id,
+          .code = CONTROL_AGGREGATE_SEND_DATA, .nodes = {2,3} };
+    bool SEND_MAX_CONTROL_RECORDS = true; // if true, fill up available control records with no-ops
+    uint8_t num_control_records = 2;
+    if (SEND_MAX_CONTROL_RECORDS) {
+        for (int ctl_i=2; ctl_i<MAX_CONTROL_RECORDS; ctl_i++) {
+            control[ctl_i] = { .id = 0, .code = CONTROL_NONE };
+        }
+        num_control_records = MAX_CONTROL_RECORDS;
+    }
+    Serial.print("Broadcasting aggregate data request");
+    if (send_multidata_control(control, num_control_records, RH_BROADCAST_ADDRESS)) {
+        Serial.println("-- Sent control. Waiting for return data.");
+        /*
+          TODO: This should listen for return data and check for data records from all nodes
+        */
+        release_recv_buffer();
+    } 
+} /* send_next_aggregate_data_request */
+
+void receive_aggregate_data_request()
+{
+    /* TODO: 
+     *  - inspect incoming control and extract it as an aggregate data request
+     *  - in order of the control.nodes list, nodes should pass arbitrary data records along
+     *  - final node in list should pass the full payload to the collector
+     */
+} /* receive_aggregate_data_request */
 /* END OF TEST FUNCTIONS */
 
 /* **** SETUP and LOOP **** */
@@ -715,6 +750,9 @@ void loop() {
             case MULTIDATA_TEST:
                 send_next_multidata_control();
                 break;
+            case AGGREGATE_DATA_COLLECTION_TEST:
+                send_next_aggregate_data_request();
+                break;
             default:
                 Serial.print("UNKNOWN TEST TYPE: ");
                 Serial.println(TEST_TYPE);
@@ -732,6 +770,9 @@ void loop() {
                 break;
             case MULTIDATA_TEST:
                 receive_multidata_control();
+                break;
+            case AGGREGATE_DATA_COLLECTION_TEST:
+                receive_aggregate_data_request();
                 break;
             default:
                 Serial.print("UNKNOWN TEST TYPE: ");
