@@ -14,6 +14,7 @@
 #define SENSOR 3
 #define MAX_MESSAGE_SIZE 255
 #define NETWORK_ID 3
+#define SENSORGRID_VERSION 1
 
 //#define NODE_TYPE SENSOR //COLLECTOR
 #define NODE_TYPE COLLECTOR
@@ -35,6 +36,7 @@
 #define MESSAGE_TYPE_MESSAGE_ERROR -2
 #define MESSAGE_TYPE_NONE_BUFFER_LOCK -3
 #define MESSAGE_TYPE_WRONG_NETWORK -4 // for testing only. Normally we will just skip messages from other networks
+#define MESSAGE_TYPE_WRONG_VERSION -5
 
 /**
  * Control codes
@@ -62,6 +64,7 @@ typedef struct Data {
 
 typedef struct Message {
     uint8_t network_id;
+    uint8_t sensorgrid_version;
     int8_t message_type;
     union {
       struct Control control;
@@ -186,28 +189,45 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
     }
+    Message* _msg;
     lock_recv_buffer(); // lock to be released by calling client
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, &len, timeout, source, dest, id, flags)) {
-            uint8_t network_id = ((Message*)recv_buf)->network_id;
-            if ( network_id != NETWORK_ID ) {
+            _msg = (Message*)recv_buf;
+            if ( _msg->network_id != NETWORK_ID ) {
                 Serial.print("WARNING: Received message from wrong network: ");
-                Serial.println(network_id, DEC);
+                Serial.println(_msg->network_id, DEC);
                 return MESSAGE_TYPE_WRONG_NETWORK;
+            }
+            if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
+                Serial.print("WARNING: Received message with wrong firmware version: ");
+                Serial.println(_msg->sensorgrid_version, DEC);
+                return MESSAGE_TYPE_WRONG_VERSION;
             }
             validate_recv_buffer(len);
             Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
-            Serial.print("; type: "); print_message_type(((Message*)recv_buf)->message_type); Serial.println("");
-            return ((Message*)recv_buf)->message_type;
+            Serial.print("; type: "); print_message_type(_msg->message_type); Serial.println("");
+            return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
         }
     } else {
         if (router->recvfromAck(recv_buf, &len, source, dest, id, flags)) {
+            _msg = (Message*)recv_buf;
+            if ( _msg->network_id != NETWORK_ID ) {
+                Serial.print("WARNING: Received message from wrong network: ");
+                Serial.println(_msg->network_id, DEC);
+                return MESSAGE_TYPE_WRONG_NETWORK;
+            }
+            if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
+                Serial.print("WARNING: Received message with wrong firmware version: ");
+                Serial.println(_msg->sensorgrid_version, DEC);
+                return MESSAGE_TYPE_WRONG_VERSION;
+            }
             validate_recv_buffer(len);
             Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
-            Serial.print("; type: "); print_message_type(((Message*)recv_buf)->message_type); Serial.println("");
-            return ((Message*)recv_buf)->message_type;
+            Serial.print("; type: "); print_message_type(_msg->message_type); Serial.println("");
+            return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
         }
@@ -248,14 +268,22 @@ Data get_data_from_buffer() {
 }       
 
 bool send_data(Data data, uint8_t dest) {
-    Message msg = { .network_id = NETWORK_ID, .message_type = MESSAGE_TYPE_DATA };
+    Message msg = {
+        .network_id = NETWORK_ID,
+        .sensorgrid_version = SENSORGRID_VERSION,
+        .message_type = MESSAGE_TYPE_DATA
+    };
     msg.data = data;
     uint8_t len = sizeof(Data) + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
 bool send_control(Control control, uint8_t dest) {
-    Message msg = { .network_id = NETWORK_ID, .message_type = MESSAGE_TYPE_CONTROL };
+    Message msg = {
+        .network_id = NETWORK_ID,
+        .sensorgrid_version = SENSORGRID_VERSION,
+        .message_type = MESSAGE_TYPE_CONTROL
+    };
     msg.control = control;
     uint8_t len = sizeof(Control) + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
