@@ -17,7 +17,7 @@
 #define SENSORGRID_VERSION 1
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 // test types
 #define BOUNCE_DATA_TEST 0
@@ -74,6 +74,7 @@ typedef struct Message {
     };
 };
 
+/* Overall max message size is somewhere between 244 and 248 bytes. 248 will cause invalid length error */
 #define MAX_DATA_RECORDS 40
 #define MAX_CONTROL_RECORDS 120
 
