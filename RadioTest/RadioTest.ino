@@ -17,7 +17,7 @@
 #define SENSORGRID_VERSION 1
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 
 // test types
 #define BOUNCE_DATA_TEST 0
@@ -277,12 +277,11 @@ Control* get_multidata_control_from_buffer(uint8_t* len)
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract control from unlocked buffer");
     }
-    int8_t message_type = ((MultidataMessage*)recv_buf)->message_type;
-    if ( message_type != MESSAGE_TYPE_CONTROL) {
-        Serial.print("WARNING: Attempt to extract control from non-control type: ");
-        Serial.println(message_type, DEC);
-    }
     MultidataMessage* _msg = (MultidataMessage*)recv_buf;
+    if ( _msg->message_type != MESSAGE_TYPE_CONTROL) {
+        Serial.print("WARNING: Attempt to extract control from non-control type: ");
+        Serial.println(_msg->message_type, DEC);
+    } 
     *len = _msg->len;
     return _msg->control;
 }
@@ -298,7 +297,24 @@ Data get_data_from_buffer()
         Serial.println(message_type, DEC);
     }
     return ((Message*)recv_buf)->data;
-}       
+}
+
+/**
+ * Get the data array from the receive buffer and copy it's length to len
+ */
+Data* get_multidata_data_from_buffer(uint8_t* len)
+{
+    if (recv_buffer_avail) {
+        Serial.println("WARNING: Attempt to extract data from unlocked buffer");
+    }
+    MultidataMessage* _msg = (MultidataMessage*)recv_buf;
+    if (_msg->message_type != MESSAGE_TYPE_DATA) {
+        Serial.print("WARNING: Attempt to extract data from non-data type: ");
+        Serial.println(_msg->message_type, DEC);
+    }
+    *len = _msg->len;
+    return _msg->data;
+}
 
 /* END OF RECEIVE FUNCTIONS */
 
@@ -374,18 +390,16 @@ bool send_data(Data data, uint8_t dest)
     return send_message((uint8_t*)&msg, len, dest);
 }
 
-bool send_multidata_control(Control control, uint8_t dest)
+bool send_multidata_control(Control *control, uint8_t array_size, uint8_t dest)
 {
     MultidataMessage msg = {
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
-        .message_type = MESSAGE_TYPE_CONTROL
+        .message_type = MESSAGE_TYPE_CONTROL,
+        .len = array_size
     };
-    Control noopControl = { .id = 0, .code = CONTROL_NONE };
-    msg.control[0] = noopControl;
-    msg.control[1] = control;
-    msg.len = 2;
-    uint8_t len = sizeof(Control)*2 + MULTIDATA_MESSAGE_OVERHEAD;
+    memcpy(msg.control, control, sizeof(Control)*array_size);
+    uint8_t len = sizeof(Control)*array_size + MULTIDATA_MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
@@ -398,23 +412,12 @@ bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
         .len = array_size,
     };
     memcpy(msg.data, data, sizeof(Data)*array_size);
-    //msg.data = *data;
-    uint8_t len = sizeof(Data)*array_size + MESSAGE_OVERHEAD;
+    uint8_t len = sizeof(Data)*array_size + MULTIDATA_MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
 /* END OF SEND  FUNCTIONS */
 
-
-/*
-struct node {
-  int data;
-  struct node *next;
-};
-node* head = (struct node*)malloc(sizeof(struct node));
-head->data = 1;
-head->next = NULL;
-*/
 
 /* **** TEST SPECIFIC FUNCTIONS **** */
 
@@ -553,20 +556,27 @@ void send_next_multidata_control() {
     static uint8_t message_id = 0;
     static int sensor_index = 1;
     sensor_index = !sensor_index;
-    Control control = {
-        .id = ++message_id,
-        .code = CONTROL_SEND_DATA
+    Control control[] = {
+        { .id = 0, .code = CONTROL_NONE },
+        { .id = ++message_id,
+          .code = CONTROL_SEND_DATA },
     };
-    Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
+    //Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
-    if (send_multidata_control(control, sensorArray[sensor_index])) {
+    if (send_multidata_control(control, 2, sensorArray[sensor_index])) {
         Serial.println("-- Sent control. Waiting for return data.");
         uint8_t from;
         int8_t msg_type = receive(5000, &from);
+        uint8_t num_records;
         if (msg_type == MESSAGE_TYPE_DATA) {
-            Data _data = get_data_from_buffer();
-            Serial.print("Received return data from: "); Serial.print(from, DEC);
-            Serial.print("; Message ID: "); Serial.println( _data.id, DEC);
+            Serial.print("Received return data from: "); Serial.println(from, DEC);
+            Serial.print("RECORD IDs:");
+            Data* _data = get_multidata_data_from_buffer(&num_records);
+            for (int record_i=0; record_i<num_records; record_i++) {
+                Serial.print(" ");
+                Serial.print( _data[record_i].id, DEC);
+            }
+            Serial.println("");
         } else {
             Serial.print("RECEIVED NON-DATA MESSAGE TYPE: ");
             Serial.println(msg_type, DEC);
