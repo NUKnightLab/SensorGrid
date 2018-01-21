@@ -6,24 +6,23 @@
 #define TX 13
 #define CAD 2000
 #define TIMEOUT 1000
-#define CS 8
+#define RF95_CS 8
 #define REQUIRED_RH_VERSION_MAJOR 1
 #define REQUIRED_RH_VERSION_MINOR 82
-#define INT 3
-#define COLLECTOR 14
-#define SENSOR 3
+#define RF95_INT 3
+#define COLLECTOR 0
+#define SENSOR 1
 #define MAX_MESSAGE_SIZE 255
 #define NETWORK_ID 3
 #define SENSORGRID_VERSION 1
 
-//#define NODE_TYPE SENSOR //COLLECTOR
-#define NODE_TYPE COLLECTOR
+/* SET THIS FOR EACH NODE */
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 
 // test types
 #define BOUNCE_DATA_TEST 0
 #define CONTROL_SEND_DATA_TEST 1
 #define TEST_TYPE CONTROL_SEND_DATA_TEST
-
 
 /* *
  *  Message types:
@@ -38,17 +37,17 @@
 #define MESSAGE_TYPE_WRONG_VERSION -4
 #define MESSAGE_TYPE_WRONG_NETWORK -5 // for testing only. Normally we will just skip messages from other networks
 
-
 /**
  * Control codes
  */
 #define CONTROL_SEND_DATA 1
 #define CONTROL_NEXT_COLLECTION 2
 
-static RH_RF95 radio(CS, INT);
+static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
 
 int sensorArray[2] = {2,3};
+int node_type;
 
 typedef struct Control {
     uint8_t id;
@@ -79,20 +78,10 @@ uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_MESSAGE_PAYLOAD;
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
 
-void lock_recv_buffer() {
-    recv_buffer_avail = false;
-}
+/* **** UTILS **** */
 
-void release_recv_buffer() {
-    recv_buffer_avail = true;
-}
-
-static void clear_recv_buffer()
+void print_message_type(int8_t num)
 {
-    memset(recv_buf, 0, MAX_MESSAGE_SIZE);
-}
-
-void print_message_type(int8_t num) {
     switch (num) {
         case MESSAGE_TYPE_CONTROL:
             Serial.print("CONTROL");
@@ -114,53 +103,44 @@ unsigned long hash(uint8_t* msg, uint8_t len)
     return h;
 }
 
-bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
+unsigned checksum(void *buffer, size_t len, unsigned int seed)
 {
-    Serial.print("Sending message type: ");
-    print_message_type(((Message*)msg)->message_type);
-    Serial.print("; length: ");
-    Serial.println(len, DEC);
-    unsigned long start = millis();
-    uint8_t err = router->sendtoWait(msg, len, toID);
-    Serial.print("Time to send: ");
-    Serial.println(millis() - start);
-    if (err == RH_ROUTER_ERROR_NONE) {
-        return true;
-    } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
-        Serial.print(F("ERROR sending message to Node ID: "));
-        Serial.print(toID);
-        Serial.println(". INVALID LENGTH");
-        return false;
-    } else if (err == RH_ROUTER_ERROR_NO_ROUTE) {
-        Serial.print(F("ERROR sending message to Node ID: "));
-        Serial.print(toID);
-        Serial.println(". NO ROUTE");
-        return false;
-    } else if (err == RH_ROUTER_ERROR_TIMEOUT) {
-        Serial.print(F("ERROR sending message to Node ID: "));
-        Serial.print(toID);
-        Serial.println(". TIMEOUT");
-        return false;
-    } else if (err == RH_ROUTER_ERROR_NO_REPLY) {
-        Serial.print(F("ERROR sending message to Node ID: "));
-        Serial.print(toID);
-        Serial.println(". NO REPLY");
-        return false;
-    } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
-        Serial.print(F("ERROR sending message to Node ID: "));
-        Serial.print(toID);
-        Serial.println(". UNABLE TO DELIVER");
-        return false;   
-    } else {
-        Serial.print(F("ERROR sending message to Node ID: "));
-        Serial.print(toID);
-        Serial.print(". UNKNOWN ERROR CODE: ");
-        Serial.println(err, DEC);
-        return false;
-    }
+      unsigned char *buf = (unsigned char *)buffer;
+      size_t i;
+      for (i = 0; i < len; ++i)
+            seed += (unsigned int)(*buf++);
+      return seed;
 }
 
-void validate_recv_buffer(uint8_t len) {
+/* END OF UTILS */
+
+/* **** RECEIVE FUNCTIONS. THESE FUNCTIONS HAVE DIRECT ACCESS TO recv_buf **** */
+
+/** 
+ *  Other functions should use these functions for receive buffer manipulations
+ *  and should call release_recv_buffer after done with any buffered data
+ */
+
+void lock_recv_buffer()
+{
+    recv_buffer_avail = false;
+}
+
+void release_recv_buffer()
+{
+    recv_buffer_avail = true;
+}
+
+/**
+ * This should not need to be used
+ */
+static void clear_recv_buffer()
+{
+    memset(recv_buf, 0, MAX_MESSAGE_SIZE);
+}
+
+void validate_recv_buffer(uint8_t len)
+{
     // some basic checks for sanity
     int8_t message_type = ((Message*)recv_buf)->message_type;
     switch(message_type) {
@@ -182,9 +162,9 @@ void validate_recv_buffer(uint8_t len) {
     }
 }
 
+
 int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
-    clear_recv_buffer(); // this should not be generally necessary
     uint8_t len = MAX_MESSAGE_SIZE;
     if (!recv_buffer_avail) {
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
@@ -235,16 +215,18 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
     }
 }
 
-
-int8_t receive(uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL) {
+int8_t receive(uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
+{
     return _receive_message(NULL, source, dest, id, flags);
 }
 
-int8_t receive(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL) {
+int8_t receive(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
+{
     return _receive_message(timeout, source, dest, id, flags);
 }
 
-Control get_control_from_buffer() {
+Control get_control_from_buffer()
+{
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract control from unlocked buffer");
     }
@@ -256,7 +238,8 @@ Control get_control_from_buffer() {
     return ((Message*)recv_buf)->control;
 }
 
-Data get_data_from_buffer() {
+Data get_data_from_buffer()
+{
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract data from unlocked buffer");
     }
@@ -268,7 +251,58 @@ Data get_data_from_buffer() {
     return ((Message*)recv_buf)->data;
 }       
 
-bool send_data(Data data, uint8_t dest) {
+/* END OF RECEIVE FUNCTIONS */
+
+/* **** SEND FUNCTIONS **** */
+
+bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
+{
+    Serial.print("Sending message type: ");
+    print_message_type(((Message*)msg)->message_type);
+    Serial.print("; length: ");
+    Serial.println(len, DEC);
+    unsigned long start = millis();
+    uint8_t err = router->sendtoWait(msg, len, toID);
+    Serial.print("Time to send: ");
+    Serial.println(millis() - start);
+    if (err == RH_ROUTER_ERROR_NONE) {
+        return true;
+    } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
+        Serial.print(F("ERROR sending message to Node ID: "));
+        Serial.print(toID);
+        Serial.println(". INVALID LENGTH");
+        return false;
+    } else if (err == RH_ROUTER_ERROR_NO_ROUTE) {
+        Serial.print(F("ERROR sending message to Node ID: "));
+        Serial.print(toID);
+        Serial.println(". NO ROUTE");
+        return false;
+    } else if (err == RH_ROUTER_ERROR_TIMEOUT) {
+        Serial.print(F("ERROR sending message to Node ID: "));
+        Serial.print(toID);
+        Serial.println(". TIMEOUT");
+        return false;
+    } else if (err == RH_ROUTER_ERROR_NO_REPLY) {
+        Serial.print(F("ERROR sending message to Node ID: "));
+        Serial.print(toID);
+        Serial.println(". NO REPLY");
+        return false;
+    } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
+        Serial.print(F("ERROR sending message to Node ID: "));
+        Serial.print(toID);
+        Serial.println(". UNABLE TO DELIVER");
+        return false;   
+    } else {
+        Serial.print(F("ERROR sending message to Node ID: "));
+        Serial.print(toID);
+        Serial.print(". UNKNOWN ERROR CODE: ");
+        Serial.println(err, DEC);
+        return false;
+    }
+}
+
+bool send_data(Data data, uint8_t dest)
+{
     Message msg = {
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
@@ -279,7 +313,8 @@ bool send_data(Data data, uint8_t dest) {
     return send_message((uint8_t*)&msg, len, dest);
 }
 
-bool send_control(Control control, uint8_t dest) {
+bool send_control(Control control, uint8_t dest)
+{
     Message msg = {
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
@@ -290,14 +325,8 @@ bool send_control(Control control, uint8_t dest) {
     return send_message((uint8_t*)&msg, len, dest);
 }
 
-unsigned checksum(void *buffer, size_t len, unsigned int seed)
-{
-      unsigned char *buf = (unsigned char *)buffer;
-      size_t i;
-      for (i = 0; i < len; ++i)
-            seed += (unsigned int)(*buf++);
-      return seed;
-}
+/* END OF SEND  FUNCTIONS */
+
 
 /*
 struct node {
@@ -309,53 +338,10 @@ head->data = 1;
 head->next = NULL;
 */
 
-void setup() {
-  /*
-    while (sizeof(&head) < 255) { //create linked list of size 255 to check max payload
-      typedef struct node* temp = (struct node*)malloc(sizeof(struct node));
-      temp->data = 1;
-      struct node* curr = head;
-      while (curr->next != NULL) {
-        curr = curr->next;
-      }
-      curr->next = temp;
-      temp->next = NULL;
-    } */
+/* **** TEST SPECIFIC FUNCTIONS **** */
 
-    while (!Serial);
-    Serial.print("Setting up radio with RadioHead Version ");
-    Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
-    Serial.println(RH_VERSION_MINOR, DEC);
-    /* TODO: Can RH version check be done at compile time? */
-    if (RH_VERSION_MAJOR != REQUIRED_RH_VERSION_MAJOR 
-        || RH_VERSION_MINOR != REQUIRED_RH_VERSION_MINOR) {
-        Serial.print("ABORTING: SensorGrid requires RadioHead version ");
-        Serial.print(REQUIRED_RH_VERSION_MAJOR, DEC); Serial.print(".");
-        Serial.println(REQUIRED_RH_VERSION_MINOR, DEC);
-        Serial.print("RadioHead ");
-        Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
-        Serial.print(RH_VERSION_MINOR, DEC);
-        Serial.println(" is installed");
-        while(1);
-    }
-    Serial.print("Node ID: ");
-    Serial.println(NODE_TYPE);
-    router = new RHMesh(radio, NODE_TYPE);
-    //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
-    if (!router->init())
-        Serial.println("Router init failed");
-    Serial.print(F("FREQ: ")); Serial.println(FREQ);
-    if (!radio.setFrequency(FREQ)) {
-        Serial.println("Radio frequency set failed");
-    } 
-    radio.setTxPower(TX, false);
-    //rf95.setCADTimeout(CAD);
-    router->setTimeout(TIMEOUT);
-    Serial.println("");
-    delay(100);
-}
-
-void send_next_data_for_bounce() {
+void send_next_data_for_bounce()
+{
     static uint8_t message_id = 0;
     static int sensor_index = 1;
     sensor_index = !sensor_index;
@@ -449,7 +435,8 @@ void send_next_control_send_data() {
     }
 } /* send_next_control_send_data */
 
-void receive_control_send_data() {
+void receive_control_send_data()
+{
     static uint8_t message_id = 0;
     uint8_t from;
     int8_t msg_type = receive(&from);
@@ -462,7 +449,7 @@ void receive_control_send_data() {
         if (_control.code == CONTROL_SEND_DATA) {
             Data data = {
               .id = ++message_id,
-              .node_id = NODE_TYPE,
+              .node_id = NODE_ID,
               .timestamp = 12345,
               .type = 111,
               .value = 123
@@ -484,9 +471,64 @@ void receive_control_send_data() {
     release_recv_buffer();
 } /* receive_control_send_data */
 
+/* END OF TEST FUNCTIONS */
+
+/* **** SETUP and LOOP **** */
+
+void setup() {
+  /*
+    while (sizeof(&head) < 255) { //create linked list of size 255 to check max payload
+      typedef struct node* temp = (struct node*)malloc(sizeof(struct node));
+      temp->data = 1;
+      struct node* curr = head;
+      while (curr->next != NULL) {
+        curr = curr->next;
+      }
+      curr->next = temp;
+      temp->next = NULL;
+    } */
+
+    while (!Serial);
+    Serial.print("Setting up radio with RadioHead Version ");
+    Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
+    Serial.println(RH_VERSION_MINOR, DEC);
+    /* TODO: Can RH version check be done at compile time? */
+    if (RH_VERSION_MAJOR != REQUIRED_RH_VERSION_MAJOR 
+        || RH_VERSION_MINOR != REQUIRED_RH_VERSION_MINOR) {
+        Serial.print("ABORTING: SensorGrid requires RadioHead version ");
+        Serial.print(REQUIRED_RH_VERSION_MAJOR, DEC); Serial.print(".");
+        Serial.println(REQUIRED_RH_VERSION_MINOR, DEC);
+        Serial.print("RadioHead ");
+        Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
+        Serial.print(RH_VERSION_MINOR, DEC);
+        Serial.println(" is installed");
+        while(1);
+    }
+    if (NODE_ID == 1) {
+        node_type = COLLECTOR;
+    } else {
+        node_type = SENSOR;
+    }
+    Serial.print("Node ID: ");
+    Serial.println(NODE_ID);
+    router = new RHMesh(radio, NODE_ID);
+    //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
+    if (!router->init())
+        Serial.println("Router init failed");
+    Serial.print(F("FREQ: ")); Serial.println(FREQ);
+    if (!radio.setFrequency(FREQ)) {
+        Serial.println("Radio frequency set failed");
+    } 
+    radio.setTxPower(TX, false);
+    //rf95.setCADTimeout(CAD);
+    router->setTimeout(TIMEOUT);
+    Serial.println("");
+    delay(100);
+}
+
 void loop() {
 
-    if (NODE_TYPE == COLLECTOR) {
+    if (node_type == COLLECTOR) {
         switch (TEST_TYPE) {
             case BOUNCE_DATA_TEST:
                 send_next_data_for_bounce();
@@ -500,7 +542,7 @@ void loop() {
         }
         Serial.println("");
         delay(5000);
-    } else if (NODE_TYPE == SENSOR) {
+    } else if (node_type == SENSOR) {
         switch (TEST_TYPE) {
             case BOUNCE_DATA_TEST:
                 receive_data_to_bounce();
