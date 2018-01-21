@@ -88,8 +88,7 @@ static void clear_recv_buffer()
     memset(recv_buf, 0, MAX_MESSAGE_SIZE);
 }
 
-void print_current_message_type() {
-    int8_t num = ((Message*)recv_buf)->message_type;
+void print_message_type(int8_t num) {
     switch (num) {
         case MESSAGE_TYPE_CONTROL:
             Serial.print("CONTROL");
@@ -114,7 +113,7 @@ unsigned long hash(uint8_t* msg, uint8_t len)
 bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
     Serial.print("Sending message type: ");
-    print_current_message_type();
+    print_message_type(((Message*)msg)->message_type);
     Serial.print("; length: ");
     Serial.println(len, DEC);
     unsigned long start = millis();
@@ -198,7 +197,7 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
             }
             validate_recv_buffer(len);
             Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
-            Serial.print("; type: "); print_current_message_type(); Serial.println("");
+            Serial.print("; type: "); print_message_type(((Message*)recv_buf)->message_type); Serial.println("");
             return ((Message*)recv_buf)->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
@@ -207,7 +206,7 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
         if (router->recvfromAck(recv_buf, &len, source, dest, id, flags)) {
             validate_recv_buffer(len);
             Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
-            Serial.print("; type: "); print_current_message_type(); Serial.println("");
+            Serial.print("; type: "); print_message_type(((Message*)recv_buf)->message_type); Serial.println("");
             return ((Message*)recv_buf)->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
