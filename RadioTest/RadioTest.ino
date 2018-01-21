@@ -75,7 +75,7 @@ typedef struct Message {
 };
 
 #define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_RECORDS 10
+#define MAX_CONTROL_RECORDS 120
 
 typedef struct MultidataMessage {
     uint8_t sensorgrid_version;
@@ -556,14 +556,21 @@ void send_next_multidata_control() {
     static uint8_t message_id = 0;
     static int sensor_index = 1;
     sensor_index = !sensor_index;
-    Control control[] = {
-        { .id = 0, .code = CONTROL_NONE },
-        { .id = ++message_id,
-          .code = CONTROL_SEND_DATA },
-    };
+    Control control[MAX_CONTROL_RECORDS];
+    control[0] = { .id = 0, .code = CONTROL_NONE };
+    control[1] = { .id = ++message_id,
+          .code = CONTROL_SEND_DATA };
+    bool SEND_MAX_CONTROL_RECORDS = true;
+    uint8_t num_control_records = 2;
+    if (SEND_MAX_CONTROL_RECORDS) {
+        for (int ctl_i=2; ctl_i<MAX_CONTROL_RECORDS; ctl_i++) {
+            control[ctl_i] = { .id = 0, .code = CONTROL_NONE };
+        }
+        num_control_records = MAX_CONTROL_RECORDS;
+    }
     //Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
-    if (send_multidata_control(control, 2, sensorArray[sensor_index])) {
+    if (send_multidata_control(control, num_control_records, sensorArray[sensor_index])) {
         Serial.println("-- Sent control. Waiting for return data.");
         uint8_t from;
         int8_t msg_type = receive(5000, &from);
