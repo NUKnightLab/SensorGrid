@@ -17,7 +17,7 @@
 #define SENSORGRID_VERSION 1
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 // test types
 #define BOUNCE_DATA_TEST 0
@@ -254,6 +254,24 @@ Control get_control_from_buffer()
         Serial.println(message_type, DEC);
     }
     return ((Message*)recv_buf)->control;
+}
+
+/**
+ * Get the control array from the receive buffer and copy it's length to len
+ */
+Control* get_multidata_control_from_buffer(uint8_t* len)
+{
+    if (recv_buffer_avail) {
+        Serial.println("WARNING: Attempt to extract control from unlocked buffer");
+    }
+    int8_t message_type = ((MultidataMessage*)recv_buf)->message_type;
+    if ( message_type != MESSAGE_TYPE_CONTROL) {
+        Serial.print("WARNING: Attempt to extract control from non-control type: ");
+        Serial.println(message_type, DEC);
+    }
+    MultidataMessage* _msg = (MultidataMessage*)recv_buf;
+    *len = _msg->len;
+    return _msg->control;
 }
 
 Data get_data_from_buffer()
@@ -530,6 +548,53 @@ void send_next_multidata_control() {
     }
 } /* send_next_multidata_control */
 
+void receive_multidata_control()
+{
+    static uint8_t message_id = 0;
+    uint8_t from;
+    int8_t msg_type = receive(&from);
+    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
+        // no-op
+    } else if (msg_type == MESSAGE_TYPE_CONTROL) {
+        uint8_t len;
+        Control* _control_array = get_multidata_control_from_buffer(&len);
+        Serial.print("Received control array of length: ");
+        Serial.println(len, DEC);
+        /* iterate the control records */
+        for (int i=0; i<len; i++) {
+            Serial.print(" -- CONTROL INDEX: "); Serial.println(i, DEC);
+            Control _control = _control_array[i];
+            Serial.print("Received control message from: "); Serial.print(from, DEC);
+            Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
+            if (_control.code == CONTROL_NONE) {
+                Serial.println("Received NO-OP control. Doing nothing");
+            } else if (_control.code == CONTROL_SEND_DATA) {
+                Data data = {
+                  .id = ++message_id,
+                  .node_id = NODE_ID,
+                  .timestamp = 12345,
+                  .type = 111,
+                  .value = 123
+                };
+                if (send_data(data, from)) {
+                    Serial.println("Returned data");
+                    Serial.println("");
+                }
+            } else {
+                Serial.print("Received unexpected CONTROL code: ");
+                Serial.println(_control.code, DEC);
+                Serial.println("");
+            }
+            Serial.println("");
+        }
+    } else {
+            Serial.print("RECEIVED NON-CONTROL MESSAGE TYPE: ");
+            Serial.print(msg_type, DEC);
+            Serial.println("");
+    }
+    release_recv_buffer();
+} /* receive_control_send_data */
+
 /* END OF TEST FUNCTIONS */
 
 /* **** SETUP and LOOP **** */
@@ -611,6 +676,9 @@ void loop() {
                 break;
             case CONTROL_SEND_DATA_TEST:
                 receive_control_send_data();
+                break;
+            case MULTIDATA_TEST:
+                receive_multidata_control();
                 break;
             default:
                 Serial.print("UNKNOWN TEST TYPE: ");
