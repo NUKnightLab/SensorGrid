@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 13
@@ -55,6 +55,7 @@
 
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
+static uint8_t message_id = 0;
 
 /* Defining list of nodes */
 int sensorArray[2] = {2,3};
@@ -436,7 +437,6 @@ bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
 
 void send_next_data_for_bounce()
 {
-    static uint8_t message_id = 0;
     static int sensor_index = 1;
     sensor_index = !sensor_index;
     Data data = {
@@ -504,7 +504,6 @@ void receive_data_to_bounce() {
 } /* receive_data_to_bounce */
 
 void send_next_control_send_data() {
-    static uint8_t message_id = 0;
     static int sensor_index = 1;
     sensor_index = !sensor_index;
     Control control = {
@@ -531,7 +530,6 @@ void send_next_control_send_data() {
 
 void receive_control_send_data()
 {
-    static uint8_t message_id = 0;
     uint8_t from;
     int8_t msg_type = receive(&from);
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
@@ -566,7 +564,6 @@ void receive_control_send_data()
 } /* receive_control_send_data */
 
 void send_next_multidata_control() {
-    static uint8_t message_id = 0;
     static int sensor_index = 1;
     sensor_index = !sensor_index;
     Control control[MAX_CONTROL_RECORDS];
@@ -607,7 +604,6 @@ void send_next_multidata_control() {
 
 void receive_multidata_control()
 {
-    static uint8_t message_id = 0;
     uint8_t from;
     int8_t msg_type = receive(&from);
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
@@ -658,7 +654,6 @@ void receive_multidata_control()
 
 void send_next_aggregate_data_request()
 {
-    static uint8_t message_id = 0;
     Control control[MAX_CONTROL_RECORDS];
     control[0] = { .id = 0, .code = CONTROL_NONE };
     control[1] = { .id = ++message_id,
@@ -687,11 +682,26 @@ void check_collection_state() {
         uint8_t next_node_id = get_next_collection_node_id();
         Serial.print("Sending data to: ");
         Serial.println(next_node_id, DEC);
+        uint8_t* _tmp[MAX_CONTROL_NODES] = {0};
+        memcpy(_tmp, uncollected_nodes+1, MAX_CONTROL_NODES-1);
+        memcpy(uncollected_nodes, _tmp, MAX_CONTROL_NODES);
+        Data data[1];
+        data[0] = {
+          .id = ++message_id,
+          .node_id = NODE_ID,
+          .timestamp = 12345,
+          .type = 111,
+          .value = 123 
+        };
+        if (send_multidata_data(data, 1, next_node_id)) {
+            Serial.println("Forwarded data to node: ");
+            Serial.println(next_node_id, DEC);
+            Serial.println("");
+        }
     }
 }
 void receive_aggregate_data_request()
 {
-    static uint8_t message_id = 0;
     uint8_t from;
     int8_t msg_type = receive(&from);
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
