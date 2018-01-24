@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -465,7 +465,7 @@ void send_next_data_for_bounce()
     Serial.print("; dest: "); Serial.print(sensorArray[sensor_index]);
     Serial.print("; hash: "); Serial.println(hashof_sent);
     if (send_data(data, sensorArray[sensor_index])) {
-        Serial.println("-- Sent data. Waiting for return data.");
+        Serial.println("-- Sent data. Waiting for return data. Will timeout in 5 seconds.");
         uint8_t from;
         int8_t msg_type = receive(5000, &from);
         if (msg_type == MESSAGE_TYPE_DATA) {
@@ -527,7 +527,7 @@ void send_next_control_send_data() {
     Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
     if (send_control(control, sensorArray[sensor_index])) {
-        Serial.println("-- Sent control. Waiting for return data.");
+        Serial.println("-- Sent control. Waiting for return data. Will timeout in 5 seconds.");
         uint8_t from;
         int8_t msg_type = receive(5000, &from);
         if (msg_type == MESSAGE_TYPE_DATA) {
@@ -581,12 +581,11 @@ void send_next_multidata_control() {
     Serial.println("Sending next multidata control");
     static int sensor_index = 1;
     sensor_index = !sensor_index;
-    Control* control;
-    *control = { .id = ++message_id,
+    Control control = { .id = ++message_id,
           .code = CONTROL_SEND_DATA };
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
-    if (send_multidata_control(control, sensorArray[sensor_index])) {
-        Serial.println("-- Sent control. Waiting for return data.");
+    if (send_multidata_control(&control, sensorArray[sensor_index])) {
+        Serial.println("-- Sent control. Waiting for return data. Will timeout in 5 seconds.");
         uint8_t from;
         int8_t msg_type = receive(5000, &from);
         uint8_t num_records;
@@ -614,14 +613,7 @@ void receive_multidata_control()
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
         // no-op
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
-        uint8_t len;
         Control _control = get_multidata_control_from_buffer();
-        //Serial.print("Received control array of length: ");
-        //Serial.println(len, DEC);
-        /* iterate the control records */
-        //for (int i=0; i<len; i++) {
-        //Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
-        //Control _control = _control_array[i];
         Serial.print("Received control message from: "); Serial.print(from, DEC);
         Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
         if (_control.code == CONTROL_NONE) {
@@ -647,7 +639,6 @@ void receive_multidata_control()
             Serial.println(_control.code, DEC);
             Serial.println("");
         }
-        //}
         print_ram();
     } else {
             Serial.print("RECEIVED NON-CONTROL MESSAGE TYPE: ");
@@ -659,13 +650,12 @@ void receive_multidata_control()
 
 void send_next_aggregate_data_request()
 {
-    Serial.println("Sending next aggregate data request");
     unsigned long start_time = millis();
     Control control = { .id = ++message_id,
           .code = CONTROL_AGGREGATE_SEND_DATA, .nodes = {2,3} };
     Serial.print("Broadcasting aggregate data request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
-        Serial.println("-- Sent control. Waiting for return data.");
+        Serial.println("-- Sent control. Waiting for return data. Will timeout in 30 seconds.");
         uint8_t from;
         int8_t msg_type = receive(30000, &from);
         if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
@@ -724,13 +714,7 @@ void receive_aggregate_data_request()
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
         // Do nothing
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
-        //uint8_t len;
         Control _control = get_multidata_control_from_buffer();
-        //Serial.print("Received control array of length: ");
-        //Serial.println(len, DEC);    
-        //for (int i=0; i<len; i++) { //iterate through control codes
-        //Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
-        //Control _control = _control_array[i];
         Serial.print("Received control message from: "); Serial.print(from, DEC);
         Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
         if (_control.code == CONTROL_NONE) {
@@ -745,7 +729,6 @@ void receive_aggregate_data_request()
             }
             Serial.println("");
         }
-        //}
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         uint8_t len;
         Data* _data_array = get_multidata_data_from_buffer(&len);
