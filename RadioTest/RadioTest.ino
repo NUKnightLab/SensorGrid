@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 13
@@ -61,9 +61,6 @@ static uint8_t message_id = 0;
 int sensorArray[2] = {2,3};
 int node_type;
 
-/* Collection state */
-uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {}; //if the first ID corresponds to current ID, send data to next ID
-
 typedef struct Control {
     uint8_t id;
     uint8_t code;
@@ -106,6 +103,11 @@ uint8_t MULTIDATA_MESSAGE_OVERHEAD = sizeof(MultidataMessage) - MAX_DATA_RECORDS
 
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
+
+/* Collection state */
+uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
+Data aggregated_data[MAX_DATA_RECORDS] = {};
+uint8_t aggregated_data_count = 0;
 
 /* **** UTILS **** */
 
@@ -710,21 +712,27 @@ void check_collection_state() {
         uint8_t next_node_id = get_next_collection_node_id();
         Serial.print("Sending data to: ");
         Serial.println(next_node_id, DEC);
-        //uint8_t* _tmp[MAX_CONTROL_NODES] = {0};
-        //memcpy(_tmp, uncollected_nodes+1, MAX_CONTROL_NODES-1);
-        //memcpy(uncollected_nodes, _tmp, MAX_CONTROL_NODES);
-        Data data[1];
-        data[0] = {
+        // TODO: potential array overrun here
+        Data _data = {
           .id = ++message_id,
           .node_id = NODE_ID,
           .timestamp = 12345,
           .type = 111,
           .value = 123 
         };
-        if (send_multidata_data(data, 1, next_node_id)) {
+        aggregated_data[aggregated_data_count++] = _data;
+        Serial.print("Sending aggregate data containing IDs: ");
+        for (int i=0; i<aggregated_data_count; i++) {
+            Serial.print(aggregated_data[i].node_id);
+            Serial.print(", ");
+        }
+        Serial.println("");
+        if (send_multidata_data(aggregated_data, aggregated_data_count, next_node_id)) {
             Serial.println("Forwarded data to node: ");
             Serial.println(next_node_id, DEC);
             Serial.println("");
+            memset(aggregated_data, 0, sizeof(aggregated_data));
+            aggregated_data_count = 0;
         }
     }
 }
@@ -758,7 +766,6 @@ void receive_aggregate_data_request()
             }
         }
     } else if (msg_type == MESSAGE_TYPE_DATA) {
-        Serial.println("Got some data, do something with it.");
         uint8_t len;
         Data* _data_array = get_multidata_data_from_buffer(&len);
         Serial.print("Received data array of length: ");
@@ -767,6 +774,8 @@ void receive_aggregate_data_request()
             Data _data = _data_array[i];
             remove_uncollected_node_id(_data.node_id);
         }
+        memcpy(&aggregated_data[aggregated_data_count], _data_array, sizeof(Data)*len);
+        aggregated_data_count += len;
     } else {
         Serial.print("WARNING: Reived unexpected Message type: ");
         Serial.println(msg_type, DEC);
