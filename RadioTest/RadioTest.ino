@@ -171,6 +171,18 @@ void remove_uncollected_node_id(uint8_t id) {
             uncollected_nodes[dest++] = uncollected_nodes[i];
     }
 }
+
+void add_aggregated_data_record(Data record) {
+    bool found_record = false;
+    for (int i=0; i<aggregated_data_count; i++) {
+        if (aggregated_data[i].id == record.id && aggregated_data[i].node_id == record.node_id)
+            found_record = true;
+    }
+    if  (!found_record) {
+        memcpy(&aggregated_data[aggregated_data_count++], &record, sizeof(Data));
+        remove_uncollected_node_id(record.node_id);
+    }
+}
 /* END OF UTILS */
 
 /* **** RECEIVE FUNCTIONS. THESE FUNCTIONS HAVE DIRECT ACCESS TO recv_buf **** */
@@ -727,7 +739,7 @@ void receive_aggregate_data_request()
                 Serial.print(_control.nodes[node_id]);
                 Serial.print(", ");
             }
-            Serial.println("");
+            Serial.println("\n");
         }
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         uint8_t len;
@@ -735,12 +747,11 @@ void receive_aggregate_data_request()
         Serial.print("Received data array of length: ");
         Serial.println(len, DEC);
         for (int i=0; i<len; i++) {
-            Data _data = _data_array[i];
-            remove_uncollected_node_id(_data.node_id);
+            add_aggregated_data_record(_data_array[i]);
         }
         // TODO: we should only be copying data we don't already have (check node_id & data id)
-        memcpy(&aggregated_data[aggregated_data_count], _data_array, sizeof(Data)*len);
-        aggregated_data_count += len;
+        //memcpy(&aggregated_data[aggregated_data_count], _data_array, sizeof(Data)*len);
+        //aggregated_data_count += len;
     } else {
         Serial.print("WARNING: Reived unexpected Message type: ");
         Serial.println(msg_type, DEC);
