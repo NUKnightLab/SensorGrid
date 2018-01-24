@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -201,16 +201,16 @@ static void clear_recv_buffer()
 void validate_recv_buffer(uint8_t len)
 {
     // some basic checks for sanity
-    int8_t message_type = ((Message*)recv_buf)->message_type;
+    int8_t message_type = ((MultidataMessage*)recv_buf)->message_type;
     switch(message_type) {
         case MESSAGE_TYPE_DATA:
-            if (len != sizeof(Data) + MESSAGE_OVERHEAD) {
+            if (len != sizeof(Data)*((MultidataMessage*)recv_buf)->len + MULTIDATA_MESSAGE_OVERHEAD) {
                 Serial.print("WARNING: Received message of type DATA with incorrect size: ");
                 Serial.println(len, DEC);
             }
             break;
         case MESSAGE_TYPE_CONTROL:
-            if (len != sizeof(Control) + MESSAGE_OVERHEAD) {
+            if (len != sizeof(Control) + MULTIDATA_MESSAGE_OVERHEAD) {
                 Serial.print("WARNING: Received message of type CONTROL with incorrect size: ");
                 Serial.println(len, DEC);
             }
@@ -738,6 +738,7 @@ void receive_aggregate_data_request()
             Data _data = _data_array[i];
             remove_uncollected_node_id(_data.node_id);
         }
+        // TODO: we should only be copying data we don't already have (check node_id & data id)
         memcpy(&aggregated_data[aggregated_data_count], _data_array, sizeof(Data)*len);
         aggregated_data_count += len;
     } else {
