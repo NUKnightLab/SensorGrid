@@ -22,7 +22,6 @@
 
 /* Overall max message size is somewhere between 244 and 248 bytes. 248 will cause invalid length error */
 #define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_RECORDS 1
 #define MAX_CONTROL_NODES 78
 
 // test types
@@ -91,7 +90,7 @@ typedef struct MultidataMessage {
     int8_t message_type;
     uint8_t len;
     union {
-      struct Control control[MAX_CONTROL_RECORDS];
+      struct Control control;
       struct Data data[MAX_DATA_RECORDS];
     };
 };
@@ -301,7 +300,7 @@ Control get_control_from_buffer()
 /**
  * Get the control array from the receive buffer and copy it's length to len
  */
-Control* get_multidata_control_from_buffer(uint8_t* len)
+Control get_multidata_control_from_buffer()
 {
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract control from unlocked buffer");
@@ -311,7 +310,7 @@ Control* get_multidata_control_from_buffer(uint8_t* len)
         Serial.print("WARNING: Attempt to extract control from non-control type: ");
         Serial.println(_msg->message_type, DEC);
     } 
-    *len = _msg->len;
+    //*len = _msg->len;
     return _msg->control;
 }
 
@@ -427,7 +426,7 @@ bool send_multidata_control(Control *control, uint8_t dest)
         .message_type = MESSAGE_TYPE_CONTROL,
         .len = 1
     };
-    memcpy(msg.control, control, sizeof(Control));
+    memcpy(&msg.control, control, sizeof(Control));
     uint8_t len = sizeof(Control) + MULTIDATA_MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
@@ -579,10 +578,11 @@ void receive_control_send_data()
 } /* receive_control_send_data */
 
 void send_next_multidata_control() {
+    Serial.println("Sending next multidata control");
     static int sensor_index = 1;
     sensor_index = !sensor_index;
-    Control control[MAX_CONTROL_RECORDS];
-    control[0] = { .id = ++message_id,
+    Control* control;
+    *control = { .id = ++message_id,
           .code = CONTROL_SEND_DATA };
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
     if (send_multidata_control(control, sensorArray[sensor_index])) {
@@ -615,39 +615,39 @@ void receive_multidata_control()
         // no-op
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
         uint8_t len;
-        Control* _control_array = get_multidata_control_from_buffer(&len);
-        Serial.print("Received control array of length: ");
-        Serial.println(len, DEC);
+        Control _control = get_multidata_control_from_buffer();
+        //Serial.print("Received control array of length: ");
+        //Serial.println(len, DEC);
         /* iterate the control records */
-        for (int i=0; i<len; i++) {
-            Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
-            Control _control = _control_array[i];
-            Serial.print("Received control message from: "); Serial.print(from, DEC);
-            Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
-            if (_control.code == CONTROL_NONE) {
-                Serial.println("Received NO-OP control. Doing nothing");
-            } else if (_control.code == CONTROL_SEND_DATA) {
-                int NUM_DATA_RECORDS = MAX_DATA_RECORDS;
-                Data data[NUM_DATA_RECORDS];
-                for (int data_i=0; data_i<NUM_DATA_RECORDS; data_i++) {
-                    data[data_i] = {
-                      .id = ++message_id,
-                      .node_id = NODE_ID,
-                      .timestamp = 12345,
-                      .type = 111,
-                      .value = 123 
-                    };
-                }
-                if (send_multidata_data(data, NUM_DATA_RECORDS, from)) {
-                    Serial.println("Returned data");
-                    Serial.println("");
-                }
-            } else {
-                Serial.print("Received unexpected CONTROL code: ");
-                Serial.println(_control.code, DEC);
+        //for (int i=0; i<len; i++) {
+        //Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
+        //Control _control = _control_array[i];
+        Serial.print("Received control message from: "); Serial.print(from, DEC);
+        Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
+        if (_control.code == CONTROL_NONE) {
+            Serial.println("Received NO-OP control. Doing nothing");
+        } else if (_control.code == CONTROL_SEND_DATA) {
+            int NUM_DATA_RECORDS = MAX_DATA_RECORDS;
+            Data data[NUM_DATA_RECORDS];
+            for (int data_i=0; data_i<NUM_DATA_RECORDS; data_i++) {
+                data[data_i] = {
+                  .id = ++message_id,
+                  .node_id = NODE_ID,
+                  .timestamp = 12345,
+                  .type = 111,
+                  .value = 123 
+                };
+            }
+            if (send_multidata_data(data, NUM_DATA_RECORDS, from)) {
+                Serial.println("Returned data");
                 Serial.println("");
             }
+        } else {
+            Serial.print("Received unexpected CONTROL code: ");
+            Serial.println(_control.code, DEC);
+            Serial.println("");
         }
+        //}
         print_ram();
     } else {
             Serial.print("RECEIVED NON-CONTROL MESSAGE TYPE: ");
@@ -659,12 +659,12 @@ void receive_multidata_control()
 
 void send_next_aggregate_data_request()
 {
+    Serial.println("Sending next aggregate data request");
     unsigned long start_time = millis();
-    Control control[MAX_CONTROL_RECORDS];
-    control[0] = { .id = ++message_id,
+    Control control = { .id = ++message_id,
           .code = CONTROL_AGGREGATE_SEND_DATA, .nodes = {2,3} };
     Serial.print("Broadcasting aggregate data request");
-    if (send_multidata_control(control, RH_BROADCAST_ADDRESS)) {
+    if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
         uint8_t from;
         int8_t msg_type = receive(30000, &from);
@@ -724,28 +724,28 @@ void receive_aggregate_data_request()
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
         // Do nothing
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
-        uint8_t len;
-        Control* _control_array = get_multidata_control_from_buffer(&len);
-        Serial.print("Received control array of length: ");
-        Serial.println(len, DEC);    
-        for (int i=0; i<len; i++) { //iterate through control codes
-            Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
-            Control _control = _control_array[i];
-            Serial.print("Received control message from: "); Serial.print(from, DEC);
-            Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
-            if (_control.code == CONTROL_NONE) {
-              Serial.println("Received NO-OP control. Doing nothing");
-            } 
-            else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
-                memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
-                Serial.print("Received collection control with node IDs: ");
-                for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
-                    Serial.print(_control.nodes[node_id]);
-                    Serial.print(", ");
-                }
-                Serial.println("");
+        //uint8_t len;
+        Control _control = get_multidata_control_from_buffer();
+        //Serial.print("Received control array of length: ");
+        //Serial.println(len, DEC);    
+        //for (int i=0; i<len; i++) { //iterate through control codes
+        //Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
+        //Control _control = _control_array[i];
+        Serial.print("Received control message from: "); Serial.print(from, DEC);
+        Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
+        if (_control.code == CONTROL_NONE) {
+          Serial.println("Received NO-OP control. Doing nothing");
+        } 
+        else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
+            memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
+            Serial.print("Received collection control with node IDs: ");
+            for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
+                Serial.print(_control.nodes[node_id]);
+                Serial.print(", ");
             }
+            Serial.println("");
         }
+        //}
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         uint8_t len;
         Data* _data_array = get_multidata_data_from_buffer(&len);
