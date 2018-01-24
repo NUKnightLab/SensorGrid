@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 13
@@ -685,6 +685,20 @@ void send_next_aggregate_data_request()
         /*
           TODO: This should listen for return data and check for data records from all nodes
         */
+        uint8_t from;
+        int8_t msg_type = receive(30000, &from);
+        if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
+            Serial.println("No data received");
+        } else if (msg_type == MESSAGE_TYPE_DATA) {
+            Serial.print("Received data from IDs: ");
+            uint8_t len;
+            Data* _data_array = get_multidata_data_from_buffer(&len);
+            for (int i=0; i<len; i++) {
+                Serial.print(_data_array[i].node_id);
+                Serial.print(", ");
+            }
+            Serial.println("");
+        }
         release_recv_buffer();
     } 
 } /* send_next_aggregate_data_request */
