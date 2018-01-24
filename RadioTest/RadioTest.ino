@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 13
@@ -61,7 +61,7 @@ int sensorArray[2] = {2,3};
 int node_type;
 
 /* Collection state */
-int uncollected_nodes[MAX_CONTROL_NODES] = {}; //if the first ID corresponds to current ID, send data to next ID
+uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {}; //if the first ID corresponds to current ID, send data to next ID
 
 typedef struct Control {
     uint8_t id;
@@ -153,6 +153,9 @@ void print_ram()
     Serial.println(free_ram(), DEC);
 }
 
+uint8_t get_next_collection_node_id() {
+    return uncollected_nodes[1];
+}
 /* END OF UTILS */
 
 /* **** RECEIVE FUNCTIONS. THESE FUNCTIONS HAVE DIRECT ACCESS TO recv_buf **** */
@@ -678,13 +681,21 @@ void send_next_aggregate_data_request()
     } 
 } /* send_next_aggregate_data_request */
 
+void check_collection_state() {
+    if (uncollected_nodes[0] == NODE_ID) {
+        Serial.println("Identified self as next in collection order.");
+        uint8_t next_node_id = get_next_collection_node_id();
+        Serial.print("Sending data to: ");
+        Serial.println(next_node_id, DEC);
+    }
+}
 void receive_aggregate_data_request()
 {
     static uint8_t message_id = 0;
     uint8_t from;
     int8_t msg_type = receive(&from);
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
-        Serial.println("No message received");
+        // Do nothing
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
         uint8_t len;
         Control* _control_array = get_multidata_control_from_buffer(&len);
@@ -701,7 +712,7 @@ void receive_aggregate_data_request()
             else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
                 memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
                 Serial.print("Received collection control with node IDs: ");
-                for (int node_id=0; i<MAX_CONTROL_NODES; node_id++) {
+                for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
                     Serial.print(_control.nodes[node_id]);
                     Serial.print(", ");
                 }
@@ -711,7 +722,11 @@ void receive_aggregate_data_request()
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         Serial.println("Got some data, do something with it.");
         // Handle incoming data
+    } else {
+        Serial.print("WARNING: Reived unexpected Message type: ");
+        Serial.println(msg_type, DEC);
     }
+    release_recv_buffer();
     /* TODO: 
      *  - inspect incoming control and extract it as an aggregate data request
      *  - in order of the control.nodes list, nodes should pass arbitrary data records along
@@ -809,6 +824,7 @@ void loop() {
                 receive_multidata_control();
                 break;
             case AGGREGATE_DATA_COLLECTION_TEST:
+                check_collection_state();
                 receive_aggregate_data_request();
                 break;
             default:
