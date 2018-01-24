@@ -61,7 +61,7 @@ int sensorArray[2] = {2,3};
 int node_type;
 
 /* Collection state */
-int uncollectedNodes[MAX_CONTROL_NODES] = {}; //if the first ID corresponds to current ID, send data to next ID
+int uncollected_nodes[MAX_CONTROL_NODES] = {}; //if the first ID corresponds to current ID, send data to next ID
 
 typedef struct Control {
     uint8_t id;
@@ -689,62 +689,36 @@ void receive_aggregate_data_request()
         uint8_t len;
         Control* _control_array = get_multidata_control_from_buffer(&len);
         Serial.print("Received control array of length: ");
-        Serial.println(len, DEC);
-        
+        Serial.println(len, DEC);    
         for (int i=0; i<len; i++) { //iterate through control codes
-          Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
-          Control _control = _control_array[i];
-          Serial.print("Received control message from: "); Serial.print(from, DEC);
-          Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
-          if (_control.code == CONTROL_NONE) {
-            Serial.println("Received NO-OP control. Doing nothing");
-          } 
-          else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
-
-            for (int i=0; i<MAX_CONTROL_NODES; i++) {
-              if (_control.nodes[0] == NODE_ID) {
-                uncollected_nodes[i] = _control.nodes[i];
-              }
-              _control.nodes[i]; //nodes should pass arbitrary data records along
-              //check for first node id
-              
-
-              
-              int NUM_DATA_RECORDS = MAX_DATA_RECORDS;
-              Data data[NUM_DATA_RECORDS]; //collect data from nodes
-              for (int data_i=0; data_i<NUM_DATA_RECORDS; data_i++) { 
-                .id = ++message_id,
-                .node_id = NODE_ID,
-                .timestamp = 12345,
-                .type = 111,
-                .value = 123 
-                };
-
-                if (i==len-1) { //reaches last node, send data to collector
-                  if (router->sendtoWait(data, len, 0) == RH_ROUTER_ERROR_NONE) {
-                    Serial.println("Sending aggregate data to collector");
-                    send_next_aggregate_data_request();
-                  }
-                  else {
-                    Serial.println("Failed to send");
-                  }
+            Serial.print("\n -- CONTROL INDEX: "); Serial.println(i, DEC);
+            Control _control = _control_array[i];
+            Serial.print("Received control message from: "); Serial.print(from, DEC);
+            Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
+            if (_control.code == CONTROL_NONE) {
+              Serial.println("Received NO-OP control. Doing nothing");
+            } 
+            else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
+                memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
+                Serial.print("Received collection control with node IDs: ");
+                for (int node_id=0; i<MAX_CONTROL_NODES; node_id++) {
+                    Serial.print(_control.nodes[node_id]);
+                    Serial.print(", ");
                 }
-          }
-          else {
-              Serial.print("Received unexpected CONTROL code: ");
-              Serial.println(_control.code, DEC);
-              Serial.println("");
-          }    
-         } 
+                Serial.println("");
+            }
         }
+    } else if (msg_type == MESSAGE_TYPE_DATA) {
+        Serial.println("Got some data, do something with it.");
+        // Handle incoming data
     }
-}
     /* TODO: 
      *  - inspect incoming control and extract it as an aggregate data request
      *  - in order of the control.nodes list, nodes should pass arbitrary data records along
      *  - final node in list should pass the full payload to the collector
      */
 } /* receive_aggregate_data_request */
+
 /* END OF TEST FUNCTIONS */
 
 /* **** SETUP and LOOP **** */
