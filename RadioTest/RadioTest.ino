@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 13
@@ -155,7 +155,20 @@ void print_ram()
 }
 
 uint8_t get_next_collection_node_id() {
-    return uncollected_nodes[1];
+    uint8_t _id = uncollected_nodes[0];
+    if (_id > 0) {
+        return _id;
+    } else {
+        return 1; // TODO: return to the collector that initiated the collection
+    }
+}
+
+void remove_uncollected_node_id(uint8_t id) {
+    int dest = 0;
+    for (int i=0; i<MAX_CONTROL_NODES; i++) {
+        if (uncollected_nodes[i] != id)
+            uncollected_nodes[dest++] = uncollected_nodes[i];
+    }
 }
 /* END OF UTILS */
 
@@ -677,14 +690,15 @@ void send_next_aggregate_data_request()
 } /* send_next_aggregate_data_request */
 
 void check_collection_state() {
-    if (uncollected_nodes[0] == NODE_ID) {
+    if (get_next_collection_node_id() == NODE_ID) {
         Serial.println("Identified self as next in collection order.");
+        remove_uncollected_node_id(NODE_ID);
         uint8_t next_node_id = get_next_collection_node_id();
         Serial.print("Sending data to: ");
         Serial.println(next_node_id, DEC);
-        uint8_t* _tmp[MAX_CONTROL_NODES] = {0};
-        memcpy(_tmp, uncollected_nodes+1, MAX_CONTROL_NODES-1);
-        memcpy(uncollected_nodes, _tmp, MAX_CONTROL_NODES);
+        //uint8_t* _tmp[MAX_CONTROL_NODES] = {0};
+        //memcpy(_tmp, uncollected_nodes+1, MAX_CONTROL_NODES-1);
+        //memcpy(uncollected_nodes, _tmp, MAX_CONTROL_NODES);
         Data data[1];
         data[0] = {
           .id = ++message_id,
@@ -731,7 +745,14 @@ void receive_aggregate_data_request()
         }
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         Serial.println("Got some data, do something with it.");
-        // Handle incoming data
+        uint8_t len;
+        Data* _data_array = get_multidata_data_from_buffer(&len);
+        Serial.print("Received data array of length: ");
+        Serial.println(len, DEC);
+        for (int i=0; i<len; i++) {
+            Data _data = _data_array[i];
+            remove_uncollected_node_id(_data.node_id);
+        }
     } else {
         Serial.print("WARNING: Reived unexpected Message type: ");
         Serial.println(msg_type, DEC);
