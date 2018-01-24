@@ -4,10 +4,10 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
-#define TX 13
+#define TX 5
 #define CAD_TIMEOUT 1000
 #define TIMEOUT 1000
 #define RF95_CS 8
