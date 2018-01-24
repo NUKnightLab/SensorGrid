@@ -22,7 +22,7 @@
 
 /* Overall max message size is somewhere between 244 and 248 bytes. 248 will cause invalid length error */
 #define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_RECORDS 3
+#define MAX_CONTROL_RECORDS 1
 #define MAX_CONTROL_NODES 78
 
 // test types
@@ -419,16 +419,16 @@ bool send_data(Data data, uint8_t dest)
     return send_message((uint8_t*)&msg, len, dest);
 }
 
-bool send_multidata_control(Control *control, uint8_t array_size, uint8_t dest)
+bool send_multidata_control(Control *control, uint8_t dest)
 {
     MultidataMessage msg = {
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
         .message_type = MESSAGE_TYPE_CONTROL,
-        .len = array_size
+        .len = 1
     };
-    memcpy(msg.control, control, sizeof(Control)*array_size);
-    uint8_t len = sizeof(Control)*array_size + MULTIDATA_MESSAGE_OVERHEAD;
+    memcpy(msg.control, control, sizeof(Control));
+    uint8_t len = sizeof(Control) + MULTIDATA_MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
@@ -582,20 +582,10 @@ void send_next_multidata_control() {
     static int sensor_index = 1;
     sensor_index = !sensor_index;
     Control control[MAX_CONTROL_RECORDS];
-    control[0] = { .id = 0, .code = CONTROL_NONE };
-    control[1] = { .id = ++message_id,
+    control[0] = { .id = ++message_id,
           .code = CONTROL_SEND_DATA };
-    bool SEND_MAX_CONTROL_RECORDS = true;
-    uint8_t num_control_records = 2;
-    if (SEND_MAX_CONTROL_RECORDS) {
-        for (int ctl_i=2; ctl_i<MAX_CONTROL_RECORDS; ctl_i++) {
-            control[ctl_i] = { .id = 0, .code = CONTROL_NONE };
-        }
-        num_control_records = MAX_CONTROL_RECORDS;
-    }
-    //Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
-    if (send_multidata_control(control, num_control_records, sensorArray[sensor_index])) {
+    if (send_multidata_control(control, sensorArray[sensor_index])) {
         Serial.println("-- Sent control. Waiting for return data.");
         uint8_t from;
         int8_t msg_type = receive(5000, &from);
@@ -669,24 +659,13 @@ void receive_multidata_control()
 
 void send_next_aggregate_data_request()
 {
+    unsigned long start_time = millis();
     Control control[MAX_CONTROL_RECORDS];
-    control[0] = { .id = 0, .code = CONTROL_NONE };
-    control[1] = { .id = ++message_id,
+    control[0] = { .id = ++message_id,
           .code = CONTROL_AGGREGATE_SEND_DATA, .nodes = {2,3} };
-    bool SEND_MAX_CONTROL_RECORDS = true; // if true, fill up available control records with no-ops
-    uint8_t num_control_records = 2;
-    if (SEND_MAX_CONTROL_RECORDS) {
-        for (int ctl_i=2; ctl_i<MAX_CONTROL_RECORDS; ctl_i++) {
-            control[ctl_i] = { .id = 0, .code = CONTROL_NONE };
-        }
-        num_control_records = MAX_CONTROL_RECORDS;
-    }
     Serial.print("Broadcasting aggregate data request");
-    if (send_multidata_control(control, num_control_records, RH_BROADCAST_ADDRESS)) {
+    if (send_multidata_control(control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
-        /*
-          TODO: This should listen for return data and check for data records from all nodes
-        */
         uint8_t from;
         int8_t msg_type = receive(30000, &from);
         if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
@@ -699,10 +678,12 @@ void send_next_aggregate_data_request()
                 Serial.print(_data_array[i].node_id);
                 Serial.print(", ");
             }
+            Serial.print("Full cycle collection time: ");
+            Serial.println(millis() - start_time, DEC);
             Serial.println("");
         }
         release_recv_buffer();
-    } 
+    }
 } /* send_next_aggregate_data_request */
 
 void check_collection_state() {
@@ -781,11 +762,6 @@ void receive_aggregate_data_request()
         Serial.println(msg_type, DEC);
     }
     release_recv_buffer();
-    /* TODO: 
-     *  - inspect incoming control and extract it as an aggregate data request
-     *  - in order of the control.nodes list, nodes should pass arbitrary data records along
-     *  - final node in list should pass the full payload to the collector
-     */
 } /* receive_aggregate_data_request */
 
 /* END OF TEST FUNCTIONS */
@@ -793,18 +769,6 @@ void receive_aggregate_data_request()
 /* **** SETUP and LOOP **** */
 
 void setup() {
-  /*
-    while (sizeof(&head) < 255) { //create linked list of size 255 to check max payload
-      typedef struct node* temp = (struct node*)malloc(sizeof(struct node));
-      temp->data = 1;
-      struct node* curr = head;
-      while (curr->next != NULL) {
-        curr = curr->next;
-      }
-      curr->next = temp;
-      temp->next = NULL;
-    } */
-
     while (!Serial);
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
