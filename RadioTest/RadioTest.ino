@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -806,6 +806,7 @@ void receive_aggregate_data_request()
 {
     uint8_t from;
     int8_t msg_type = receive(&from);
+    unsigned long receive_time = millis();
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
         // Do nothing
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
@@ -824,9 +825,10 @@ void receive_aggregate_data_request()
             }
             Serial.println("\n");
         } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
-            Serial.println("Received aggregate data after timeout. Sleeping for 5 seconds.");
             radio.sleep();
-            delay(4000);
+            Serial.print("Received aggregate data after timeout. Sleeping for: ");
+            Serial.println(_control.data - (millis() - receive_time));          
+            delay(_control.data - (millis() - receive_time) );
         } else {
             Serial.print("WARNING: Received unexpected control code: ");
             Serial.println(_control.code);
