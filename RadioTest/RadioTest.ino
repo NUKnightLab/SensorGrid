@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -918,6 +918,10 @@ void loop() {
             case AGGREGATE_DATA_COLLECTION_TEST:
                 check_collection_state();
                 receive_aggregate_data_request();
+                break;
+            case AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST:
+                receive_aggregate_data_request();
+                //check_collection_state();
                 break;
             default:
                 Serial.print("UNKNOWN TEST TYPE: ");
