@@ -5,6 +5,7 @@
 
 /* SET THIS FOR EACH NODE */
 #define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define COLLECTOR_ID 1 // TODO: get collector out of protocol, not hard-coded
 
 #define FREQ 915.00
 #define TX 5
@@ -105,7 +106,7 @@ static bool recv_buffer_avail = true;
 
 /* Collection state */
 uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
-Data aggregated_data[MAX_DATA_RECORDS] = {};
+Data aggregated_data[MAX_DATA_RECORDS*2] = {};
 uint8_t aggregated_data_count = 0;
 
 /* **** UTILS **** */
@@ -689,7 +690,24 @@ void send_next_aggregate_data_request()
 } /* send_next_aggregate_data_request */
 
 void check_collection_state() {
-    if (get_next_collection_node_id() == NODE_ID) {
+    if (aggregated_data_count >= MAX_DATA_RECORDS) {
+        // too much aggregated data. send to collector
+        Serial.print("Sending aggregate data containing IDs: ");
+        for (int i=0; i<MAX_DATA_RECORDS; i++) {
+            Serial.print(aggregated_data[i].node_id);
+            Serial.print(", ");
+        }
+        Serial.println("");
+        if (send_multidata_data(aggregated_data, MAX_DATA_RECORDS, COLLECTOR_ID)) {
+            Serial.println("Forwarded aggregated data to collector node: ");
+            Serial.println(COLLECTOR_ID, DEC);
+            Serial.println("");
+            memset(aggregated_data, 0, MAX_DATA_RECORDS*sizeof(Data));
+            memcpy(aggregated_data, &aggregated_data[MAX_DATA_RECORDS], MAX_DATA_RECORDS*sizeof(Data));
+            memset(&aggregated_data[MAX_DATA_RECORDS], 0, MAX_DATA_RECORDS*sizeof(Data));
+ 
+        }
+    }else if (get_next_collection_node_id() == NODE_ID) {
         Serial.println("Identified self as next in collection order.");
         remove_uncollected_node_id(NODE_ID);
         uint8_t next_node_id = get_next_collection_node_id();
@@ -749,9 +767,6 @@ void receive_aggregate_data_request()
         for (int i=0; i<len; i++) {
             add_aggregated_data_record(_data_array[i]);
         }
-        // TODO: we should only be copying data we don't already have (check node_id & data id)
-        //memcpy(&aggregated_data[aggregated_data_count], _data_array, sizeof(Data)*len);
-        //aggregated_data_count += len;
     } else {
         Serial.print("WARNING: Reived unexpected Message type: ");
         Serial.println(msg_type, DEC);
