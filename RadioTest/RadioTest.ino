@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -21,14 +21,14 @@
 #define SENSORGRID_VERSION 1
 
 /**
- * Overall max message size is somewhere between 244 and 247 bytes. 248 will cause invalid length error
+ * Overall max message size is somewhere between 244 and 247 bytes. 247 will cause invalid length error
  * 
  * Note that these max sizes on the message structs are system specific due to struct padding. The values
  * here are specific to the Cortex M0
  * 
  */
 #define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_NODES 237
+#define MAX_CONTROL_NODES 234
 
 // test types
 #define BOUNCE_DATA_TEST 0
@@ -58,7 +58,7 @@
 #define CONTROL_NEXT_COLLECTION 2
 #define CONTROL_NONE 3 // no-op used for testing
 #define CONTROL_AGGREGATE_SEND_DATA 4
-#define CONTROL_AGGREGATE_SEND_DATA_AFTER_TIMEOUT 5
+#define CONTROL_NEXT_REQUEST_TIME 5
 
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
@@ -72,6 +72,7 @@ typedef struct Control {
     uint8_t id;
     uint8_t code;
     uint8_t from_node;
+    int16_t data;
     uint8_t nodes[MAX_CONTROL_NODES];
 };
 
@@ -544,7 +545,9 @@ void send_next_control_send_data() {
     sensor_index = !sensor_index;
     Control control = {
         .id = ++message_id,
-        .code = CONTROL_SEND_DATA
+        .code = CONTROL_SEND_DATA,
+        .from_node = NODE_ID,
+        .data = 0
     };
     Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
@@ -604,7 +607,7 @@ void send_next_multidata_control() {
     static int sensor_index = 1;
     sensor_index = !sensor_index;
     Control control = { .id = ++message_id,
-          .code = CONTROL_SEND_DATA };
+          .code = CONTROL_SEND_DATA, .from_node = NODE_ID, .data = 0  };
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
     if (send_multidata_control(&control, sensorArray[sensor_index])) {
         Serial.println("-- Sent control. Waiting for return data. Will timeout in 5 seconds.");
@@ -674,7 +677,7 @@ void send_next_aggregate_data_request()
 {
     //unsigned long start_time = millis();
     Control control = { .id = ++message_id,
-          .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .nodes = {3} };
+          .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .data = 0, .nodes = {3} };
     Serial.print("Broadcasting aggregate data request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
@@ -687,7 +690,7 @@ void send_next_aggregate_data_request()
 void send_aggregate_data_countdown_request(unsigned long timeout)
 {
     Control control = { .id = ++message_id,
-          .code = CONTROL_AGGREGATE_SEND_DATA_AFTER_TIMEOUT, .from_node = NODE_ID, .nodes = {2,3} };
+          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {2,3} };
     Serial.print("Broadcasting aggregate data after timeout request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
@@ -820,7 +823,7 @@ void receive_aggregate_data_request()
                 Serial.print(", ");
             }
             Serial.println("\n");
-        } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA_AFTER_TIMEOUT) {
+        } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
             Serial.println("Received aggregate data after timeout. Sleeping for 5 seconds.");
             radio.sleep();
             delay(4000);
