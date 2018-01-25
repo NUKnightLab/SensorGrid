@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_ID 1 // TODO: get collector out of protocol, not hard-coded
 
 #define FREQ 915.00
@@ -663,12 +663,13 @@ void receive_multidata_control()
 
 void send_next_aggregate_data_request()
 {
-    unsigned long start_time = millis();
+    //unsigned long start_time = millis();
     Control control = { .id = ++message_id,
           .code = CONTROL_AGGREGATE_SEND_DATA, .nodes = {2,3} };
     Serial.print("Broadcasting aggregate data request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
-        Serial.println("-- Sent control. Waiting for return data. Will timeout in 30 seconds.");
+        Serial.println("-- Sent control. Waiting for return data.");
+        /*
         uint8_t from;
         int8_t msg_type = receive(30000, &from);
         if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
@@ -686,8 +687,43 @@ void send_next_aggregate_data_request()
             Serial.println("");
         }
         release_recv_buffer();
+        */
+    } else {
+        Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
     }
 } /* send_next_aggregate_data_request */
+
+void listen_for_aggregate_data_response()
+{
+    uint8_t from;
+    int8_t msg_type = receive(&from);
+    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
+        // Serial.println("No data received");
+    } else if (msg_type == MESSAGE_TYPE_DATA) {
+        Serial.print("Received data from IDs: ");
+        uint8_t len;
+        Data* _data_array = get_multidata_data_from_buffer(&len);
+        for (int i=0; i<len; i++) {
+            Serial.print(_data_array[i].node_id);
+            Serial.print(", ");
+        }
+        //Serial.print("Full cycle collection time: ");
+        //Serial.println(millis() - start_time, DEC);
+        //Serial.println("");
+    }
+    release_recv_buffer();
+} /* listen_for_aggregate_data_response */
+
+void test_aggregate_data_collection()
+{
+    static unsigned long last_collection_request_time = 0;
+    if (millis() - last_collection_request_time > 30000) {
+        send_next_aggregate_data_request();
+        last_collection_request_time = millis();
+    } else {
+        listen_for_aggregate_data_response();
+    }
+}; /* test_aggregate_data_collection */
 
 void check_collection_state() {
     if (aggregated_data_count >= MAX_DATA_RECORDS) {
@@ -838,15 +874,15 @@ void loop() {
                 send_next_multidata_control();
                 break;
             case AGGREGATE_DATA_COLLECTION_TEST:
-                send_next_aggregate_data_request();
+                test_aggregate_data_collection();
                 break;
             default:
                 Serial.print("UNKNOWN TEST TYPE: ");
                 Serial.println(TEST_TYPE);
         }
-        Serial.println("");
-        print_ram();
-        delay(5000);
+        //Serial.println("");
+        //print_ram();
+        //delay(5000);
     } else if (node_type == SENSOR) {
         switch (TEST_TYPE) {
             case BOUNCE_DATA_TEST:
