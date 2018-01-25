@@ -21,16 +21,16 @@
 #define NETWORK_ID 3
 #define SENSORGRID_VERSION 1
 
-/* Overall max message size is somewhere between 244 and 248 bytes. 248 will cause invalid length error */
+/* Overall max message size is somewhere between 244 and 247 bytes. 248 will cause invalid length error */
 #define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_NODES 78
+#define MAX_CONTROL_NODES 238
 
 // test types
 #define BOUNCE_DATA_TEST 0
 #define CONTROL_SEND_DATA_TEST 1
 #define MULTIDATA_TEST 2
 #define AGGREGATE_DATA_COLLECTION_TEST 3
-#define TEST_TYPE AGGREGATE_DATA_COLLECTION_TEST
+#define TEST_TYPE MULTIDATA_TEST
 
 /* *
  *  Message types:
@@ -669,25 +669,6 @@ void send_next_aggregate_data_request()
     Serial.print("Broadcasting aggregate data request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
-        /*
-        uint8_t from;
-        int8_t msg_type = receive(30000, &from);
-        if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
-            Serial.println("No data received");
-        } else if (msg_type == MESSAGE_TYPE_DATA) {
-            Serial.print("Received data from IDs: ");
-            uint8_t len;
-            Data* _data_array = get_multidata_data_from_buffer(&len);
-            for (int i=0; i<len; i++) {
-                Serial.print(_data_array[i].node_id);
-                Serial.print(", ");
-            }
-            Serial.print("Full cycle collection time: ");
-            Serial.println(millis() - start_time, DEC);
-            Serial.println("");
-        }
-        release_recv_buffer();
-        */
     } else {
         Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
     }
@@ -698,7 +679,7 @@ void listen_for_aggregate_data_response()
     uint8_t from;
     int8_t msg_type = receive(&from);
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
-        // Serial.println("No data received");
+        // do nothing
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         Serial.print("Received data from IDs: ");
         uint8_t len;
@@ -707,9 +688,6 @@ void listen_for_aggregate_data_response()
             Serial.print(_data_array[i].node_id);
             Serial.print(", ");
         }
-        //Serial.print("Full cycle collection time: ");
-        //Serial.println(millis() - start_time, DEC);
-        //Serial.println("");
     }
     release_recv_buffer();
 } /* listen_for_aggregate_data_response */
@@ -880,9 +858,6 @@ void loop() {
                 Serial.print("UNKNOWN TEST TYPE: ");
                 Serial.println(TEST_TYPE);
         }
-        //Serial.println("");
-        //print_ram();
-        //delay(5000);
     } else if (node_type == SENSOR) {
         switch (TEST_TYPE) {
             case BOUNCE_DATA_TEST:
