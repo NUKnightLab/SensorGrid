@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -674,7 +674,7 @@ void send_next_aggregate_data_request()
 {
     //unsigned long start_time = millis();
     Control control = { .id = ++message_id,
-          .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .nodes = {2,3} };
+          .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .nodes = {3} };
     Serial.print("Broadcasting aggregate data request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
@@ -731,12 +731,17 @@ void test_aggregate_data_collection()
 void test_aggregate_data_collection_with_sleep()
 {
     static unsigned long last_collection_request_time = 0;
-    if (millis() - last_collection_request_time > 30000) {
+    static long next_collection_time = -1;
+    if (next_collection_time > 0 && millis() >= next_collection_time) {
+        send_next_aggregate_data_request();
+        next_collection_time = -1;
+    } else if (millis() - last_collection_request_time > 30000) {
         unsigned long t = 10000;
         send_aggregate_data_countdown_request(t);
         //send_next_aggregate_data_request();
         last_collection_request_time = millis();
-        delay(t);
+        next_collection_time = millis() + 5000;
+        //delay(t);
     } else {
         listen_for_aggregate_data_response();
     }
