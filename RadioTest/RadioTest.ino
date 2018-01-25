@@ -31,7 +31,6 @@
 #define MAX_CONTROL_NODES 234
 
 // test types
-#define BOUNCE_DATA_TEST 0
 #define CONTROL_SEND_DATA_TEST 1
 #define MULTIDATA_TEST 2
 #define AGGREGATE_DATA_COLLECTION_TEST 3
@@ -85,6 +84,7 @@ typedef struct Data {
     int16_t value;
 };
 
+/*
 typedef struct Message {
     uint8_t sensorgrid_version;
     uint8_t network_id;
@@ -93,7 +93,7 @@ typedef struct Message {
       struct Control control;
       struct Data data;
     };
-};
+}; */
 
 typedef struct MultidataMessage {
     uint8_t sensorgrid_version;
@@ -107,7 +107,7 @@ typedef struct MultidataMessage {
 };
 
 uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Data);
-uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_MESSAGE_PAYLOAD;
+//uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_MESSAGE_PAYLOAD;
 uint8_t MAX_MULIDATA_MESSAGE_PAYLOAD = sizeof(MultidataMessage);
 uint8_t MULTIDATA_MESSAGE_OVERHEAD = sizeof(MultidataMessage) - MAX_DATA_RECORDS * MAX_MESSAGE_PAYLOAD;
 
@@ -253,11 +253,11 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
     }
-    Message* _msg;
+    MultidataMessage* _msg;
     lock_recv_buffer(); // lock to be released by calling client
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, &len, timeout, source, dest, id, flags)) {
-            _msg = (Message*)recv_buf;
+            _msg = (MultidataMessage*)recv_buf;
              if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
                 Serial.print("WARNING: Received message with wrong firmware version: ");
                 Serial.println(_msg->sensorgrid_version, DEC);
@@ -277,7 +277,7 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
         }
     } else {
         if (router->recvfromAck(recv_buf, &len, source, dest, id, flags)) {
-            _msg = (Message*)recv_buf;
+            _msg = (MultidataMessage*)recv_buf;
             if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
                 Serial.print("WARNING: Received message with wrong firmware version: ");
                 Serial.println(_msg->sensorgrid_version, DEC);
@@ -308,19 +308,6 @@ int8_t receive(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8
     return _receive_message(timeout, source, dest, id, flags);
 }
 
-Control get_control_from_buffer()
-{
-    if (recv_buffer_avail) {
-        Serial.println("WARNING: Attempt to extract control from unlocked buffer");
-    }
-    int8_t message_type = ((Message*)recv_buf)->message_type;
-    if ( message_type != MESSAGE_TYPE_CONTROL) {
-        Serial.print("WARNING: Attempt to extract control from non-control type: ");
-        Serial.println(message_type, DEC);
-    }
-    return ((Message*)recv_buf)->control;
-}
-
 /**
  * Get the control array from the receive buffer and copy it's length to len
  */
@@ -336,19 +323,6 @@ Control get_multidata_control_from_buffer()
     } 
     //*len = _msg->len;
     return _msg->control;
-}
-
-Data get_data_from_buffer()
-{
-    if (recv_buffer_avail) {
-        Serial.println("WARNING: Attempt to extract data from unlocked buffer");
-    }
-    int8_t message_type = ((Message*)recv_buf)->message_type;
-    if (message_type != MESSAGE_TYPE_DATA) {
-        Serial.print("WARNING: Attempt to extract data from non-data type: ");
-        Serial.println(message_type, DEC);
-    }
-    return ((Message*)recv_buf)->data;
 }
 
 /**
@@ -368,14 +342,134 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
     return _msg->data;
 }
 
+void check_collection_state() {
+    if (collector_id > 0 && aggregated_data_count >= MAX_DATA_RECORDS) {
+        /** 
+         *  too much aggregated data. send to collector
+         *  TODO: is it possible to have aggregated data with no known collector? What would
+         *  we do with that data?
+         */
+        Serial.print("Sending aggregate data containing IDs: ");
+        for (int i=0; i<MAX_DATA_RECORDS; i++) {
+            Serial.print(aggregated_data[i].node_id);
+            Serial.print(", ");
+        }
+        Serial.println("");
+        if (send_multidata_data(aggregated_data, MAX_DATA_RECORDS, collector_id)) {
+            Serial.print("Forwarded aggregated data to collector node: ");
+            Serial.println(collector_id, DEC);
+            Serial.println("");
+            memset(aggregated_data, 0, MAX_DATA_RECORDS*sizeof(Data));
+            memcpy(aggregated_data, &aggregated_data[MAX_DATA_RECORDS], MAX_DATA_RECORDS*sizeof(Data));
+            memset(&aggregated_data[MAX_DATA_RECORDS], 0, MAX_DATA_RECORDS*sizeof(Data));
+            aggregated_data_count = aggregated_data_count - MAX_DATA_RECORDS;
+        }
+    } else if (get_next_collection_node_id() == NODE_ID) {
+        Serial.println("Identified self as next in collection order.");
+        remove_uncollected_node_id(NODE_ID);
+        uint8_t next_node_id = get_next_collection_node_id();
+        Serial.print("Sending data to: ");
+        Serial.println(next_node_id, DEC);
+        // TODO: potential array overrun here
+        Data _data = {
+          .id = ++message_id,
+          .node_id = NODE_ID,
+          .timestamp = 12345,
+          .type = 111,
+          .value = 123 
+        };
+        aggregated_data[aggregated_data_count++] = _data;
+        Serial.print("Sending aggregate data containing IDs: ");
+        for (int i=0; i<aggregated_data_count; i++) {
+            Serial.print(aggregated_data[i].node_id);
+            Serial.print(", ");
+        }
+        Serial.println("");
+        if (send_multidata_data(aggregated_data, aggregated_data_count, next_node_id)) {
+            Serial.print("Forwarded data to node: ");
+            Serial.println(next_node_id, DEC);
+            Serial.println("");
+            memset(aggregated_data, 0, sizeof(aggregated_data));
+            aggregated_data_count = 0;
+        }
+    }
+} /* check_collection_state */
+
+void check_incoming_message()
+{
+    uint8_t from;
+    int8_t msg_type = receive(&from);
+    unsigned long receive_time = millis();
+    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
+        // Do nothing
+    } else if (msg_type == MESSAGE_TYPE_CONTROL) {
+        Control _control = get_multidata_control_from_buffer();
+        Serial.print("Received control message from: "); Serial.print(from, DEC);
+        Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
+        if (_control.code == CONTROL_NONE) {
+          Serial.println("Received control code: NONE. Doing nothing");
+        } else if (_control.code == CONTROL_SEND_DATA) {
+           Data data[] = { {
+              .id = ++message_id,
+              .node_id = NODE_ID,
+              .timestamp = 12345,
+              .type = 111,
+              .value = 123
+            } };
+            if (send_multidata_data(data, 1, from)) {
+                Serial.println("Returned data");
+                Serial.println("");
+            }
+        } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
+            memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
+            collector_id = _control.from_node;
+            Serial.print("Received control code: AGGREGATE_SEND_DATA. Node IDs: ");
+            for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
+                Serial.print(_control.nodes[node_id]);
+                Serial.print(", ");
+            }
+            Serial.println("\n");
+        } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
+            radio.sleep();
+            Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
+            Serial.println(_control.data - (millis() - receive_time));
+            next_listen = receive_time + _control.data;      
+        } else {
+            Serial.print("WARNING: Received unexpected control code: ");
+            Serial.println(_control.code);
+        }
+        /* Overfill for testing only */
+        bool OVERFILL_AGGREGATE_DATA_BUFFER = true;
+        if (OVERFILL_AGGREGATE_DATA_BUFFER) {
+            for (int i=0; i<MAX_DATA_RECORDS; i++) {
+                Data data = { .id=i, .node_id=i+10, .timestamp=12345, .type=1, .value=123 };
+                add_aggregated_data_record(data);
+            }
+        }
+    } else if (msg_type == MESSAGE_TYPE_DATA) {
+        uint8_t len;
+        Data* _data_array = get_multidata_data_from_buffer(&len);
+        Serial.print("Received data array of length: ");
+        Serial.println(len, DEC);
+        for (int i=0; i<len; i++) {
+            add_aggregated_data_record(_data_array[i]);
+        }
+    } else {
+        Serial.print("WARNING: Reived unexpected Message type: ");
+        Serial.println(msg_type, DEC);
+    }
+    release_recv_buffer();
+} /* check_incoming_message */
+
 /* END OF RECEIVE FUNCTIONS */
 
 /* **** SEND FUNCTIONS **** */
 
+
 bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
     Serial.print("Sending message type: ");
-    print_message_type(((Message*)msg)->message_type);
+    print_message_type(((MultidataMessage*)msg)->message_type);
     Serial.print("; length: ");
     Serial.println(len, DEC);
     unsigned long start = millis();
@@ -422,30 +516,6 @@ bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     }
 }
 
-bool send_control(Control control, uint8_t dest)
-{
-    Message msg = {
-        .sensorgrid_version = SENSORGRID_VERSION,
-        .network_id = NETWORK_ID,
-        .message_type = MESSAGE_TYPE_CONTROL
-    };
-    msg.control = control;
-    uint8_t len = sizeof(Control) + MESSAGE_OVERHEAD;
-    return send_message((uint8_t*)&msg, len, dest);
-}
-
-bool send_data(Data data, uint8_t dest)
-{
-    Message msg = {
-        .sensorgrid_version = SENSORGRID_VERSION,
-        .network_id = NETWORK_ID,
-        .message_type = MESSAGE_TYPE_DATA
-    };
-    msg.data = data;
-    uint8_t len = sizeof(Data) + MESSAGE_OVERHEAD;
-    return send_message((uint8_t*)&msg, len, dest);
-}
-
 bool send_multidata_control(Control *control, uint8_t dest)
 {
     MultidataMessage msg = {
@@ -474,76 +544,7 @@ bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
 
 /* END OF SEND  FUNCTIONS */
 
-
 /* **** TEST SPECIFIC FUNCTIONS **** */
-
-void send_next_data_for_bounce()
-{
-    static int sensor_index = 1;
-    sensor_index = !sensor_index;
-    Data data = {
-        .id = ++message_id,
-        .node_id = 10,
-        .timestamp = 12345,
-        .type = 111,
-        .value = 123
-    };
-    unsigned long hashof_sent = hash((uint8_t*)&data, sizeof(Data));
-    Serial.print("Sending Message ID: "); Serial.print(data.id, DEC);
-    Serial.print("; dest: "); Serial.print(sensorArray[sensor_index]);
-    Serial.print("; hash: "); Serial.println(hashof_sent);
-    if (send_data(data, sensorArray[sensor_index])) {
-        Serial.println("-- Sent data. Waiting for return data. Will timeout in 5 seconds.");
-        uint8_t from;
-        int8_t msg_type = receive(5000, &from);
-        if (msg_type == MESSAGE_TYPE_DATA) {
-            Data _data = get_data_from_buffer();
-            unsigned long _hash = hash((uint8_t*)&_data, sizeof(Data));
-            Serial.print("Received return data from: "); Serial.print(from, DEC);
-            Serial.print("; hash: "); Serial.print(_hash);
-            Serial.print("; Message ID: "); Serial.println( _data.id, DEC);
-            if (_hash != hashof_sent) {
-                Serial.print("WARNING: Hash of received data does not match hash of sent. Sent: ");
-                Serial.print(hashof_sent, DEC);
-                Serial.print("; Received: ");
-                Serial.println(_hash, DEC);
-            }
-            if (_data.id != message_id) {
-                Serial.print("WARNING: Received message ID does not match sent message ID. Sent: ");
-                Serial.print(message_id, DEC);
-                Serial.print("; Received: ");
-                Serial.println(_data.id, DEC);
-            }
-        } else {
-            Serial.print("RECEIVED NON-DATA MESSAGE TYPE: ");
-            Serial.println(msg_type, DEC);
-        }
-        release_recv_buffer();
-    }
-} /* send_next_data_for_bounce */
-
-void receive_data_to_bounce() {
-    uint8_t from;
-    int8_t msg_type = receive(&from);
-    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
-        // no-op
-    } else if (msg_type == MESSAGE_TYPE_DATA) {
-        Data _data = get_data_from_buffer();
-        unsigned long _hash = hash((uint8_t*)&_data, sizeof(Data));
-        Serial.print("Received message from: "); Serial.print(from, DEC);
-        Serial.print("; hash: "); Serial.print(_hash);
-        Serial.print("; Message ID: "); Serial.println(_data.id, DEC);
-        if (send_data(_data, from)) {
-            Serial.println("Returned data");
-            Serial.println("");
-        }
-    } else {
-            Serial.print("RECEIVED NON-DATA MESSAGE TYPE: ");
-            Serial.print(msg_type, DEC);
-            Serial.println("");
-    }
-    release_recv_buffer();
-} /* receive_data_to_bounce */
 
 void send_next_control_send_data() {
     static int sensor_index = 1;
@@ -556,14 +557,14 @@ void send_next_control_send_data() {
     };
     Serial.print("Sending Message ID: "); Serial.print(control.id, DEC);
     Serial.print("; dest: "); Serial.println(sensorArray[sensor_index]);
-    if (send_control(control, sensorArray[sensor_index])) {
+    if (send_multidata_control(&control, sensorArray[sensor_index])) {
         Serial.println("-- Sent control. Waiting for return data. Will timeout in 5 seconds.");
         uint8_t from;
         int8_t msg_type = receive(5000, &from);
         if (msg_type == MESSAGE_TYPE_DATA) {
-            Data _data = get_data_from_buffer();
+            uint8_t num_records;
+            Data* _data = get_multidata_data_from_buffer(&num_records);
             Serial.print("Received return data from: "); Serial.print(from, DEC);
-            Serial.print("; Message ID: "); Serial.println( _data.id, DEC);
         } else {
             Serial.print("RECEIVED NON-DATA MESSAGE TYPE: ");
             Serial.println(msg_type, DEC);
@@ -572,40 +573,6 @@ void send_next_control_send_data() {
     }
 } /* send_next_control_send_data */
 
-void receive_control_send_data()
-{
-    uint8_t from;
-    int8_t msg_type = receive(&from);
-    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
-        // no-op
-    } else if (msg_type == MESSAGE_TYPE_CONTROL) {
-        Control _control = get_control_from_buffer();
-        Serial.print("Received control message from: "); Serial.print(from, DEC);
-        Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
-        if (_control.code == CONTROL_SEND_DATA) {
-            Data data = {
-              .id = ++message_id,
-              .node_id = NODE_ID,
-              .timestamp = 12345,
-              .type = 111,
-              .value = 123
-            };
-            if (send_data(data, from)) {
-                Serial.println("Returned data");
-                Serial.println("");
-            }
-        } else {
-            Serial.print("Received unexpected CONTROL code: ");
-            Serial.println(_control.code, DEC);
-            Serial.println("");
-        }
-    } else {
-            Serial.print("RECEIVED NON-CONTROL MESSAGE TYPE: ");
-            Serial.print(msg_type, DEC);
-            Serial.println("");
-    }
-    release_recv_buffer();
-} /* receive_control_send_data */
 
 void send_next_multidata_control() {
     Serial.println("Sending next multidata control");
@@ -635,48 +602,6 @@ void send_next_multidata_control() {
         release_recv_buffer();
     }
 } /* send_next_multidata_control */
-
-void receive_multidata_control()
-{
-    uint8_t from;
-    int8_t msg_type = receive(&from);
-    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
-        // no-op
-    } else if (msg_type == MESSAGE_TYPE_CONTROL) {
-        Control _control = get_multidata_control_from_buffer();
-        Serial.print("Received control message from: "); Serial.print(from, DEC);
-        Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
-        if (_control.code == CONTROL_NONE) {
-            Serial.println("Received NO-OP control. Doing nothing");
-        } else if (_control.code == CONTROL_SEND_DATA) {
-            int NUM_DATA_RECORDS = MAX_DATA_RECORDS;
-            Data data[NUM_DATA_RECORDS];
-            for (int data_i=0; data_i<NUM_DATA_RECORDS; data_i++) {
-                data[data_i] = {
-                  .id = ++message_id,
-                  .node_id = NODE_ID,
-                  .timestamp = 12345,
-                  .type = 111,
-                  .value = 123 
-                };
-            }
-            if (send_multidata_data(data, NUM_DATA_RECORDS, from)) {
-                Serial.println("Returned data");
-                Serial.println("");
-            }
-        } else {
-            Serial.print("Received unexpected CONTROL code: ");
-            Serial.println(_control.code, DEC);
-            Serial.println("");
-        }
-        print_ram();
-    } else {
-            Serial.print("RECEIVED NON-CONTROL MESSAGE TYPE: ");
-            Serial.print(msg_type, DEC);
-            Serial.println("");
-    }
-    release_recv_buffer();
-} /* receive_control_send_data */
 
 void send_next_aggregate_data_request()
 {
@@ -734,8 +659,6 @@ void test_aggregate_data_collection()
     }
 }; /* test_aggregate_data_collection */
 
-
-
 void test_aggregate_data_collection_with_sleep()
 {
     static unsigned long last_collection_request_time = 0;
@@ -746,122 +669,12 @@ void test_aggregate_data_collection_with_sleep()
     } else if (millis() - last_collection_request_time > 30000) {
         unsigned long t = 10000;
         send_aggregate_data_countdown_request(t);
-        //send_next_aggregate_data_request();
         last_collection_request_time = millis();
         next_collection_time = millis() + 5000;
-        //delay(t);
     } else {
         listen_for_aggregate_data_response();
     }
 }; /* test_aggregate_data_collection */
-
-void check_collection_state() {
-    if (collector_id > 0 && aggregated_data_count >= MAX_DATA_RECORDS) {
-        /** 
-         *  too much aggregated data. send to collector
-         *  TODO: is it possible to have aggregated data with no known collector? What would
-         *  we do with that data?
-         */
-        Serial.print("Sending aggregate data containing IDs: ");
-        for (int i=0; i<MAX_DATA_RECORDS; i++) {
-            Serial.print(aggregated_data[i].node_id);
-            Serial.print(", ");
-        }
-        Serial.println("");
-        if (send_multidata_data(aggregated_data, MAX_DATA_RECORDS, collector_id)) {
-            Serial.print("Forwarded aggregated data to collector node: ");
-            Serial.println(collector_id, DEC);
-            Serial.println("");
-            memset(aggregated_data, 0, MAX_DATA_RECORDS*sizeof(Data));
-            memcpy(aggregated_data, &aggregated_data[MAX_DATA_RECORDS], MAX_DATA_RECORDS*sizeof(Data));
-            memset(&aggregated_data[MAX_DATA_RECORDS], 0, MAX_DATA_RECORDS*sizeof(Data));
-            aggregated_data_count = aggregated_data_count - MAX_DATA_RECORDS;
-        }
-    } else if (get_next_collection_node_id() == NODE_ID) {
-        Serial.println("Identified self as next in collection order.");
-        remove_uncollected_node_id(NODE_ID);
-        uint8_t next_node_id = get_next_collection_node_id();
-        Serial.print("Sending data to: ");
-        Serial.println(next_node_id, DEC);
-        // TODO: potential array overrun here
-        Data _data = {
-          .id = ++message_id,
-          .node_id = NODE_ID,
-          .timestamp = 12345,
-          .type = 111,
-          .value = 123 
-        };
-        aggregated_data[aggregated_data_count++] = _data;
-        Serial.print("Sending aggregate data containing IDs: ");
-        for (int i=0; i<aggregated_data_count; i++) {
-            Serial.print(aggregated_data[i].node_id);
-            Serial.print(", ");
-        }
-        Serial.println("");
-        if (send_multidata_data(aggregated_data, aggregated_data_count, next_node_id)) {
-            Serial.print("Forwarded data to node: ");
-            Serial.println(next_node_id, DEC);
-            Serial.println("");
-            memset(aggregated_data, 0, sizeof(aggregated_data));
-            aggregated_data_count = 0;
-        }
-    }
-}
-
-void check_incoming_message()
-{
-    if (millis() < next_listen) return;
-    uint8_t from;
-    int8_t msg_type = receive(&from);
-    unsigned long receive_time = millis();
-    if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
-        // Do nothing
-    } else if (msg_type == MESSAGE_TYPE_CONTROL) {
-        Control _control = get_multidata_control_from_buffer();
-        Serial.print("Received control message from: "); Serial.print(from, DEC);
-        Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
-        if (_control.code == CONTROL_NONE) {
-          Serial.println("Received control code: NONE. Doing nothing");
-        } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
-            memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
-            collector_id = _control.from_node;
-            Serial.print("Received control code: AGGREGATE_SEND_DATA. Node IDs: ");
-            for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
-                Serial.print(_control.nodes[node_id]);
-                Serial.print(", ");
-            }
-            Serial.println("\n");
-        } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
-            radio.sleep();
-            Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
-            Serial.println(_control.data - (millis() - receive_time));
-            next_listen = receive_time + _control.data;      
-        } else {
-            Serial.print("WARNING: Received unexpected control code: ");
-            Serial.println(_control.code);
-        }
-        /* Overfill for testing only */
-        bool OVERFILL_AGGREGATE_DATA_BUFFER = true;
-        if (OVERFILL_AGGREGATE_DATA_BUFFER) {
-            for (int i=0; i<MAX_DATA_RECORDS; i++) {
-                Data data = { .id=i, .node_id=i+10, .timestamp=12345, .type=1, .value=123 };
-                add_aggregated_data_record(data);
-            }
-        }
-    } else if (msg_type == MESSAGE_TYPE_DATA) {
-        uint8_t len;
-        Data* _data_array = get_multidata_data_from_buffer(&len);
-        Serial.print("Received data array of length: ");
-        Serial.println(len, DEC);
-        for (int i=0; i<len; i++) {
-            add_aggregated_data_record(_data_array[i]);
-        }
-    } else {
-        Serial.print("WARNING: Reived unexpected Message type: ");
-        Serial.println(msg_type, DEC);
-    }
-    release_recv_buffer();
-} /* receive_aggregate_data_request */
 
 /* END OF TEST FUNCTIONS */
 
@@ -910,9 +723,6 @@ void loop() {
 
     if (node_type == COLLECTOR) {
         switch (TEST_TYPE) {
-            case BOUNCE_DATA_TEST:
-                send_next_data_for_bounce();
-                break;
             case CONTROL_SEND_DATA_TEST:
                 send_next_control_send_data();
                 break;
@@ -930,27 +740,9 @@ void loop() {
                 Serial.println(TEST_TYPE);
         }
     } else if (node_type == SENSOR) {
-        switch (TEST_TYPE) {
-            case BOUNCE_DATA_TEST:
-                receive_data_to_bounce();
-                break;
-            case CONTROL_SEND_DATA_TEST:
-                receive_control_send_data();
-                break;
-            case MULTIDATA_TEST:
-                receive_multidata_control();
-                break;
-            case AGGREGATE_DATA_COLLECTION_TEST:
-                check_collection_state();
-                check_incoming_message();
-                break;
-            case AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST:
-                check_incoming_message();
-                check_collection_state();
-                break;
-            default:
-                Serial.print("UNKNOWN TEST TYPE: ");
-                Serial.println(TEST_TYPE);
+        if (millis() >= next_listen) {
+            check_collection_state();
+            check_incoming_message();
         }
     }
 }
