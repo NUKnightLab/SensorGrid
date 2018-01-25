@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -748,8 +748,12 @@ void test_aggregate_data_collection_with_sleep()
 }; /* test_aggregate_data_collection */
 
 void check_collection_state() {
-    if (aggregated_data_count >= MAX_DATA_RECORDS) {
-        // too much aggregated data. send to collector
+    if (collector_id > 0 && aggregated_data_count >= MAX_DATA_RECORDS) {
+        /** 
+         *  too much aggregated data. send to collector
+         *  TODO: is it possible to have aggregated data with no known collector? What would
+         *  we do with that data?
+         */
         Serial.print("Sending aggregate data containing IDs: ");
         for (int i=0; i<MAX_DATA_RECORDS; i++) {
             Serial.print(aggregated_data[i].node_id);
@@ -787,7 +791,7 @@ void check_collection_state() {
         }
         Serial.println("");
         if (send_multidata_data(aggregated_data, aggregated_data_count, next_node_id)) {
-            Serial.println("Forwarded data to node: ");
+            Serial.print("Forwarded data to node: ");
             Serial.println(next_node_id, DEC);
             Serial.println("");
             memset(aggregated_data, 0, sizeof(aggregated_data));
@@ -818,7 +822,8 @@ void receive_aggregate_data_request()
             Serial.println("\n");
         } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA_AFTER_TIMEOUT) {
             Serial.println("Received aggregate data after timeout. Sleeping for 5 seconds.");
-            delay(5000);
+            radio.sleep();
+            delay(4000);
         } else {
             Serial.print("WARNING: Received unexpected control code: ");
             Serial.println(_control.code);
@@ -928,7 +933,7 @@ void loop() {
                 break;
             case AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST:
                 receive_aggregate_data_request();
-                //check_collection_state();
+                check_collection_state();
                 break;
             default:
                 Serial.print("UNKNOWN TEST TYPE: ");
