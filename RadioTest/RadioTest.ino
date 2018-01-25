@@ -63,6 +63,7 @@
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
 static uint8_t message_id = 0;
+static unsigned long next_listen = 0;
 
 /* Defining list of nodes */
 int sensorArray[2] = {3};
@@ -379,6 +380,10 @@ bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     Serial.println(len, DEC);
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
+    if (millis() < next_listen) {
+        Serial.print("Listen timeout not expired. Sleeping.");
+        radio.sleep();
+    }
     Serial.print("Time to send: ");
     Serial.println(millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
@@ -802,8 +807,10 @@ void check_collection_state() {
         }
     }
 }
-void receive_aggregate_data_request()
+
+void check_incoming_message()
 {
+    if (millis() < next_listen) return;
     uint8_t from;
     int8_t msg_type = receive(&from);
     unsigned long receive_time = millis();
@@ -814,11 +821,11 @@ void receive_aggregate_data_request()
         Serial.print("Received control message from: "); Serial.print(from, DEC);
         Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
         if (_control.code == CONTROL_NONE) {
-          Serial.println("Received NO-OP control. Doing nothing");
+          Serial.println("Received control code: NONE. Doing nothing");
         } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
             memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
             collector_id = _control.from_node;
-            Serial.print("Received collection control with node IDs: ");
+            Serial.print("Received control code: AGGREGATE_SEND_DATA. Node IDs: ");
             for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
                 Serial.print(_control.nodes[node_id]);
                 Serial.print(", ");
@@ -826,13 +833,14 @@ void receive_aggregate_data_request()
             Serial.println("\n");
         } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
             radio.sleep();
-            Serial.print("Received aggregate data after timeout. Sleeping for: ");
-            Serial.println(_control.data - (millis() - receive_time));          
-            delay(_control.data - (millis() - receive_time) );
+            Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
+            Serial.println(_control.data - (millis() - receive_time));
+            next_listen = receive_time + _control.data;      
         } else {
             Serial.print("WARNING: Received unexpected control code: ");
             Serial.println(_control.code);
         }
+        /* Overfill for testing only */
         bool OVERFILL_AGGREGATE_DATA_BUFFER = true;
         if (OVERFILL_AGGREGATE_DATA_BUFFER) {
             for (int i=0; i<MAX_DATA_RECORDS; i++) {
@@ -934,10 +942,10 @@ void loop() {
                 break;
             case AGGREGATE_DATA_COLLECTION_TEST:
                 check_collection_state();
-                receive_aggregate_data_request();
+                check_incoming_message();
                 break;
             case AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST:
-                receive_aggregate_data_request();
+                check_incoming_message();
                 check_collection_state();
                 break;
             default:
