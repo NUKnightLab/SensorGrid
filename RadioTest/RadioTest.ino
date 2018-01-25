@@ -21,16 +21,22 @@
 #define NETWORK_ID 3
 #define SENSORGRID_VERSION 1
 
-/* Overall max message size is somewhere between 244 and 247 bytes. 248 will cause invalid length error */
+/**
+ * Overall max message size is somewhere between 244 and 247 bytes. 248 will cause invalid length error
+ * 
+ * Note that these max sizes on the message structs are system specific due to struct padding. The values
+ * here are specific to the Cortex M0
+ * 
+ */
 #define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_NODES 238
+#define MAX_CONTROL_NODES 237
 
 // test types
 #define BOUNCE_DATA_TEST 0
 #define CONTROL_SEND_DATA_TEST 1
 #define MULTIDATA_TEST 2
 #define AGGREGATE_DATA_COLLECTION_TEST 3
-#define TEST_TYPE MULTIDATA_TEST
+#define TEST_TYPE AGGREGATE_DATA_COLLECTION_TEST
 
 /* *
  *  Message types:
@@ -64,6 +70,7 @@ int node_type;
 typedef struct Control {
     uint8_t id;
     uint8_t code;
+    uint8_t from_node;
     uint8_t nodes[MAX_CONTROL_NODES];
 };
 
@@ -665,7 +672,7 @@ void send_next_aggregate_data_request()
 {
     //unsigned long start_time = millis();
     Control control = { .id = ++message_id,
-          .code = CONTROL_AGGREGATE_SEND_DATA, .nodes = {2,3} };
+          .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .nodes = {2,3} };
     Serial.print("Broadcasting aggregate data request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
