@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -65,7 +65,7 @@ static RHMesh* router;
 static uint8_t message_id = 0;
 
 /* Defining list of nodes */
-int sensorArray[2] = {2,3};
+int sensorArray[2] = {3};
 int node_type;
 
 typedef struct Control {
@@ -802,8 +802,7 @@ void receive_aggregate_data_request()
         Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
         if (_control.code == CONTROL_NONE) {
           Serial.println("Received NO-OP control. Doing nothing");
-        } 
-        else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
+        } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
             memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
             collector_id = _control.from_node;
             Serial.print("Received collection control with node IDs: ");
@@ -812,6 +811,12 @@ void receive_aggregate_data_request()
                 Serial.print(", ");
             }
             Serial.println("\n");
+        } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA_AFTER_TIMEOUT) {
+            Serial.println("Received aggregate data after timeout. Sleeping for 5 seconds.");
+            delay(5000);
+        } else {
+            Serial.print("WARNING: Received unexpected control code: ");
+            Serial.println(_control.code);
         }
         bool OVERFILL_AGGREGATE_DATA_BUFFER = true;
         if (OVERFILL_AGGREGATE_DATA_BUFFER) {
@@ -819,9 +824,6 @@ void receive_aggregate_data_request()
                 Data data = { .id=i, .node_id=i+10, .timestamp=12345, .type=1, .value=123 };
                 add_aggregated_data_record(data);
             }
-        } else {
-            Serial.print("WARNING: Received unexpected control code: ");
-            Serial.println(_control.code);
         }
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         uint8_t len;
