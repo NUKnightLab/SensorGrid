@@ -4,8 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
-#define COLLECTOR_ID 1 // TODO: get collector out of protocol, not hard-coded
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -115,6 +114,7 @@ static bool recv_buffer_avail = true;
 uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
 Data aggregated_data[MAX_DATA_RECORDS*2] = {};
 uint8_t aggregated_data_count = 0;
+uint8_t collector_id;
 
 /* **** UTILS **** */
 
@@ -719,16 +719,16 @@ void check_collection_state() {
             Serial.print(", ");
         }
         Serial.println("");
-        if (send_multidata_data(aggregated_data, MAX_DATA_RECORDS, COLLECTOR_ID)) {
-            Serial.println("Forwarded aggregated data to collector node: ");
-            Serial.println(COLLECTOR_ID, DEC);
+        if (send_multidata_data(aggregated_data, MAX_DATA_RECORDS, collector_id)) {
+            Serial.print("Forwarded aggregated data to collector node: ");
+            Serial.println(collector_id, DEC);
             Serial.println("");
             memset(aggregated_data, 0, MAX_DATA_RECORDS*sizeof(Data));
             memcpy(aggregated_data, &aggregated_data[MAX_DATA_RECORDS], MAX_DATA_RECORDS*sizeof(Data));
             memset(&aggregated_data[MAX_DATA_RECORDS], 0, MAX_DATA_RECORDS*sizeof(Data));
             aggregated_data_count = aggregated_data_count - MAX_DATA_RECORDS;
         }
-    }else if (get_next_collection_node_id() == NODE_ID) {
+    } else if (get_next_collection_node_id() == NODE_ID) {
         Serial.println("Identified self as next in collection order.");
         remove_uncollected_node_id(NODE_ID);
         uint8_t next_node_id = get_next_collection_node_id();
@@ -773,6 +773,7 @@ void receive_aggregate_data_request()
         } 
         else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
             memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
+            collector_id = _control.from_node;
             Serial.print("Received collection control with node IDs: ");
             for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
                 Serial.print(_control.nodes[node_id]);
