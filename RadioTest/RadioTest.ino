@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -35,7 +35,8 @@
 #define CONTROL_SEND_DATA_TEST 1
 #define MULTIDATA_TEST 2
 #define AGGREGATE_DATA_COLLECTION_TEST 3
-#define TEST_TYPE AGGREGATE_DATA_COLLECTION_TEST
+#define AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST 4
+#define TEST_TYPE AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST
 
 /* *
  *  Message types:
@@ -57,6 +58,7 @@
 #define CONTROL_NEXT_COLLECTION 2
 #define CONTROL_NONE 3 // no-op used for testing
 #define CONTROL_AGGREGATE_SEND_DATA 4
+#define CONTROL_AGGREGATE_SEND_DATA_AFTER_TIMEOUT 5
 
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
@@ -681,6 +683,20 @@ void send_next_aggregate_data_request()
     }
 } /* send_next_aggregate_data_request */
 
+
+void send_aggregate_data_countdown_request(unsigned long timeout)
+{
+    Control control = { .id = ++message_id,
+          .code = CONTROL_AGGREGATE_SEND_DATA_AFTER_TIMEOUT, .from_node = NODE_ID, .nodes = {2,3} };
+    Serial.print("Broadcasting aggregate data after timeout request");
+    if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
+        Serial.println("-- Sent control. Waiting for return data.");
+    } else {
+        Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
+    }
+} /* send_next_aggregate_data_request */
+
+
 void listen_for_aggregate_data_response()
 {
     uint8_t from;
@@ -705,6 +721,22 @@ void test_aggregate_data_collection()
     if (millis() - last_collection_request_time > 30000) {
         send_next_aggregate_data_request();
         last_collection_request_time = millis();
+    } else {
+        listen_for_aggregate_data_response();
+    }
+}; /* test_aggregate_data_collection */
+
+
+
+void test_aggregate_data_collection_with_sleep()
+{
+    static unsigned long last_collection_request_time = 0;
+    if (millis() - last_collection_request_time > 30000) {
+        unsigned long t = 10000;
+        send_aggregate_data_countdown_request(t);
+        //send_next_aggregate_data_request();
+        last_collection_request_time = millis();
+        delay(t);
     } else {
         listen_for_aggregate_data_response();
     }
@@ -787,6 +819,9 @@ void receive_aggregate_data_request()
                 Data data = { .id=i, .node_id=i+10, .timestamp=12345, .type=1, .value=123 };
                 add_aggregated_data_record(data);
             }
+        } else {
+            Serial.print("WARNING: Received unexpected control code: ");
+            Serial.println(_control.code);
         }
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         uint8_t len;
@@ -861,6 +896,9 @@ void loop() {
                 break;
             case AGGREGATE_DATA_COLLECTION_TEST:
                 test_aggregate_data_collection();
+                break;
+            case AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST:
+                test_aggregate_data_collection_with_sleep();
                 break;
             default:
                 Serial.print("UNKNOWN TEST TYPE: ");
