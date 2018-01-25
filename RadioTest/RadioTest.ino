@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_ID 1 // TODO: get collector out of protocol, not hard-coded
 
 #define FREQ 915.00
@@ -705,7 +705,7 @@ void check_collection_state() {
             memset(aggregated_data, 0, MAX_DATA_RECORDS*sizeof(Data));
             memcpy(aggregated_data, &aggregated_data[MAX_DATA_RECORDS], MAX_DATA_RECORDS*sizeof(Data));
             memset(&aggregated_data[MAX_DATA_RECORDS], 0, MAX_DATA_RECORDS*sizeof(Data));
- 
+            aggregated_data_count = aggregated_data_count - MAX_DATA_RECORDS;
         }
     }else if (get_next_collection_node_id() == NODE_ID) {
         Serial.println("Identified self as next in collection order.");
@@ -758,6 +758,13 @@ void receive_aggregate_data_request()
                 Serial.print(", ");
             }
             Serial.println("\n");
+        }
+        bool OVERFILL_AGGREGATE_DATA_BUFFER = true;
+        if (OVERFILL_AGGREGATE_DATA_BUFFER) {
+            for (int i=0; i<MAX_DATA_RECORDS; i++) {
+                Data data = { .id=i, .node_id=i+10, .timestamp=12345, .type=1, .value=123 };
+                add_aggregated_data_record(data);
+            }
         }
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         uint8_t len;
