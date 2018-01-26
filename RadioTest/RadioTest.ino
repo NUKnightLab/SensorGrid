@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -84,21 +84,11 @@ typedef struct Data {
     int16_t value;
 };
 
-/*
-typedef struct Message {
-    uint8_t sensorgrid_version;
-    uint8_t network_id;
-    int8_t message_type;
-    union {
-      struct Control control;
-      struct Data data;
-    };
-}; */
-
 typedef struct MultidataMessage {
     uint8_t sensorgrid_version;
     uint8_t network_id;
     int8_t message_type;
+    uint8_t message_id;
     uint8_t len;
     union {
       struct Control control;
@@ -113,6 +103,9 @@ uint8_t MULTIDATA_MESSAGE_OVERHEAD = sizeof(MultidataMessage) - MAX_DATA_RECORDS
 
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
+uint8_t current_message_id = 0;
+uint8_t last_broadcast_msg_id = 0; /* This is the application layer ID, not the RadioHead message ID since
+                                      RadioHead does not let us explictly set the ID for sendToWait */
 
 /* Collection state */
 uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
@@ -246,9 +239,9 @@ void validate_recv_buffer(uint8_t len)
 }
 
 
-int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
+int8_t _receive_message(uint8_t* len, uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
-    uint8_t len = MAX_MESSAGE_SIZE;
+    *len = MAX_MESSAGE_SIZE;
     if (!recv_buffer_avail) {
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
@@ -256,7 +249,7 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
     MultidataMessage* _msg;
     lock_recv_buffer(); // lock to be released by calling client
     if (timeout) {
-        if (router->recvfromAckTimeout(recv_buf, &len, timeout, source, dest, id, flags)) {
+        if (router->recvfromAckTimeout(recv_buf, len, timeout, source, dest, id, flags)) {
             _msg = (MultidataMessage*)recv_buf;
              if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
                 Serial.print("WARNING: Received message with wrong firmware version: ");
@@ -268,15 +261,15 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
                 Serial.println(_msg->network_id, DEC);
                 return MESSAGE_TYPE_WRONG_NETWORK;
             }
-            validate_recv_buffer(len);
-            Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
+            validate_recv_buffer(*len);
+            Serial.print("Received buffered message. len: "); Serial.print(*len, DEC);
             Serial.print("; type: "); print_message_type(_msg->message_type); Serial.println("");
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
         }
     } else {
-        if (router->recvfromAck(recv_buf, &len, source, dest, id, flags)) {
+        if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
             _msg = (MultidataMessage*)recv_buf;
             if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
                 Serial.print("WARNING: Received message with wrong firmware version: ");
@@ -288,8 +281,8 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
                 Serial.println(_msg->network_id, DEC);
                 return MESSAGE_TYPE_WRONG_NETWORK;
             }
-            validate_recv_buffer(len);
-            Serial.print("Received buffered message. len: "); Serial.print(len, DEC);
+            validate_recv_buffer(*len);
+            Serial.print("Received buffered message. len: "); Serial.print(*len, DEC);
             Serial.print("; type: "); print_message_type(_msg->message_type); Serial.println("");
             return _msg->message_type;
         } else {
@@ -298,14 +291,16 @@ int8_t _receive_message(uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* de
     }
 }
 
-int8_t receive(uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
+int8_t receive(uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL,
+        uint8_t* len=NULL, uint8_t* flags=NULL)
 {
-    return _receive_message(NULL, source, dest, id, flags);
+    return _receive_message(len, NULL, source, dest, id, flags);
 }
 
-int8_t receive(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
+int8_t receive(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL,
+        uint8_t* len=NULL, uint8_t* flags=NULL)
 {
-    return _receive_message(timeout, source, dest, id, flags);
+    return _receive_message(len, timeout, source, dest, id, flags);
 }
 
 /**
@@ -398,17 +393,32 @@ void check_collection_state() {
 void check_incoming_message()
 {
     uint8_t from;
-    int8_t msg_type = receive(&from);
+    uint8_t dest;
+    uint8_t msg_id;
+    uint8_t len;
+    int8_t msg_type = receive(&from, &dest, &msg_id, &len);
     unsigned long receive_time = millis();
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
         // Do nothing
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
+        /* rebroadcast control messages to 255 */
+        if (dest == RH_BROADCAST_ADDRESS) {
+            // TODO: abstract broadcast TX/RX to isolate scope of last_broadcast_msg_id utilization          
+            last_broadcast_msg_id = ((MultidataMessage*)recv_buf)->message_id;
+            Serial.print("Rebroadcasting broadcast control message");
+            if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
+                Serial.println("-- Sent broadcast control");
+            } else {
+                Serial.println("ERROR: could not re-broadcast control");
+            }
+        }
         Control _control = get_multidata_control_from_buffer();
         Serial.print("Received control message from: "); Serial.print(from, DEC);
         Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
         if (_control.code == CONTROL_NONE) {
           Serial.println("Received control code: NONE. Doing nothing");
         } else if (_control.code == CONTROL_SEND_DATA) {
+            // TODO: check the dest ID. This should not be a broadcast message
            Data data[] = { {
               .id = ++message_id,
               .node_id = NODE_ID,
@@ -522,6 +532,7 @@ bool send_multidata_control(Control *control, uint8_t dest)
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
         .message_type = MESSAGE_TYPE_CONTROL,
+        .message_id = ++current_message_id,
         .len = 1
     };
     memcpy(&msg.control, control, sizeof(Control));
@@ -535,6 +546,7 @@ bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
         .message_type = MESSAGE_TYPE_DATA,
+        .message_id = ++current_message_id,
         .len = array_size,
     };
     memcpy(msg.data, data, sizeof(Data)*array_size);
