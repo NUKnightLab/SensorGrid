@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -103,8 +103,14 @@ uint8_t MULTIDATA_MESSAGE_OVERHEAD = sizeof(MultidataMessage) - MAX_DATA_RECORDS
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
 //uint8_t current_message_id = 0;
-uint8_t last_broadcast_msg_id = 0; /* This is the application layer ID, not the RadioHead message ID since
-                                      RadioHead does not let us explictly set the ID for sendToWait */
+
+/**
+ * Track the latest broadcast control message received for each node
+ * 
+ * This is the application layer control ID, not the RadioHead message ID since
+ * RadioHead does not let us explictly set the ID for sendToWait
+ */
+uint8_t received_broadcast_control_messages[MAX_CONTROL_NODES];
 
 /* Collection state */
 uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
@@ -240,10 +246,7 @@ void validate_recv_buffer(uint8_t len)
 
 int8_t _receive_message(uint8_t* len, uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
-    if (!len) {
-        uint8_t _len = MAX_MESSAGE_SIZE;
-        len = &_len;
-    }
+    *len = MAX_MESSAGE_SIZE;
     if (!recv_buffer_avail) {
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
@@ -406,12 +409,20 @@ void check_incoming_message()
         /* rebroadcast control messages to 255 */
         if (dest == RH_BROADCAST_ADDRESS) {
             // TODO: abstract broadcast TX/RX to isolate scope of last_broadcast_msg_id utilization          
-            //last_broadcast_msg_id = ((MultidataMessage*)recv_buf)->message_id;
-            Serial.print("Rebroadcasting broadcast control message");
-            if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
-                Serial.println("-- Sent broadcast control");
-            } else {
-                Serial.println("ERROR: could not re-broadcast control");
+            MultidataMessage *_msg = (MultidataMessage*)recv_buf;
+            if (_msg->control.from_node != NODE_ID
+                    && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
+                received_broadcast_control_messages[_msg->control.from_node] = _msg->control.id;
+                Serial.println("Rebroadcasting broadcast control message");
+                if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
+                    Serial.println("-- Sent broadcast control");
+                } else {
+                    Serial.println("ERROR: could not re-broadcast control");
+                }
+            } else if (_msg->control.from_node == NODE_ID) {
+                Serial.println("NOT rebroadcasting control message originating from self");
+            } else if (received_broadcast_control_messages[_msg->control.from_node] == _msg->control.id) {
+                Serial.println("NOT rebroadcasting control message recently received");
             }
         }
         Control _control = get_multidata_control_from_buffer();
@@ -445,6 +456,7 @@ void check_incoming_message()
             radio.sleep();
             Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
             Serial.println(_control.data - (millis() - receive_time));
+            Serial.println("");
             next_listen = receive_time + _control.data;      
         } else {
             Serial.print("WARNING: Received unexpected control code: ");
@@ -467,8 +479,10 @@ void check_incoming_message()
             add_aggregated_data_record(_data_array[i]);
         }
     } else {
-        Serial.print("WARNING: Reived unexpected Message type: ");
-        Serial.println(msg_type, DEC);
+        Serial.print("WARNING: Received unexpected Message type: ");
+        Serial.print(msg_type, DEC);
+        Serial.print(" from ID: ");
+        Serial.println(from);
     }
     release_recv_buffer();
 } /* check_incoming_message */
