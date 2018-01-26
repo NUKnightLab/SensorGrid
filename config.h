@@ -13,6 +13,7 @@
 #define NODE_TYPE_SENSOR 3
 #define NODE_TYPE_ORDERED_COLLECTOR 4
 #define NODE_TYPE_ORDERED_SENSOR_ROUTER 5
+#define NODE_TYPE_SENSOR_LOGGER 6
 
 /* Config defaults are strings so they can be passed to getConfig */
 //char* DEFAULT_NETWORK_ID = "1";
