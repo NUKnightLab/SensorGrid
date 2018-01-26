@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 
 #define FREQ 915.00
 #define TX 5
@@ -88,7 +88,6 @@ typedef struct MultidataMessage {
     uint8_t sensorgrid_version;
     uint8_t network_id;
     int8_t message_type;
-    uint8_t message_id;
     uint8_t len;
     union {
       struct Control control;
@@ -103,7 +102,7 @@ uint8_t MULTIDATA_MESSAGE_OVERHEAD = sizeof(MultidataMessage) - MAX_DATA_RECORDS
 
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
-uint8_t current_message_id = 0;
+//uint8_t current_message_id = 0;
 uint8_t last_broadcast_msg_id = 0; /* This is the application layer ID, not the RadioHead message ID since
                                       RadioHead does not let us explictly set the ID for sendToWait */
 
@@ -241,7 +240,10 @@ void validate_recv_buffer(uint8_t len)
 
 int8_t _receive_message(uint8_t* len, uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
-    *len = MAX_MESSAGE_SIZE;
+    if (!len) {
+        uint8_t _len = MAX_MESSAGE_SIZE;
+        len = &_len;
+    }
     if (!recv_buffer_avail) {
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
@@ -404,7 +406,7 @@ void check_incoming_message()
         /* rebroadcast control messages to 255 */
         if (dest == RH_BROADCAST_ADDRESS) {
             // TODO: abstract broadcast TX/RX to isolate scope of last_broadcast_msg_id utilization          
-            last_broadcast_msg_id = ((MultidataMessage*)recv_buf)->message_id;
+            //last_broadcast_msg_id = ((MultidataMessage*)recv_buf)->message_id;
             Serial.print("Rebroadcasting broadcast control message");
             if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
                 Serial.println("-- Sent broadcast control");
@@ -532,7 +534,6 @@ bool send_multidata_control(Control *control, uint8_t dest)
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
         .message_type = MESSAGE_TYPE_CONTROL,
-        .message_id = ++current_message_id,
         .len = 1
     };
     memcpy(&msg.control, control, sizeof(Control));
@@ -546,7 +547,6 @@ bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
         .message_type = MESSAGE_TYPE_DATA,
-        .message_id = ++current_message_id,
         .len = array_size,
     };
     memcpy(msg.data, data, sizeof(Data)*array_size);
@@ -759,3 +759,4 @@ void loop() {
     }
 }
   
+
