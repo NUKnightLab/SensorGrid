@@ -281,7 +281,14 @@ void loop()
         } else {
             Serial.println("WARNING: cycle period time too short to collect all node data!!!");
         }
-    } else {
+    } else if (config.node_type == NODE_TYPE_SENSOR_LOGGER) {
+      //stand-alone sensor that will log data
+      Serial.println("Writing to logger...");
+      fillCurrentMessageData();
+      writeLogLine(config.node_id,config.node_id);
+      delay(1000);
+    }
+    else {
         Serial.print("Unknown node type: "); Serial.println(config.node_type, DEC);
         while(1);
     }
