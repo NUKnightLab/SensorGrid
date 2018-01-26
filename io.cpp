@@ -180,7 +180,7 @@ static char* logline(int fromNode, int id)
     return str;
 }
 
-static void writeLogLine(int fromNode, int id)
+void writeLogLine(int fromNode, int id)
 {
     char* line = logline(fromNode, id);
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
@@ -542,7 +542,7 @@ void _writeToSD(char* filename, char* str)
     }
     File file;
     Serial.print(F("Writing log line to ")); Serial.println(filename);
-    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);
+    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
     file.println(str);
     file.close();
     Serial.println(F("File closed"));
