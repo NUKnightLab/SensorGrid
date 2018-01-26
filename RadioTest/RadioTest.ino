@@ -4,7 +4,8 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
 #define TX 5
@@ -14,8 +15,6 @@
 #define REQUIRED_RH_VERSION_MAJOR 1
 #define REQUIRED_RH_VERSION_MINOR 82
 #define RF95_INT 3
-#define COLLECTOR 0
-#define SENSOR 1
 #define MAX_MESSAGE_SIZE 255
 #define NETWORK_ID 3
 #define SENSORGRID_VERSION 1
@@ -66,7 +65,6 @@ static unsigned long next_listen = 0;
 
 /* Defining list of nodes */
 int sensorArray[2] = {3};
-int node_type;
 
 typedef struct Control {
     uint8_t id;
@@ -723,11 +721,6 @@ void setup() {
         Serial.println(" is installed");
         while(1);
     }
-    if (NODE_ID == 1) {
-        node_type = COLLECTOR;
-    } else {
-        node_type = SENSOR;
-    }
     Serial.print("Node ID: ");
     Serial.println(NODE_ID);
     router = new RHMesh(radio, NODE_ID);
@@ -747,7 +740,7 @@ void setup() {
 
 void loop() {
 
-    if (node_type == COLLECTOR) {
+    if (NODE_ID == COLLECTOR_NODE_ID) {
         switch (TEST_TYPE) {
             case CONTROL_SEND_DATA_TEST:
                 send_next_control_send_data();
@@ -765,7 +758,7 @@ void loop() {
                 Serial.print("UNKNOWN TEST TYPE: ");
                 Serial.println(TEST_TYPE);
         }
-    } else if (node_type == SENSOR) {
+    } else {
         if (millis() >= next_listen) {
             check_collection_state();
             check_incoming_message();
