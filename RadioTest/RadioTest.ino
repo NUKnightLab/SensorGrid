@@ -677,7 +677,7 @@ void send_next_aggregate_data_request()
 void send_aggregate_data_countdown_request(unsigned long timeout)
 {
     Control control = { .id = ++message_id,
-          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {2,3} };
+          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {3} };
     Serial.println("Broadcasting aggregate data after timeout request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
