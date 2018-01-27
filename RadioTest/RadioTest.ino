@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -57,6 +57,7 @@
 #define CONTROL_NONE 3 // no-op used for testing
 #define CONTROL_AGGREGATE_SEND_DATA 4
 #define CONTROL_NEXT_REQUEST_TIME 5
+#define CONTROL_ADD_NODE 6
 
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
@@ -115,6 +116,7 @@ uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
 Data aggregated_data[MAX_DATA_RECORDS*2] = {};
 uint8_t aggregated_data_count = 0;
 uint8_t collector_id;
+bool add_node_pending = false;
 
 /* **** UTILS **** */
 
@@ -348,7 +350,16 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
 }
 
 void check_collection_state() {
-    if (collector_id > 0 && aggregated_data_count >= MAX_DATA_RECORDS) {
+    if (collector_id <= 0 && add_node_pending) {
+        //broadcast_add_node();
+        Control control = { .id = ++message_id,
+          .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0, .nodes = {NODE_ID} };
+        if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
+            Serial.println("-- Sent ADD_NODE control");
+        } else {
+            Serial.println("ERROR: did not successfully broadcast ADD NODE control");
+        }
+    } else if (collector_id > 0 && aggregated_data_count >= MAX_DATA_RECORDS) {
         /** 
          *  too much aggregated data. send to collector
          *  TODO: is it possible to have aggregated data with no known collector? What would
@@ -459,6 +470,9 @@ void check_incoming_message()
             Serial.println("\n");
         } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
             radio.sleep();
+            if (collector_id <= 0) { // have no collector. at next request time send ADD_NODE
+                add_node_pending = true;
+            }
             Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
             Serial.println(_control.data - (millis() - receive_time));
             Serial.println("");
