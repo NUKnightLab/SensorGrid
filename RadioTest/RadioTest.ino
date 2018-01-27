@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -117,6 +117,7 @@ Data aggregated_data[MAX_DATA_RECORDS*2] = {};
 uint8_t aggregated_data_count = 0;
 uint8_t collector_id;
 uint8_t pending_nodes[MAX_CONTROL_NODES];
+bool pending_nodes_waiting_broadcast = false;
 //bool add_node_pending = false;
 
 /* **** UTILS **** */
@@ -197,18 +198,18 @@ void add_aggregated_data_record(Data record) {
 
 void add_pending_node(uint8_t id)
 {
-    Serial.println("Check add pending node");
     int i;
     for (i=0; i<MAX_CONTROL_NODES && pending_nodes[i] != 0; i++) {
         if (pending_nodes[i] == id) {
             return;
         }
     }
-    Serial.print("Adding pending node ID: ");
-    Serial.print(id, DEC);
-    Serial.print("; node list index: ");
-    Serial.println(i, DEC);
+    //Serial.print("Adding pending node ID: ");
+    //Serial.print(id, DEC);
+    //Serial.print("; node list index: ");
+    //Serial.println(i, DEC);
     pending_nodes[i] = id;
+    pending_nodes_waiting_broadcast = true;
 }
 
 bool is_pending_nodes()
@@ -377,7 +378,7 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
 }
 
 void check_collection_state() {
-    if (collector_id <= 0 && is_pending_nodes()) {
+    if (collector_id <= 0 && pending_nodes_waiting_broadcast) {
         //broadcast_add_node();
         Control control = { .id = ++message_id,
           .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0 }; //, .nodes = pending_nodes };
@@ -385,7 +386,8 @@ void check_collection_state() {
         if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
             Serial.println("-- Sent ADD_NODE control");
             //add_node_pending = false;
-            clear_pending_nodes();
+            //clear_pending_nodes();
+            pending_nodes_waiting_broadcast = false;
         } else {
             Serial.println("ERROR: did not successfully broadcast ADD NODE control");
         }
@@ -512,6 +514,7 @@ void check_incoming_message()
             Serial.print("Received control code: ADD_NODES. Adding pending IDs: ");
             for (int i=0; i<MAX_CONTROL_NODES && _control.nodes[i] != 0; i++) {
                 Serial.print(_control.nodes[i]);
+                Serial.print(", ");
                 add_pending_node(_control.nodes[i]);
             }
             Serial.println("");
