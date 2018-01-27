@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -246,10 +246,10 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
 {
     //Serial.println("_receive_message");
     if (len == NULL) {
-        uint8_t _len = MAX_MESSAGE_SIZE;
+        uint8_t _len;
         len = &_len;
     }
-    //*len = MAX_MESSAGE_SIZE;
+    *len = MAX_MESSAGE_SIZE;
     if (!recv_buffer_avail) {
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
@@ -271,7 +271,8 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             }
             validate_recv_buffer(*len);
             Serial.print("Received buffered message. len: "); Serial.print(*len, DEC);
-            Serial.print("; type: "); print_message_type(_msg->message_type); Serial.println("");
+            Serial.print("; type: "); print_message_type(_msg->message_type);
+            Serial.print("; from: "); Serial.println(*source);
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
