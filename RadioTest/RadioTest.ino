@@ -293,7 +293,8 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             }
             validate_recv_buffer(*len);
             Serial.print("Received buffered message. len: "); Serial.print(*len, DEC);
-            Serial.print("; type: "); print_message_type(_msg->message_type); Serial.println("");
+            Serial.print("; type: "); print_message_type(_msg->message_type);
+            Serial.print("; from: "); Serial.println(*source);
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
@@ -652,7 +653,7 @@ void send_aggregate_data_countdown_request(unsigned long timeout)
 {
     Control control = { .id = ++message_id,
           .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {2,3} };
-    Serial.print("Broadcasting aggregate data after timeout request");
+    Serial.println("Broadcasting aggregate data after timeout request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
     } else {
