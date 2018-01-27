@@ -471,6 +471,13 @@ void check_incoming_message()
                 Serial.print(", ");
             }
             Serial.println("\n");
+        } else if (_control.code == CONTROL_ADD_NODE) {
+            Serial.print("Received control code: ADD_NODES. Adding pending IDs: ");
+            for (int i=0; i<MAX_CONTROL_NODES && _control.nodes[i] != 0; i++) {
+                Serial.print(_control.nodes[i]);
+                add_pending_node(_control.nodes[i]);
+            }
+            Serial.println("");
         } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
             radio.sleep();
             bool self_in_list = false;
@@ -678,7 +685,7 @@ void send_next_aggregate_data_request()
 void send_aggregate_data_countdown_request(unsigned long timeout)
 {
     Control control = { .id = ++message_id,
-          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {3} };
+          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {2,3} };
     Serial.println("Broadcasting aggregate data after timeout request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
@@ -795,7 +802,10 @@ void loop() {
         }
     } else {
         if (millis() >= next_listen) {
-            check_collection_state();
+            if (millis() >= next_listen + 1000) {
+                check_collection_state();
+            }
+            //if (millis() >= next_listen + 3000)
             check_incoming_message();
         }
     }
