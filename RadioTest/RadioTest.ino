@@ -431,7 +431,8 @@ void check_incoming_message()
             if (_msg->control.from_node != NODE_ID
                     && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
                 received_broadcast_control_messages[_msg->control.from_node] = _msg->control.id;
-                Serial.println("Rebroadcasting broadcast control message");
+                Serial.print("Rebroadcasting broadcast control message originally from ID: ");
+                Serial.println(_msg->control.from_node, DEC);
                 if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
                     Serial.println("-- Sent broadcast control");
                 } else {
