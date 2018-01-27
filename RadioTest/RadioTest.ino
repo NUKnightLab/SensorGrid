@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -65,7 +65,7 @@ static uint8_t message_id = 0;
 static unsigned long next_listen = 0;
 
 /* Defining list of nodes */
-int sensorArray[2] = {3};
+int sensorArray[2] = {};
 
 typedef struct Control {
     uint8_t id;
@@ -664,7 +664,7 @@ void send_next_aggregate_data_request()
 {
     //unsigned long start_time = millis();
     Control control = { .id = ++message_id,
-          .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .data = 0, .nodes = {3} };
+          .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .data = 0, .nodes = {} };
     Serial.print("Broadcasting aggregate data request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
@@ -677,7 +677,7 @@ void send_next_aggregate_data_request()
 void send_aggregate_data_countdown_request(unsigned long timeout)
 {
     Control control = { .id = ++message_id,
-          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {3} };
+          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {} };
     Serial.println("Broadcasting aggregate data after timeout request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
@@ -720,7 +720,8 @@ void test_aggregate_data_collection_with_sleep()
 {
     static unsigned long last_collection_request_time = 0;
     static long next_collection_time = -1;
-    if (next_collection_time > 0 && millis() >= next_collection_time) {
+    int collection_delay = 2000;
+    if (next_collection_time > 0 && millis() >= next_collection_time + collection_delay) {
         send_next_aggregate_data_request();
         next_collection_time = -1;
     } else if (millis() - last_collection_request_time > 30000) {
