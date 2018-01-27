@@ -242,9 +242,14 @@ void validate_recv_buffer(uint8_t len)
 }
 
 
-int8_t _receive_message(uint8_t* len, uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
+int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* source=NULL, uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
-    *len = MAX_MESSAGE_SIZE;
+    //Serial.println("_receive_message");
+    if (len == NULL) {
+        uint8_t _len = MAX_MESSAGE_SIZE;
+        len = &_len;
+    }
+    //*len = MAX_MESSAGE_SIZE;
     if (!recv_buffer_avail) {
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
@@ -273,6 +278,7 @@ int8_t _receive_message(uint8_t* len, uint16_t timeout=NULL, uint8_t* source=NUL
         }
     } else {
         if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
+            Serial.println("received");
             _msg = (MultidataMessage*)recv_buf;
             if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
                 Serial.print("WARNING: Received message with wrong firmware version: ");
@@ -752,6 +758,7 @@ void loop() {
                 test_aggregate_data_collection();
                 break;
             case AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST:
+                //Serial.println("test aggregate data colleciton w/ sleep");
                 test_aggregate_data_collection_with_sleep();
                 break;
             default:
