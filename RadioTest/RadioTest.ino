@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -356,6 +356,7 @@ void check_collection_state() {
           .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0, .nodes = {NODE_ID} };
         if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
             Serial.println("-- Sent ADD_NODE control");
+            add_node_pending = false;
         } else {
             Serial.println("ERROR: did not successfully broadcast ADD NODE control");
         }
