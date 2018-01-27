@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -394,6 +394,7 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
 void check_collection_state() {
     //if (collector_id <= 0 && pending_nodes_waiting_broadcast) {
     if (pending_nodes_waiting_broadcast) {
+        Serial.println("pending nodes are waiting broadcast");
         //broadcast_add_node();
         Control control = { .id = ++message_id,
           .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0 }; //, .nodes = pending_nodes };
@@ -564,6 +565,8 @@ void check_incoming_message()
                     } else {
                         //add_node_pending = true;
                         add_pending_node(NODE_ID);
+                        pending_nodes_waiting_broadcast = true; // broadcast self as pending even
+                                                                // if previous attempt
                     }
                 }
                 Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
@@ -576,7 +579,7 @@ void check_incoming_message()
             Serial.println(_control.code);
         }
         /* Overfill for testing only */
-        bool OVERFILL_AGGREGATE_DATA_BUFFER = true;
+        bool OVERFILL_AGGREGATE_DATA_BUFFER = false;
         if (OVERFILL_AGGREGATE_DATA_BUFFER) {
             for (int i=0; i<MAX_DATA_RECORDS; i++) {
                 Data data = { .id=i, .node_id=i+10, .timestamp=12345, .type=1, .value=123 };
