@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -472,8 +472,18 @@ void check_incoming_message()
             Serial.println("\n");
         } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
             radio.sleep();
-            if (collector_id <= 0) { // have no collector. at next request time send ADD_NODE
-                add_node_pending = true;
+            bool self_in_list = false;
+            for (int i=0; i<MAX_CONTROL_NODES; i++) {
+                if (_control.nodes[i] == NODE_ID) {
+                    self_in_list = true;
+                }
+            }
+            if (collector_id <= 0) {
+                if (self_in_list) {
+                    collector_id = _control.from_node;
+                } else {
+                    add_node_pending = true;
+                }
             }
             Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
             Serial.println(_control.data - (millis() - receive_time));
