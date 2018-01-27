@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -116,7 +116,8 @@ uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
 Data aggregated_data[MAX_DATA_RECORDS*2] = {};
 uint8_t aggregated_data_count = 0;
 uint8_t collector_id;
-bool add_node_pending = false;
+uint8_t pending_nodes[MAX_CONTROL_NODES];
+//bool add_node_pending = false;
 
 /* **** UTILS **** */
 
@@ -192,6 +193,31 @@ void add_aggregated_data_record(Data record) {
         memcpy(&aggregated_data[aggregated_data_count++], &record, sizeof(Data));
         remove_uncollected_node_id(record.node_id);
     }
+}
+
+void add_pending_node(uint8_t id)
+{
+    Serial.println("Check add pending node");
+    int i;
+    for (i=0; i<MAX_CONTROL_NODES && pending_nodes[i] != 0; i++) {
+        if (pending_nodes[i] == id) {
+            return;
+        }
+    }
+    Serial.print("Adding pending node ID: ");
+    Serial.print(id, DEC);
+    Serial.print("; node list index: ");
+    Serial.println(i, DEC);
+    pending_nodes[i] = id;
+}
+
+bool is_pending_nodes()
+{
+    return pending_nodes[0] > 0;
+}
+
+void clear_pending_nodes() {
+    memset(pending_nodes, 0, MAX_CONTROL_NODES);
 }
 /* END OF UTILS */
 
@@ -351,13 +377,15 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
 }
 
 void check_collection_state() {
-    if (collector_id <= 0 && add_node_pending) {
+    if (collector_id <= 0 && is_pending_nodes()) {
         //broadcast_add_node();
         Control control = { .id = ++message_id,
-          .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0, .nodes = {NODE_ID} };
+          .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0 }; //, .nodes = pending_nodes };
+        memcpy(control.nodes, pending_nodes, MAX_CONTROL_NODES);
         if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
             Serial.println("-- Sent ADD_NODE control");
-            add_node_pending = false;
+            //add_node_pending = false;
+            clear_pending_nodes();
         } else {
             Serial.println("ERROR: did not successfully broadcast ADD NODE control");
         }
@@ -463,14 +491,22 @@ void check_incoming_message()
                 Serial.println("");
             }
         } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
-            memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
-            collector_id = _control.from_node;
-            Serial.print("Received control code: AGGREGATE_SEND_DATA. Node IDs: ");
-            for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
-                Serial.print(_control.nodes[node_id]);
-                Serial.print(", ");
+            bool self_in_list = false;
+            for (int i=0; i<MAX_CONTROL_NODES; i++) {
+                if (_control.nodes[i] == NODE_ID) {
+                    self_in_list = true;
+                }
             }
-            Serial.println("\n");
+            if (self_in_list) {
+                memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
+                collector_id = _control.from_node;
+                Serial.print("Received control code: AGGREGATE_SEND_DATA. Node IDs: ");
+                for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
+                    Serial.print(_control.nodes[node_id]);
+                    Serial.print(", ");
+                }
+                Serial.println("\n");
+            }
         } else if (_control.code == CONTROL_NEXT_REQUEST_TIME) {
             radio.sleep();
             bool self_in_list = false;
@@ -479,11 +515,14 @@ void check_incoming_message()
                     self_in_list = true;
                 }
             }
+            Serial.print("Self in control list: ");
+            Serial.println(self_in_list);
             if (collector_id <= 0) {
                 if (self_in_list) {
                     collector_id = _control.from_node;
                 } else {
-                    add_node_pending = true;
+                    //add_node_pending = true;
+                    add_pending_node(NODE_ID);
                 }
             }
             Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
