@@ -216,7 +216,7 @@ void add_pending_node(uint8_t id)
 
 void add_known_node(uint8_t id)
 {
-    if (id == 3) return; // TODO: this is just for testing
+    //if (id == 3) return; // TODO: this is just for testing
     int i;
     for (i=0; i<MAX_CONTROL_NODES && known_nodes[i] != 0; i++) {
         if (known_nodes[i] == id) {
@@ -470,23 +470,25 @@ void check_incoming_message()
         // Do nothing
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
         /* rebroadcast control messages to 255 */
-        if (dest == RH_BROADCAST_ADDRESS) {
-            // TODO: abstract broadcast TX/RX to isolate scope of last_broadcast_msg_id utilization          
-            MultidataMessage *_msg = (MultidataMessage*)recv_buf;
-            if (_msg->control.from_node != NODE_ID
-                    && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
-                received_broadcast_control_messages[_msg->control.from_node] = _msg->control.id;
-                Serial.print("Rebroadcasting broadcast control message originally from ID: ");
-                Serial.println(_msg->control.from_node, DEC);
-                if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
-                    Serial.println("-- Sent broadcast control");
-                } else {
-                    Serial.println("ERROR: could not re-broadcast control");
+        if (dest == RH_BROADCAST_ADDRESS) {   
+            if ( !(NODE_ID == COLLECTOR_NODE_ID && from == 3) ) { // TODO: ignoring 3 just for testing
+                MultidataMessage *_msg = (MultidataMessage*)recv_buf;
+                if (NODE_ID != COLLECTOR_NODE_ID // is there a reason for collectors to re-broadcast 255 controls? 
+                        && _msg->control.from_node != NODE_ID
+                        && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
+                    received_broadcast_control_messages[_msg->control.from_node] = _msg->control.id;
+                    Serial.print("Rebroadcasting broadcast control message originally from ID: ");
+                    Serial.println(_msg->control.from_node, DEC);
+                    if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
+                        Serial.println("-- Sent broadcast control");
+                    } else {
+                        Serial.println("ERROR: could not re-broadcast control");
+                    }
+                } else if (_msg->control.from_node == NODE_ID) {
+                    Serial.println("NOT rebroadcasting control message originating from self");
+                } else if (received_broadcast_control_messages[_msg->control.from_node] == _msg->control.id) {
+                    Serial.println("NOT rebroadcasting control message recently received");
                 }
-            } else if (_msg->control.from_node == NODE_ID) {
-                Serial.println("NOT rebroadcasting control message originating from self");
-            } else if (received_broadcast_control_messages[_msg->control.from_node] == _msg->control.id) {
-                Serial.println("NOT rebroadcasting control message recently received");
             }
         }
         Control _control = get_multidata_control_from_buffer();
@@ -752,6 +754,12 @@ void send_next_aggregate_data_request()
         Serial.print(" ");
     }
     Serial.println("");
+
+    ****
+    TODO: don't broadcast this. Send it to the first uncollected node. If nodes encounter a no-route along the way, they
+    should return their payload to the collector and collector should issue a new aggregate data request to whatever
+    node is next
+    ****
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control. Waiting for return data.");
     } else {
