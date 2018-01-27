@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -394,6 +394,7 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
 void check_collection_state() {
     //if (collector_id <= 0 && pending_nodes_waiting_broadcast) {
     if (pending_nodes_waiting_broadcast) {
+        Serial.println("pending nodes are waiting broadcast");
         //broadcast_add_node();
         Control control = { .id = ++message_id,
           .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0 }; //, .nodes = pending_nodes };
