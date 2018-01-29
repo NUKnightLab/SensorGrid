@@ -226,6 +226,13 @@ void add_known_node(uint8_t id)
     known_nodes[i] = id;
 }
 
+void remove_known_node_id(uint8_t id) {
+    int dest = 0;
+    for (int i=0; i<MAX_CONTROL_NODES; i++) {
+        if (known_nodes[i] != id)
+            known_nodes[dest++] = known_nodes[i];
+    }
+}
 
 bool is_pending_nodes()
 {
@@ -755,7 +762,7 @@ void send_next_aggregate_data_request()
     Control control = { .id = ++message_id,
           .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .data = 0 };
     memcpy(control.nodes, known_nodes, MAX_CONTROL_NODES);
-    Serial.print("Broadcasting aggregate data request from nodes: ");
+    Serial.print("Sending aggregate data request from nodes: ");
     for (int i=0; i<MAX_CONTROL_NODES && control.nodes[i] != 0; i++) {
         Serial.print(control.nodes[i], DEC);
         Serial.print(" ");
@@ -771,15 +778,17 @@ void send_next_aggregate_data_request()
         Serial.print("-- Sent control: CONTROL_AGGREGATE_SEND_DATA to ID: ");
         Serial.println(known_nodes[0], DEC);
     } else {
-        Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
+        Serial.println("ERROR: did not successfully send aggregate data collection request");
+        remove_known_node_id(known_nodes[0]);
     }
 } /* send_next_aggregate_data_request */
 
 
-void send_aggregate_data_countdown_request(unsigned long timeout)
+void send_control_next_request_time(unsigned long timeout)
 {
     Control control = { .id = ++message_id,
-          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {} };
+          .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000 };
+    memcpy(control.nodes, known_nodes, MAX_CONTROL_NODES);
     Serial.println("Broadcasting aggregate data after timeout request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control: CONTROL_NEXT_REQUEST_TIME");
@@ -828,7 +837,7 @@ void test_aggregate_data_collection_with_sleep()
         next_collection_time = -1;
     } else if (millis() - last_collection_request_time > 30000) {
         unsigned long t = 10000;
-        send_aggregate_data_countdown_request(t);
+        send_control_next_request_time(t);
         last_collection_request_time = millis();
         next_collection_time = millis() + 5000;
     } /*else {
