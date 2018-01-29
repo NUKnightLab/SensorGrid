@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -566,15 +566,19 @@ void check_incoming_message()
                 }
                 Serial.print("Self in control list: ");
                 Serial.println(self_in_list);
-                if (collector_id <= 0) {
-                    if (self_in_list) {
-                        collector_id = _control.from_node;
-                    } else {
-                        //add_node_pending = true;
+                if (self_in_list) {
+                    if (collector_id > 0) {
+                        if (collector_id == _control.from_node) {
+                            // nothing changes
+                        } else {
+                            // This node has a collector. Do we switch collectors here if not the same?
+                        }
+                    }
+                } else {
+                    if (collector_id <= 0 || collector_id == _control.from_node) {
                         add_pending_node(NODE_ID);
                         pending_nodes_waiting_broadcast = true; // broadcast self as pending even
-                                                                // if previous attempt
-                    }
+                    }                                            // if previous attempt
                 }
                 Serial.print("Received control code: NEXT_REQUEST_TIME. Sleeping for: ");
                 Serial.println(_control.data - (millis() - receive_time));
