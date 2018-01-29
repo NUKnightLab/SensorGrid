@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -748,6 +748,10 @@ void send_next_multidata_control() {
 void send_next_aggregate_data_request()
 {
     //unsigned long start_time = millis();
+    if (known_nodes[0] <= 0) {
+        Serial.println("No known nodes. NOT sending data request.");
+        return;
+    }
     Control control = { .id = ++message_id,
           .code = CONTROL_AGGREGATE_SEND_DATA, .from_node = NODE_ID, .data = 0 };
     memcpy(control.nodes, known_nodes, MAX_CONTROL_NODES);
@@ -758,13 +762,14 @@ void send_next_aggregate_data_request()
     }
     Serial.println("");
 
-    ****
+    /* ***
     TODO: don't broadcast this. Send it to the first uncollected node. If nodes encounter a no-route along the way, they
     should return their payload to the collector and collector should issue a new aggregate data request to whatever
     node is next
-    ****
-    if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
-        Serial.println("-- Sent control. Waiting for return data.");
+    *** */
+    if (send_multidata_control(&control, known_nodes[0])) {
+        Serial.print("-- Sent control: CONTROL_AGGREGATE_SEND_DATA to ID: ");
+        Serial.println(known_nodes[0], DEC);
     } else {
         Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
     }
@@ -777,7 +782,7 @@ void send_aggregate_data_countdown_request(unsigned long timeout)
           .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000, .nodes = {} };
     Serial.println("Broadcasting aggregate data after timeout request");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
-        Serial.println("-- Sent control. Waiting for return data.");
+        Serial.println("-- Sent control: CONTROL_NEXT_REQUEST_TIME");
     } else {
         Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
     }
