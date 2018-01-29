@@ -537,7 +537,7 @@ void check_incoming_message()
                 }
                 Serial.println("\n");
             }
-        } else if (_control.code == CONTROL_ADD_NODE) {
+        } else if (_control.code == CONTROL_ADD_NODE && !(NODE_ID == COLLECTOR_NODE_ID && from == 3) ) { // TODO: ignoring 3 for testing
             if (NODE_ID == COLLECTOR_NODE_ID) {
                 Serial.print("Received control code: ADD_NODES. Adding known IDs: ");
                 for (int i=0; i<MAX_CONTROL_NODES && _control.nodes[i] != 0; i++) {
@@ -789,7 +789,7 @@ void send_control_next_request_time(unsigned long timeout)
     Control control = { .id = ++message_id,
           .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = 5000 };
     memcpy(control.nodes, known_nodes, MAX_CONTROL_NODES);
-    Serial.println("Broadcasting aggregate data after timeout request");
+    Serial.println("Broadcasting next request time");
     if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control: CONTROL_NEXT_REQUEST_TIME");
     } else {
