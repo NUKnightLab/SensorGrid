@@ -170,10 +170,14 @@ void print_ram()
 
 uint8_t get_next_collection_node_id() {
     uint8_t _id = uncollected_nodes[0];
+    Serial.print("First ID in uncollected nodes array: ");
+    Serial.print(_id, DEC);
+    Serial.print(uncollected_nodes[1], DEC);
+    Serial.println(uncollected_nodes[2], DEC);
     if (_id > 0) {
         return _id;
     } else {
-        return 1; // TODO: return to the collector that initiated the collection
+        return collector_id;
     }
 }
 
@@ -604,6 +608,12 @@ void check_incoming_message()
         Serial.println(len, DEC);
         for (int i=0; i<len; i++) {
             add_aggregated_data_record(_data_array[i]);
+        }
+        for (int i=0; i<aggregated_data_count; i++) {
+            /* remove collected nodes from uncollected nodes */
+            Serial.print("Removing ID from uncollected nodes: ");
+            Serial.println(aggregated_data[i].node_id, DEC);
+            remove_uncollected_node_id(aggregated_data[i].node_id);
         }
     } else {
         Serial.print("WARNING: Received unexpected Message type: ");
