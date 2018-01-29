@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -79,7 +79,7 @@ typedef struct Control {
 };
 
 typedef struct Data {
-    uint8_t id; // 1-255 indicates Data$
+    uint8_t id; // 1-255 indicates Data
     uint8_t node_id;
     uint8_t timestamp;
     uint8_t type;
@@ -442,7 +442,24 @@ void check_collection_state() {
             memset(&aggregated_data[MAX_DATA_RECORDS], 0, MAX_DATA_RECORDS*sizeof(Data));
             aggregated_data_count = aggregated_data_count - MAX_DATA_RECORDS;
         }
-    } else if (get_next_collection_node_id() == NODE_ID) {
+    } else {
+        for (int i=1; i<aggregated_data_count; i++) { // Skip the first record, it is the aggregation init
+            if (aggregated_data[i].id == 0) {
+                if (aggregated_data[i].node_id == NODE_ID) {
+                    current node's time to collect
+                    Serial.println("Time for current node to collect");
+                } else {
+                    break; // there is still an uncollected node before current node
+                }
+            } else {
+                // continue through to find the first 0 id  
+            }
+        }
+    } 
+    
+    /* 
+     *  Removed control based approach to aggregation
+      else if (get_next_collection_node_id() == NODE_ID) {
         Serial.println("Identified self as next in collection order.");
         remove_uncollected_node_id(NODE_ID);
         uint8_t next_node_id = get_next_collection_node_id();
@@ -470,7 +487,7 @@ void check_collection_state() {
             memset(aggregated_data, 0, sizeof(aggregated_data));
             aggregated_data_count = 0;
         }
-    }
+    } */
 } /* check_collection_state */
 
 void check_incoming_message()
