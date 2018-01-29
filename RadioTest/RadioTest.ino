@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -58,6 +58,9 @@
 #define CONTROL_AGGREGATE_SEND_DATA 4
 #define CONTROL_NEXT_REQUEST_TIME 5
 #define CONTROL_ADD_NODE 6
+
+/* Data types */
+#define AGGREGATE_DATA_INIT 0
 
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
@@ -537,7 +540,8 @@ void check_incoming_message()
                 }
                 Serial.println("\n");
             }
-        } else if (_control.code == CONTROL_ADD_NODE && !(NODE_ID == COLLECTOR_NODE_ID && from == 3) ) { // TODO: ignoring 3 for testing
+        } else if (_control.code == CONTROL_ADD_NODE && !(NODE_ID == COLLECTOR_NODE_ID && from == 3 && dest == RH_BROADCAST_ADDRESS) ) { 
+                                                        // TODO: ignoring broadcasts from 3 for testing
             if (NODE_ID == COLLECTOR_NODE_ID) {
                 Serial.print("Received control code: ADD_NODES. Adding known IDs: ");
                 for (int i=0; i<MAX_CONTROL_NODES && _control.nodes[i] != 0; i++) {
@@ -787,6 +791,37 @@ void send_next_aggregate_data_request()
     }
 } /* send_next_aggregate_data_request */
 
+void send_aggregate_data_init() {
+    if (known_nodes[0] <= 0) {
+        Serial.println("No known nodes. NOT sending data request.");
+        return;
+    }
+    Data data[MAX_DATA_RECORDS];
+    data[0] = {
+           .id = 0, .node_id = NODE_ID, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
+    uint8_t num_data_records = 1;      
+    for (int i=0; i<MAX_DATA_RECORDS-1 && known_nodes[i] != 0; i++) {
+        data[i+1] = {
+            .id = 0, .node_id = known_nodes[i], .timestamp = 0, .type = 0, .value = 0 };
+        Serial.print(known_nodes[i], DEC);
+        Serial.print(" ");
+        num_data_records++;
+    }
+    Serial.println("");
+
+    /* ***
+    TODO: don't broadcast this. Send it to the first uncollected node. If nodes encounter a no-route along the way, they
+    should return their payload to the collector and collector should issue a new aggregate data request to whatever
+    node is next
+    *** */
+    if (send_multidata_data(data, num_data_records, known_nodes[0])) {
+        Serial.print("-- Sent data: AGGREGATE_DATA_INIT to ID: ");
+        Serial.println(known_nodes[0], DEC);
+    } else {
+        Serial.println("ERROR: did not successfully send aggregate data collection request");
+        remove_known_node_id(known_nodes[0]);
+    }
+} /* send_aggregate_data_init */
 
 void send_control_next_request_time(unsigned long timeout)
 {
@@ -837,7 +872,8 @@ void test_aggregate_data_collection_with_sleep()
     static long next_collection_time = -1;
     int collection_delay = 2000;
     if (next_collection_time > 0 && millis() >= next_collection_time + collection_delay) {
-        send_next_aggregate_data_request();
+        //send_next_aggregate_data_request();
+        send_aggregate_data_init();
         next_collection_time = -1;
     } else if (millis() - last_collection_request_time > 30000) {
         unsigned long t = 10000;
