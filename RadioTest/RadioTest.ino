@@ -446,8 +446,30 @@ void check_collection_state() {
         for (int i=1; i<aggregated_data_count; i++) { // Skip the first record, it is the aggregation init
             if (aggregated_data[i].id == 0) {
                 if (aggregated_data[i].node_id == NODE_ID) {
-                    current node's time to collect
+                    //current node's time to collect
                     Serial.println("Time for current node to collect");
+                    aggregated_data[i] = {
+                        .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
+                    };
+                    Serial.print("Sending aggregate data containing IDs: ");
+                    for (int i=0; i<aggregated_data_count; i++) {
+                        Serial.print(aggregated_data[i].node_id);
+                        Serial.print(", ");
+                    }
+                    uint8_t next_node_id;
+                    if (i == aggregated_data_count - 1) {
+                        next_node_id = aggregated_data[0].node_id;
+                    } else {
+                        next_node_id = aggregated_data[i+1].node_id;
+                    }
+                    Serial.println("");
+                    if (send_multidata_data(aggregated_data, aggregated_data_count, next_node_id)) {
+                        Serial.print("Forwarded data to node: ");
+                        Serial.println(next_node_id, DEC);
+                        Serial.println("");
+                        memset(aggregated_data, 0, sizeof(aggregated_data));
+                        aggregated_data_count = 0;
+                    }
                 } else {
                     break; // there is still an uncollected node before current node
                 }
