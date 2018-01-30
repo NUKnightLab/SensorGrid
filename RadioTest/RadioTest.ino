@@ -30,9 +30,6 @@
 #define MAX_CONTROL_NODES 230
 
 // test types
-#//define CONTROL_SEND_DATA_TEST 1
-#//define MULTIDATA_TEST 2
-#//define AGGREGATE_DATA_COLLECTION_TEST 3
 #define AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST 4
 #define TEST_TYPE AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST
 
@@ -98,13 +95,11 @@ typedef struct MultidataMessage {
 };
 
 uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Data);
-//uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_MESSAGE_PAYLOAD;
 uint8_t MAX_MULIDATA_MESSAGE_PAYLOAD = sizeof(MultidataMessage);
 uint8_t MULTIDATA_MESSAGE_OVERHEAD = sizeof(MultidataMessage) - MAX_DATA_RECORDS * MAX_MESSAGE_PAYLOAD;
 
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
-//uint8_t current_message_id = 0;
 
 /**
  * Track the latest broadcast control message received for each node
@@ -115,14 +110,10 @@ static bool recv_buffer_avail = true;
 uint8_t received_broadcast_control_messages[MAX_CONTROL_NODES];
 
 /* Collection state */
-//uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
-//Data aggregated_data[MAX_DATA_RECORDS*2] = {};
-//uint8_t aggregated_data_count = 0;
 uint8_t collector_id;
 uint8_t known_nodes[MAX_CONTROL_NODES];
 uint8_t pending_nodes[MAX_CONTROL_NODES];
 bool pending_nodes_waiting_broadcast = false;
-//bool add_node_pending = false;
 
 /* **** UTILS **** */
 
@@ -170,19 +161,6 @@ void print_ram()
     Serial.print("Avail RAM: ");
     Serial.println(free_ram(), DEC);
 }
-
-/*
-void add_aggregated_data_record(Data record) {
-    bool found_record = false;
-    for (int i=0; i<aggregated_data_count; i++) {
-        if (aggregated_data[i].id == record.id && aggregated_data[i].node_id == record.node_id)
-            found_record = true;
-    }
-    if  (!found_record) {
-        memcpy(&aggregated_data[aggregated_data_count++], &record, sizeof(Data));
-        //remove_uncollected_node_id(record.node_id);
-    }
-} */
 
 void add_pending_node(uint8_t id)
 {
@@ -509,43 +487,18 @@ void handle_incoming_aggregate_data()
 }
 
 void check_collection_state() {
-    //if (collector_id <= 0 && pending_nodes_waiting_broadcast) {
     if (pending_nodes_waiting_broadcast) {
         Serial.println("pending nodes are waiting broadcast");
-        //broadcast_add_node();
         Control control = { .id = ++message_id,
           .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0 }; //, .nodes = pending_nodes };
         memcpy(control.nodes, pending_nodes, MAX_CONTROL_NODES);
         if (send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
             Serial.println("-- Sent ADD_NODE control");
-            //add_node_pending = false;
-            //clear_pending_nodes();
             pending_nodes_waiting_broadcast = false;
         } else {
             Serial.println("ERROR: did not successfully broadcast ADD NODE control");
         }
-    } 
-    /*
-    else if (collector_id > 0 && aggregated_data_count >= MAX_DATA_RECORDS) {
- 
-        Serial.print("Sending aggregate data containing IDs: ");
-        for (int i=0; i<MAX_DATA_RECORDS; i++) {
-            Serial.print(aggregated_data[i].node_id);
-            Serial.print(", ");
-        }
-        Serial.println("");
-        if (send_multidata_data(aggregated_data, MAX_DATA_RECORDS, collector_id)) {
-            Serial.print("Forwarded aggregated data to collector node: ");
-            Serial.println(collector_id, DEC);
-            Serial.println("");
-            memset(aggregated_data, 0, MAX_DATA_RECORDS*sizeof(Data));
-            memcpy(aggregated_data, &aggregated_data[MAX_DATA_RECORDS], MAX_DATA_RECORDS*sizeof(Data));
-            memset(&aggregated_data[MAX_DATA_RECORDS], 0, MAX_DATA_RECORDS*sizeof(Data));
-            aggregated_data_count = aggregated_data_count - MAX_DATA_RECORDS;
-        }
-    } */ else {
-        //handle_incoming_aggregate_data();
-    } 
+    }
 } /* check_collection_state */
 
 void check_incoming_message()
@@ -654,15 +607,6 @@ void check_incoming_message()
             Serial.print("WARNING: Received unexpected control code: ");
             Serial.println(_control.code);
         }
-        /* Overfill for testing only */
-        /*
-        bool OVERFILL_AGGREGATE_DATA_BUFFER = false;
-        if (OVERFILL_AGGREGATE_DATA_BUFFER) {
-            for (int i=0; i<MAX_DATA_RECORDS; i++) {
-                Data data = { .id=i, .node_id=i+10, .timestamp=12345, .type=1, .value=123 };
-                add_aggregated_data_record(data);
-            }
-        }*/
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         uint8_t len;
         Data* _data_array = get_multidata_data_from_buffer(&len);
@@ -761,7 +705,8 @@ void test_aggregate_data_collection_with_sleep()
 
 /* **** SETUP and LOOP **** */
 
-void setup() {
+void setup()
+{
     while (!Serial);
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
@@ -795,7 +740,8 @@ void setup() {
     delay(100);
 }
 
-void loop() {
+void loop()
+{
 
     if (NODE_ID == COLLECTOR_NODE_ID) {
         switch (TEST_TYPE) {
@@ -817,5 +763,3 @@ void loop() {
         }
     }
 }
-  
-
