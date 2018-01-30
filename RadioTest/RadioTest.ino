@@ -474,8 +474,6 @@ void handle_incoming_aggregate_data()
                     Serial.print("Forwarded data to node: ");
                     Serial.println(next_node_id, DEC);
                     Serial.println("");
-                    //memset(aggregated_data, 0, sizeof(aggregated_data));
-                    //aggregated_data_count = 0;
                 }
             } else {
                 break; // there is still an uncollected node before current node
@@ -742,7 +740,6 @@ void setup()
 
 void loop()
 {
-
     if (NODE_ID == COLLECTOR_NODE_ID) {
         switch (TEST_TYPE) {
             case AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST:
