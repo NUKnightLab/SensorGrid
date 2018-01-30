@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -670,7 +670,7 @@ void check_incoming_message()
         for (int i=0; i<aggregated_data_count; i++) {
             /* remove collected nodes from uncollected nodes */
             //Serial.print("Removing ID from uncollected nodes: ");
-            Serial.println(aggregated_data[i].node_id, DEC);
+            //Serial.println(aggregated_data[i].node_id, DEC);
             remove_uncollected_node_id(aggregated_data[i].node_id);
         }
     } else {
