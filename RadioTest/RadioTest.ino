@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -27,7 +27,7 @@
  * 
  */
 #define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_NODES 234
+#define MAX_CONTROL_NODES 232
 
 // test types
 #define CONTROL_SEND_DATA_TEST 1
@@ -89,6 +89,7 @@ typedef struct Data {
 typedef struct MultidataMessage {
     uint8_t sensorgrid_version;
     uint8_t network_id;
+    uint8_t from_node;
     int8_t message_type;
     uint8_t len;
     union {
@@ -405,6 +406,51 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
     return _msg->data;
 }
 
+
+void handle_incoming_aggregate_data(uint8_t from_id)
+{
+     for (int i=1; i<aggregated_data_count; i++) { // Skip the first record, it is the aggregation init
+        Serial.print("Aggregate data index: ");
+        Serial.print(i, DEC);
+        Serial.print(" has ID: ");
+        Serial.print(aggregated_data[i].id, DEC);
+        Serial.print(" and node ID: ");
+        Serial.println(aggregated_data[i].node_id, DEC);
+        if (aggregated_data[i].id == 0) {
+            if (aggregated_data[i].node_id == NODE_ID) {
+                //current node's time to collect
+                Serial.println("Time for current node to collect");
+                aggregated_data[i] = {
+                    .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
+                };
+                Serial.print("Sending aggregate data containing IDs: ");
+                for (int i=0; i<aggregated_data_count; i++) {
+                    Serial.print(aggregated_data[i].node_id);
+                    Serial.print(", ");
+                }
+                uint8_t next_node_id;
+                if (i == aggregated_data_count - 1) {
+                    next_node_id = aggregated_data[0].node_id;
+                } else {
+                    next_node_id = aggregated_data[i+1].node_id;
+                }
+                Serial.println("");
+                if (send_multidata_data(aggregated_data, aggregated_data_count, next_node_id, from_id)) {
+                    Serial.print("Forwarded data to node: ");
+                    Serial.println(next_node_id, DEC);
+                    Serial.println("");
+                    memset(aggregated_data, 0, sizeof(aggregated_data));
+                    aggregated_data_count = 0;
+                }
+            } else {
+                break; // there is still an uncollected node before current node
+            }
+        } else {
+            // continue through to find the first 0 id  
+        }
+    }
+}
+
 void check_collection_state() {
     //if (collector_id <= 0 && pending_nodes_waiting_broadcast) {
     if (pending_nodes_waiting_broadcast) {
@@ -443,46 +489,7 @@ void check_collection_state() {
             aggregated_data_count = aggregated_data_count - MAX_DATA_RECORDS;
         }
     } else {
-        for (int i=1; i<aggregated_data_count; i++) { // Skip the first record, it is the aggregation init
-            Serial.print("Aggregate data index: ");
-            Serial.print(i, DEC);
-            Serial.print(" has ID: ");
-            Serial.print(aggregated_data[i].id, DEC);
-            Serial.print(" and node ID: ");
-            Serial.println(aggregated_data[i].node_id, DEC);
-            if (aggregated_data[i].id == 0) {
-                if (aggregated_data[i].node_id == NODE_ID) {
-                    //current node's time to collect
-                    Serial.println("Time for current node to collect");
-                    aggregated_data[i] = {
-                        .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
-                    };
-                    Serial.print("Sending aggregate data containing IDs: ");
-                    for (int i=0; i<aggregated_data_count; i++) {
-                        Serial.print(aggregated_data[i].node_id);
-                        Serial.print(", ");
-                    }
-                    uint8_t next_node_id;
-                    if (i == aggregated_data_count - 1) {
-                        next_node_id = aggregated_data[0].node_id;
-                    } else {
-                        next_node_id = aggregated_data[i+1].node_id;
-                    }
-                    Serial.println("");
-                    if (send_multidata_data(aggregated_data, aggregated_data_count, next_node_id)) {
-                        Serial.print("Forwarded data to node: ");
-                        Serial.println(next_node_id, DEC);
-                        Serial.println("");
-                        memset(aggregated_data, 0, sizeof(aggregated_data));
-                        aggregated_data_count = 0;
-                    }
-                } else {
-                    break; // there is still an uncollected node before current node
-                }
-            } else {
-                // continue through to find the first 0 id  
-            }
-        }
+        //handle_incoming_aggregate_data();
     } 
     
     /* 
@@ -531,7 +538,8 @@ void check_incoming_message()
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
         /* rebroadcast control messages to 255 */
         if (dest == RH_BROADCAST_ADDRESS) {   
-            if ( !(NODE_ID == COLLECTOR_NODE_ID && from == 3) ) { // TODO: ignoring 3 just for testing
+            //if ( !(NODE_ID == COLLECTOR_NODE_ID && from == 3) ) { // TODO: ignoring 3 just for testing
+            if ( !(NODE_ID == COLLECTOR_NODE_ID) ) {
                 MultidataMessage *_msg = (MultidataMessage*)recv_buf;
                 if (NODE_ID != COLLECTOR_NODE_ID // is there a reason for collectors to re-broadcast 255 controls? 
                         && _msg->control.from_node != NODE_ID
@@ -589,7 +597,8 @@ void check_incoming_message()
                 }
                 Serial.println("\n");
             }
-        } else if (_control.code == CONTROL_ADD_NODE && !(NODE_ID == COLLECTOR_NODE_ID && from == 3 && dest == RH_BROADCAST_ADDRESS) ) { 
+        } else if (_control.code == CONTROL_ADD_NODE) {
+        //else if (_control.code == CONTROL_ADD_NODE && !(NODE_ID == COLLECTOR_NODE_ID && from == 3 && dest == RH_BROADCAST_ADDRESS) ) { 
                                                         // TODO: ignoring broadcasts from 3 for testing
             if (NODE_ID == COLLECTOR_NODE_ID) {
                 Serial.print("Received control code: ADD_NODES. Adding known IDs: ");
@@ -660,7 +669,7 @@ void check_incoming_message()
         }
         for (int i=0; i<aggregated_data_count; i++) {
             /* remove collected nodes from uncollected nodes */
-            Serial.print("Removing ID from uncollected nodes: ");
+            //Serial.print("Removing ID from uncollected nodes: ");
             Serial.println(aggregated_data[i].node_id, DEC);
             remove_uncollected_node_id(aggregated_data[i].node_id);
         }
@@ -670,6 +679,8 @@ void check_incoming_message()
         Serial.print(" from ID: ");
         Serial.println(from);
     }
+    /* RH's sendToWait doesn't allow specification of from ID so we pass the orig ID in the application layer */
+    handle_incoming_aggregate_data( ((MultidataMessage*)recv_buf)->from_node );
     release_recv_buffer();
 } /* check_incoming_message */
 
@@ -733,6 +744,7 @@ bool send_multidata_control(Control *control, uint8_t dest)
     MultidataMessage msg = {
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
+        .from_node = NODE_ID,
         .message_type = MESSAGE_TYPE_CONTROL,
         .len = 1
     };
@@ -741,11 +753,13 @@ bool send_multidata_control(Control *control, uint8_t dest)
     return send_message((uint8_t*)&msg, len, dest);
 }
 
-bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
+bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)
 {
+    if (!from_id) from_id = NODE_ID;
     MultidataMessage msg = {
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
+        .from_node = from_id,
         .message_type = MESSAGE_TYPE_DATA,
         .len = array_size,
     };
@@ -753,6 +767,12 @@ bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
     uint8_t len = sizeof(Data)*array_size + MULTIDATA_MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
+
+bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
+{
+    return send_multidata_data(data, array_size, dest, 0);
+}
+
 
 /* END OF SEND  FUNCTIONS */
 
@@ -852,9 +872,18 @@ void send_aggregate_data_init() {
         return;
     }
     Data data[MAX_DATA_RECORDS];
+
+    /* for testing struct size:
+    for (int i=0; i<MAX_DATA_RECORDS; i++) {
+        data[i] = { .id = 0, .node_id = i+1, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
+    }
+    uint8_t num_data_records = MAX_DATA_RECORDS; */
+    
+    /* TODO: above code is just for testing data struct size */
+
     data[0] = {
            .id = 0, .node_id = NODE_ID, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
-    uint8_t num_data_records = 1;      
+    uint8_t num_data_records = 1;
     for (int i=0; i<MAX_DATA_RECORDS-1 && known_nodes[i] != 0; i++) {
         data[i+1] = {
             .id = 0, .node_id = known_nodes[i], .timestamp = 0, .type = 0, .value = 0 };
