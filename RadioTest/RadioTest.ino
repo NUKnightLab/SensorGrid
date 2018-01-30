@@ -32,7 +32,7 @@
 // test types
 #define CONTROL_SEND_DATA_TEST 1
 #define MULTIDATA_TEST 2
-#define AGGREGATE_DATA_COLLECTION_TEST 3
+#//define AGGREGATE_DATA_COLLECTION_TEST 3
 #define AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST 4
 #define TEST_TYPE AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST
 
@@ -55,7 +55,7 @@
 #define CONTROL_SEND_DATA 1
 #define CONTROL_NEXT_COLLECTION 2
 #define CONTROL_NONE 3 // no-op used for testing
-#define CONTROL_AGGREGATE_SEND_DATA 4
+#//define CONTROL_AGGREGATE_SEND_DATA 4
 #define CONTROL_NEXT_REQUEST_TIME 5
 #define CONTROL_ADD_NODE 6
 
@@ -571,7 +571,9 @@ void check_incoming_message()
                 Serial.println("Returned data");
                 Serial.println("");
             }
-        } else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
+        } 
+        /*
+        else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
             if (NODE_ID != COLLECTOR_NODE_ID) {
                 bool self_in_list = false;
                 for (int i=0; i<MAX_CONTROL_NODES; i++) {
@@ -591,7 +593,8 @@ void check_incoming_message()
                 }
                 Serial.println("\n");
             }
-        } else if (_control.code == CONTROL_ADD_NODE) {
+        } */
+        else if (_control.code == CONTROL_ADD_NODE) {
         //else if (_control.code == CONTROL_ADD_NODE && !(NODE_ID == COLLECTOR_NODE_ID && from == 3 && dest == RH_BROADCAST_ADDRESS) ) { 
                                                         // TODO: ignoring broadcasts from 3 for testing
             if (NODE_ID == COLLECTOR_NODE_ID) {
@@ -660,13 +663,16 @@ void check_incoming_message()
         Serial.print(len, DEC);
         Serial.print(" from ID: ");
         Serial.print( ((MultidataMessage*)recv_buf)->from_node, DEC);
-        Serial.print(" containing node ids:");
+        Serial.print(" containing data: {");
         for (int i=0; i<len; i++) {
             add_aggregated_data_record(_data_array[i]);
-            Serial.print(" ");
+            Serial.print(" id: ");
             Serial.print(_data_array[i].node_id, DEC);
+            Serial.print(", value: ");
+            Serial.print(_data_array[i].value, DEC);
+            Serial.print(";");
         }
-        Serial.println("");
+        Serial.println("} ");
         for (int i=0; i<aggregated_data_count; i++) {
             /* remove collected nodes from uncollected nodes */
             //Serial.print("Removing ID from uncollected nodes: ");
@@ -835,6 +841,7 @@ void send_next_multidata_control() {
     }
 } /* send_next_multidata_control */
 
+/*
 void send_next_aggregate_data_request()
 {
     //unsigned long start_time = millis();
@@ -851,12 +858,6 @@ void send_next_aggregate_data_request()
         Serial.print(" ");
     }
     Serial.println("");
-
-    /* ***
-    TODO: don't broadcast this. Send it to the first uncollected node. If nodes encounter a no-route along the way, they
-    should return their payload to the collector and collector should issue a new aggregate data request to whatever
-    node is next
-    *** */
     if (send_multidata_control(&control, known_nodes[0])) {
         Serial.print("-- Sent control: CONTROL_AGGREGATE_SEND_DATA to ID: ");
         Serial.println(known_nodes[0], DEC);
@@ -864,7 +865,8 @@ void send_next_aggregate_data_request()
         Serial.println("ERROR: did not successfully send aggregate data collection request");
         remove_known_node_id(known_nodes[0]);
     }
-} /* send_next_aggregate_data_request */
+
+} */ /* send_next_aggregate_data_request */
 
 void send_aggregate_data_init() {
     if (known_nodes[0] <= 0) {
@@ -939,6 +941,7 @@ void listen_for_aggregate_data_response()
     release_recv_buffer();
 } /* listen_for_aggregate_data_response */
 
+/*
 void test_aggregate_data_collection()
 {
     static unsigned long last_collection_request_time = 0;
@@ -948,7 +951,7 @@ void test_aggregate_data_collection()
     } else {
         listen_for_aggregate_data_response();
     }
-}; /* test_aggregate_data_collection */
+}; */ /* test_aggregate_data_collection */
 
 void test_aggregate_data_collection_with_sleep()
 {
@@ -1017,9 +1020,9 @@ void loop() {
             case MULTIDATA_TEST:
                 send_next_multidata_control();
                 break;
-            case AGGREGATE_DATA_COLLECTION_TEST:
-                test_aggregate_data_collection();
-                break;
+            //case AGGREGATE_DATA_COLLECTION_TEST:
+            //    test_aggregate_data_collection();
+            //   break;
             case AGGREGATE_DATA_COLLECTION_WITH_SLEEP_TEST:
                 //Serial.println("test aggregate data colleciton w/ sleep");
                 test_aggregate_data_collection_with_sleep();
