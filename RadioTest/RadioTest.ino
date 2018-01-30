@@ -55,7 +55,6 @@
 #define CONTROL_SEND_DATA 1
 #define CONTROL_NEXT_COLLECTION 2
 #define CONTROL_NONE 3 // no-op used for testing
-#//define CONTROL_AGGREGATE_SEND_DATA 4
 #define CONTROL_NEXT_REQUEST_TIME 5
 #define CONTROL_ADD_NODE 6
 
@@ -116,7 +115,7 @@ static bool recv_buffer_avail = true;
 uint8_t received_broadcast_control_messages[MAX_CONTROL_NODES];
 
 /* Collection state */
-uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
+//uint8_t uncollected_nodes[MAX_CONTROL_NODES] = {0};
 Data aggregated_data[MAX_DATA_RECORDS*2] = {};
 uint8_t aggregated_data_count = 0;
 uint8_t collector_id;
@@ -172,6 +171,7 @@ void print_ram()
     Serial.println(free_ram(), DEC);
 }
 
+/*
 uint8_t get_next_collection_node_id() {
     uint8_t _id = uncollected_nodes[0];
     Serial.print("First ID in uncollected nodes array: ");
@@ -184,7 +184,9 @@ uint8_t get_next_collection_node_id() {
         return collector_id;
     }
 }
+*/
 
+/*
 void remove_uncollected_node_id(uint8_t id) {
     int dest = 0;
     for (int i=0; i<MAX_CONTROL_NODES; i++) {
@@ -192,6 +194,7 @@ void remove_uncollected_node_id(uint8_t id) {
             uncollected_nodes[dest++] = uncollected_nodes[i];
     }
 }
+*/
 
 void add_aggregated_data_record(Data record) {
     bool found_record = false;
@@ -201,7 +204,7 @@ void add_aggregated_data_record(Data record) {
     }
     if  (!found_record) {
         memcpy(&aggregated_data[aggregated_data_count++], &record, sizeof(Data));
-        remove_uncollected_node_id(record.node_id);
+        //remove_uncollected_node_id(record.node_id);
     }
 }
 
@@ -213,10 +216,6 @@ void add_pending_node(uint8_t id)
             return;
         }
     }
-    //Serial.print("Adding pending node ID: ");
-    //Serial.print(id, DEC);
-    //Serial.print("; node list index: ");
-    //Serial.println(i, DEC);
     pending_nodes[i] = id;
     pending_nodes_waiting_broadcast = true;
 }
@@ -224,7 +223,6 @@ void add_pending_node(uint8_t id)
 
 void add_known_node(uint8_t id)
 {
-    //if (id == 3) return; // TODO: this is just for testing
     int i;
     for (i=0; i<MAX_CONTROL_NODES && known_nodes[i] != 0; i++) {
         if (known_nodes[i] == id) {
@@ -485,38 +483,6 @@ void check_collection_state() {
     } else {
         //handle_incoming_aggregate_data();
     } 
-    
-    /* 
-     *  Removed control based approach to aggregation
-      else if (get_next_collection_node_id() == NODE_ID) {
-        Serial.println("Identified self as next in collection order.");
-        remove_uncollected_node_id(NODE_ID);
-        uint8_t next_node_id = get_next_collection_node_id();
-        Serial.print("Sending data to: ");
-        Serial.println(next_node_id, DEC);
-        // TODO: potential array overrun here
-        Data _data = {
-          .id = ++message_id,
-          .node_id = NODE_ID,
-          .timestamp = 12345,
-          .type = 111,
-          .value = 123 
-        };
-        aggregated_data[aggregated_data_count++] = _data;
-        Serial.print("Sending aggregate data containing IDs: ");
-        for (int i=0; i<aggregated_data_count; i++) {
-            Serial.print(aggregated_data[i].node_id);
-            Serial.print(", ");
-        }
-        Serial.println("");
-        if (send_multidata_data(aggregated_data, aggregated_data_count, next_node_id)) {
-            Serial.print("Forwarded data to node: ");
-            Serial.println(next_node_id, DEC);
-            Serial.println("");
-            memset(aggregated_data, 0, sizeof(aggregated_data));
-            aggregated_data_count = 0;
-        }
-    } */
 } /* check_collection_state */
 
 void check_incoming_message()
@@ -571,30 +537,7 @@ void check_incoming_message()
                 Serial.println("Returned data");
                 Serial.println("");
             }
-        } 
-        /*
-        else if (_control.code == CONTROL_AGGREGATE_SEND_DATA) {
-            if (NODE_ID != COLLECTOR_NODE_ID) {
-                bool self_in_list = false;
-                for (int i=0; i<MAX_CONTROL_NODES; i++) {
-                    if (_control.nodes[i] == NODE_ID) {
-                        self_in_list = true;
-                    }
-                }
-                if (self_in_list) {
-                    memcpy(uncollected_nodes, _control.nodes, MAX_CONTROL_NODES);
-                    collector_id = _control.from_node;
-                    Serial.print("Received control code: AGGREGATE_SEND_DATA. Node IDs: ");
-                    for (int node_id=0; node_id<MAX_CONTROL_NODES && _control.nodes[node_id] > 0; node_id++) {
-                        Serial.print(_control.nodes[node_id]);
-                        Serial.print(", ");
-                    }
-                    Serial.println("\n");
-                }
-                Serial.println("\n");
-            }
-        } */
-        else if (_control.code == CONTROL_ADD_NODE) {
+        } else if (_control.code == CONTROL_ADD_NODE) {
         //else if (_control.code == CONTROL_ADD_NODE && !(NODE_ID == COLLECTOR_NODE_ID && from == 3 && dest == RH_BROADCAST_ADDRESS) ) { 
                                                         // TODO: ignoring broadcasts from 3 for testing
             if (NODE_ID == COLLECTOR_NODE_ID) {
@@ -673,12 +616,13 @@ void check_incoming_message()
             Serial.print(";");
         }
         Serial.println("} ");
+        /*
         for (int i=0; i<aggregated_data_count; i++) {
-            /* remove collected nodes from uncollected nodes */
             //Serial.print("Removing ID from uncollected nodes: ");
             //Serial.println(aggregated_data[i].node_id, DEC);
             remove_uncollected_node_id(aggregated_data[i].node_id);
         }
+        */
     } else {
         Serial.print("WARNING: Received unexpected Message type: ");
         Serial.print(msg_type, DEC);
