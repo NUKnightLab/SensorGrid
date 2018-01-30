@@ -26,8 +26,8 @@
  * here are specific to the Cortex M0
  * 
  */
-#define MAX_DATA_RECORDS 40
-#define MAX_CONTROL_NODES 232
+#define MAX_DATA_RECORDS 39
+#define MAX_CONTROL_NODES 230
 
 // test types
 #define CONTROL_SEND_DATA_TEST 1
@@ -82,7 +82,7 @@ typedef struct Data {
     uint8_t id; // 1-255 indicates Data
     uint8_t node_id;
     uint8_t timestamp;
-    uint8_t type;
+    int8_t type;
     int16_t value;
 };
 
@@ -90,7 +90,7 @@ typedef struct MultidataMessage {
     uint8_t sensorgrid_version;
     uint8_t network_id;
     uint8_t from_node;
-    int8_t message_type;
+    uint8_t message_type;
     uint8_t len;
     union {
       struct Control control;
@@ -410,12 +410,12 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
 void handle_incoming_aggregate_data(uint8_t from_id)
 {
      for (int i=1; i<aggregated_data_count; i++) { // Skip the first record, it is the aggregation init
-        Serial.print("Aggregate data index: ");
-        Serial.print(i, DEC);
-        Serial.print(" has ID: ");
-        Serial.print(aggregated_data[i].id, DEC);
-        Serial.print(" and node ID: ");
-        Serial.println(aggregated_data[i].node_id, DEC);
+        //Serial.print("Aggregate data index: ");
+        //Serial.print(i, DEC);
+        //Serial.print(" has ID: ");
+        //Serial.print(aggregated_data[i].id, DEC);
+        //Serial.print(" and node ID: ");
+        //Serial.println(aggregated_data[i].node_id, DEC);
         if (aggregated_data[i].id == 0) {
             if (aggregated_data[i].node_id == NODE_ID) {
                 //current node's time to collect
@@ -873,14 +873,15 @@ void send_aggregate_data_init() {
     }
     Data data[MAX_DATA_RECORDS];
 
-    /* for testing struct size:
+    /* for testing struct size: */
     for (int i=0; i<MAX_DATA_RECORDS; i++) {
         data[i] = { .id = 0, .node_id = i+1, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
     }
-    uint8_t num_data_records = MAX_DATA_RECORDS; */
+    uint8_t num_data_records = MAX_DATA_RECORDS;
     
     /* TODO: above code is just for testing data struct size */
 
+/*
     data[0] = {
            .id = 0, .node_id = NODE_ID, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
     uint8_t num_data_records = 1;
@@ -890,7 +891,7 @@ void send_aggregate_data_init() {
         Serial.print(known_nodes[i], DEC);
         Serial.print(" ");
         num_data_records++;
-    }
+    } */
     Serial.println("");
 
     /* ***
