@@ -507,14 +507,15 @@ void check_incoming_message()
     uint8_t len;
     int8_t msg_type = receive(&from, &dest, &msg_id, &len);
     unsigned long receive_time = millis();
+    MultidataMessage *_msg = (MultidataMessage*)recv_buf;
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
         // Do nothing
-    } else if (msg_type == MESSAGE_TYPE_CONTROL) {
+    } else if (msg_type == MESSAGE_TYPE_CONTROL && _msg->control.from_node != NODE_ID) {
         /* rebroadcast control messages to 255 */
         if (dest == RH_BROADCAST_ADDRESS) {   
             //if ( !(NODE_ID == COLLECTOR_NODE_ID && from == 3) ) { // TODO: ignoring 3 just for testing
             if ( !(NODE_ID == COLLECTOR_NODE_ID) ) {
-                MultidataMessage *_msg = (MultidataMessage*)recv_buf;
+                
                 if (NODE_ID != COLLECTOR_NODE_ID // is there a reason for collectors to re-broadcast 255 controls? 
                         && _msg->control.from_node != NODE_ID
                         && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
@@ -526,8 +527,8 @@ void check_incoming_message()
                     } else {
                         Serial.println("ERROR: could not re-broadcast control");
                     }
-                } else if (_msg->control.from_node == NODE_ID) {
-                    Serial.println("NOT rebroadcasting control message originating from self");
+                //} else if (_msg->control.from_node == NODE_ID) {
+                //    Serial.println("NOT rebroadcasting control message originating from self");
                 } else if (received_broadcast_control_messages[_msg->control.from_node] == _msg->control.id) {
                     Serial.println("NOT rebroadcasting control message recently received");
                 }
@@ -688,7 +689,6 @@ void test_aggregate_data_collection_with_sleep()
     static long next_collection_time = -1;
     int collection_delay = 2000;
     if (next_collection_time > 0 && millis() >= next_collection_time + collection_delay) {
-        //send_next_aggregate_data_request();
         send_aggregate_data_init();
         next_collection_time = -1;
     } else if (millis() - last_collection_request_time > 30000) {
