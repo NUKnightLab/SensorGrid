@@ -659,10 +659,14 @@ void check_incoming_message()
         Serial.print("Received data array of length: ");
         Serial.print(len, DEC);
         Serial.print(" from ID: ");
-        Serial.println( ((MultidataMessage*)recv_buf)->from_node, DEC);
+        Serial.print( ((MultidataMessage*)recv_buf)->from_node, DEC);
+        Serial.print(" containing node ids:");
         for (int i=0; i<len; i++) {
             add_aggregated_data_record(_data_array[i]);
+            Serial.print(" ");
+            Serial.print(_data_array[i].node_id, DEC);
         }
+        Serial.println("");
         for (int i=0; i<aggregated_data_count; i++) {
             /* remove collected nodes from uncollected nodes */
             //Serial.print("Removing ID from uncollected nodes: ");
