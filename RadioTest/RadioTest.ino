@@ -409,13 +409,7 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
 
 void handle_incoming_aggregate_data(uint8_t from_id)
 {
-     for (int i=1; i<aggregated_data_count; i++) { // Skip the first record, it is the aggregation init
-        //Serial.print("Aggregate data index: ");
-        //Serial.print(i, DEC);
-        //Serial.print(" has ID: ");
-        //Serial.print(aggregated_data[i].id, DEC);
-        //Serial.print(" and node ID: ");
-        //Serial.println(aggregated_data[i].node_id, DEC);
+     for (int i=0; i<aggregated_data_count; i++) {
         if (aggregated_data[i].id == 0) {
             if (aggregated_data[i].node_id == NODE_ID) {
                 //current node's time to collect
@@ -672,7 +666,7 @@ void check_incoming_message()
         for (int i=0; i<aggregated_data_count; i++) {
             /* remove collected nodes from uncollected nodes */
             //Serial.print("Removing ID from uncollected nodes: ");
-            Serial.println(aggregated_data[i].node_id, DEC);
+            //Serial.println(aggregated_data[i].node_id, DEC);
             remove_uncollected_node_id(aggregated_data[i].node_id);
         }
     } else {
@@ -883,10 +877,10 @@ void send_aggregate_data_init() {
     
     /* TODO: above code is just for testing data struct size */
 
-    data[0] = {
-           .id = 0, .node_id = NODE_ID, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
-    uint8_t num_data_records = 1;
-    for (int i=0; i<MAX_DATA_RECORDS-1 && known_nodes[i] != 0; i++) {
+    //data[0] = {
+    //       .id = 0, .node_id = NODE_ID, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
+    uint8_t num_data_records = 0;
+    for (int i=0; i<MAX_DATA_RECORDS && known_nodes[i] != 0; i++) {
         data[i+1] = {
             .id = 0, .node_id = known_nodes[i], .timestamp = 0, .type = 0, .value = 0 };
         Serial.print(known_nodes[i], DEC);
