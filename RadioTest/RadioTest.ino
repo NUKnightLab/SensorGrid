@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -881,7 +881,7 @@ void send_aggregate_data_init() {
     //       .id = 0, .node_id = NODE_ID, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
     uint8_t num_data_records = 0;
     for (int i=0; i<MAX_DATA_RECORDS && known_nodes[i] != 0; i++) {
-        data[i+1] = {
+        data[i] = {
             .id = 0, .node_id = known_nodes[i], .timestamp = 0, .type = 0, .value = 0 };
         Serial.print(known_nodes[i], DEC);
         Serial.print(" ");
