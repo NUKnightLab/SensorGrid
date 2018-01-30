@@ -430,7 +430,7 @@ void handle_incoming_aggregate_data(uint8_t from_id)
                 }
                 uint8_t next_node_id;
                 if (i == aggregated_data_count - 1) {
-                    next_node_id = aggregated_data[0].node_id;
+                    next_node_id = from_id;
                 } else {
                     next_node_id = aggregated_data[i+1].node_id;
                 }
@@ -663,7 +663,9 @@ void check_incoming_message()
         uint8_t len;
         Data* _data_array = get_multidata_data_from_buffer(&len);
         Serial.print("Received data array of length: ");
-        Serial.println(len, DEC);
+        Serial.print(len, DEC);
+        Serial.print(" from ID: ");
+        Serial.println( ((MultidataMessage*)recv_buf)->from_node, DEC);
         for (int i=0; i<len; i++) {
             add_aggregated_data_record(_data_array[i]);
         }
@@ -873,15 +875,14 @@ void send_aggregate_data_init() {
     }
     Data data[MAX_DATA_RECORDS];
 
-    /* for testing struct size: */
+    /* for testing struct size:
     for (int i=0; i<MAX_DATA_RECORDS; i++) {
         data[i] = { .id = 0, .node_id = i+1, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
     }
-    uint8_t num_data_records = MAX_DATA_RECORDS;
+    uint8_t num_data_records = MAX_DATA_RECORDS; */
     
     /* TODO: above code is just for testing data struct size */
 
-/*
     data[0] = {
            .id = 0, .node_id = NODE_ID, .timestamp = 0, .type = AGGREGATE_DATA_INIT, .value = 0 };
     uint8_t num_data_records = 1;
@@ -891,7 +892,7 @@ void send_aggregate_data_init() {
         Serial.print(known_nodes[i], DEC);
         Serial.print(" ");
         num_data_records++;
-    } */
+    }
     Serial.println("");
 
     /* ***
