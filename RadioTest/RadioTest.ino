@@ -444,6 +444,12 @@ void check_collection_state() {
         }
     } else {
         for (int i=1; i<aggregated_data_count; i++) { // Skip the first record, it is the aggregation init
+            Serial.print("Aggregate data index: ");
+            Serial.print(i, DEC);
+            Serial.print(" has ID: ");
+            Serial.print(aggregated_data[i].id, DEC);
+            Serial.print(" and node ID: ");
+            Serial.println(aggregated_data[i].node_id, DEC);
             if (aggregated_data[i].id == 0) {
                 if (aggregated_data[i].node_id == NODE_ID) {
                     //current node's time to collect
