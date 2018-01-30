@@ -171,31 +171,6 @@ void print_ram()
     Serial.println(free_ram(), DEC);
 }
 
-/*
-uint8_t get_next_collection_node_id() {
-    uint8_t _id = uncollected_nodes[0];
-    Serial.print("First ID in uncollected nodes array: ");
-    Serial.print(_id, DEC);
-    Serial.print(uncollected_nodes[1], DEC);
-    Serial.println(uncollected_nodes[2], DEC);
-    if (_id > 0) {
-        return _id;
-    } else {
-        return collector_id;
-    }
-}
-*/
-
-/*
-void remove_uncollected_node_id(uint8_t id) {
-    int dest = 0;
-    for (int i=0; i<MAX_CONTROL_NODES; i++) {
-        if (uncollected_nodes[i] != id)
-            uncollected_nodes[dest++] = uncollected_nodes[i];
-    }
-}
-*/
-
 void add_aggregated_data_record(Data record) {
     bool found_record = false;
     for (int i=0; i<aggregated_data_count; i++) {
@@ -616,13 +591,6 @@ void check_incoming_message()
             Serial.print(";");
         }
         Serial.println("} ");
-        /*
-        for (int i=0; i<aggregated_data_count; i++) {
-            //Serial.print("Removing ID from uncollected nodes: ");
-            //Serial.println(aggregated_data[i].node_id, DEC);
-            remove_uncollected_node_id(aggregated_data[i].node_id);
-        }
-        */
     } else {
         Serial.print("WARNING: Received unexpected Message type: ");
         Serial.print(msg_type, DEC);
@@ -637,7 +605,6 @@ void check_incoming_message()
 /* END OF RECEIVE FUNCTIONS */
 
 /* **** SEND FUNCTIONS **** */
-
 
 bool send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
