@@ -597,7 +597,7 @@ void _handle_data_message()
     /* TODO: prefer to send to node with known route w/ preference for single hop */
     for (int i=0; i<record_count && !success; i++) {
         if (data[i].node_id != NODE_ID && data[i].id == 0) { // send to the first uncollected node
-            if (send_multidata_data(data, record_count, from_id, from_id)) {
+            if (send_multidata_data(data, record_count, data[i].node_id, from_id)) {
                 Serial.print("Forwarded data to node: ");
                 Serial.println(data[i].node_id, DEC);
                 Serial.println("");
