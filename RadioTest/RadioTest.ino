@@ -446,46 +446,6 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
     return _msg->data;
 }
 
-/*
-void handle_incoming_aggregate_data()
-{
-     uint8_t from_id = ((MultidataMessage*)recv_buf)->from_node;
-     uint8_t record_count;
-     Data* data = get_multidata_data_from_buffer(&record_count);
-     for (int i=0; i<record_count; i++) {
-        if (data[i].id == 0) {
-            if (data[i].node_id == NODE_ID) {
-                Serial.println("Time for current node to collect");
-                data[i] = {
-                    .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
-                };
-                Serial.print("Sending aggregate data containing IDs: ");
-                for (int i=0; i<record_count; i++) {
-                    Serial.print(data[i].node_id);
-                    Serial.print(", ");
-                }
-                uint8_t next_node_id;
-                if (i == record_count - 1) {
-                    next_node_id = from_id;
-                } else {
-                    next_node_id = data[i+1].node_id;
-                }
-                Serial.println("");
-                if (send_multidata_data(data, record_count, next_node_id, from_id)) {
-                    Serial.print("Forwarded data to node: ");
-                    Serial.println(next_node_id, DEC);
-                    Serial.println("");
-                }
-            } else {
-                break; // there is still an uncollected node before current node
-            }
-        } else {
-            // continue through to find the first 0 id  
-        }
-    }
-}
-*/
-
 void check_collection_state() {
     if (pending_nodes_waiting_broadcast) {
         Serial.println("pending nodes are waiting broadcast");
@@ -503,29 +463,24 @@ void check_collection_state() {
 
 void _handle_control_message(MultidataMessage* _msg, uint8_t len, uint8_t from, uint8_t dest, unsigned long receive_time)
 {
-    if (_msg->control.from_node == NODE_ID) return;
+    if (_msg->control.from_node == NODE_ID) return; // ignore controls originating from self
     
     /* rebroadcast control messages to 255 */
     if (dest == RH_BROADCAST_ADDRESS) {   
         //if ( !(NODE_ID == COLLECTOR_NODE_ID && from == 3) ) { // TODO: ignoring 3 just for testing
-        if ( !(NODE_ID == COLLECTOR_NODE_ID) ) {
-            
-            if (NODE_ID != COLLECTOR_NODE_ID // is there a reason for collectors to re-broadcast 255 controls? 
-                    && _msg->control.from_node != NODE_ID
-                    && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
-                received_broadcast_control_messages[_msg->control.from_node] = _msg->control.id;
-                Serial.print("Rebroadcasting broadcast control message originally from ID: ");
-                Serial.println(_msg->control.from_node, DEC);
-                if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
-                    Serial.println("-- Sent broadcast control");
-                } else {
-                    Serial.println("ERROR: could not re-broadcast control");
-                }
-            //} else if (_msg->control.from_node == NODE_ID) {
-            //    Serial.println("NOT rebroadcasting control message originating from self");
-            } else if (received_broadcast_control_messages[_msg->control.from_node] == _msg->control.id) {
-                Serial.println("NOT rebroadcasting control message recently received");
+        if (NODE_ID != COLLECTOR_NODE_ID // is there a reason for collectors to re-broadcast 255 controls? 
+                && _msg->control.from_node != NODE_ID
+                && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
+            received_broadcast_control_messages[_msg->control.from_node] = _msg->control.id;
+            Serial.print("Rebroadcasting broadcast control message originally from ID: ");
+            Serial.println(_msg->control.from_node, DEC);
+            if (send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
+                Serial.println("-- Sent broadcast control");
+            } else {
+                Serial.println("ERROR: could not re-broadcast control");
             }
+        } else if (received_broadcast_control_messages[_msg->control.from_node] == _msg->control.id) {
+            Serial.println("NOT rebroadcasting control message recently received");
         }
     }
     Control _control = get_multidata_control_from_buffer();
@@ -621,11 +576,7 @@ void _handle_data_message()
         Serial.print(";");
     }
     Serial.println("} ");
-    //handle_incoming_aggregate_data();
-     //uint8_t from_id = ((MultidataMessage*)recv_buf)->from_node;
-     //uint8_t record_count;
-     //Data* data = get_multidata_data_from_buffer(&record_count);
-     for (int i=0; i<record_count; i++) {
+    for (int i=0; i<record_count; i++) {
         if (data[i].id == 0) {
             if (data[i].node_id == NODE_ID) {
                 Serial.println("Time for current node to collect");
