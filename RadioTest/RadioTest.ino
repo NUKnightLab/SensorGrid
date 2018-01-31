@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -557,6 +557,21 @@ void _handle_control_message(MultidataMessage* _msg, uint8_t len, uint8_t from, 
     }
 }
 
+bool set_node_data(Data* data, uint8_t record_count) {
+    /* TODO: a node could have multiple data records to set. Set all within constraints of available
+     *  uncollected data records and return false if we still have records left to set
+     */
+    for (int i=0; i<record_count; i++) {
+        if (data[i].node_id = NODE_ID) {
+            data[i] = {
+                .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
+            };
+            break;
+        }
+    }
+    return true;
+}
+
 void _handle_data_message()
 {
     //uint8_t len;
@@ -576,8 +591,33 @@ void _handle_data_message()
         Serial.print(";");
     }
     Serial.println("} ");
-    for (int i=0; i<record_count; i++) {
-        if (data[i].id == 0) {
+    set_node_data(data, record_count);
+    /* TODO: set a flag in outgoing message to indicate if there are more records to collect from this node */
+    bool success = false;
+    /* TODO: prefer to send to node with known route w/ preference for single hop */
+    for (int i=0; i<record_count && !success; i++) {
+        if (data[i].node_id != NODE_ID && data[i].id == 0) { // send to the first uncollected node
+            if (send_multidata_data(data, record_count, from_id, from_id)) {
+                Serial.print("Forwarded data to node: ");
+                Serial.println(data[i].node_id, DEC);
+                Serial.println("");
+                success = true;
+            } else {
+                Serial.print("Failed to forward data to node: ");
+                Serial.println(data[i].node_id, DEC);
+            }
+        }
+    }
+    if (!success) {
+        // send to the collector
+        if (send_multidata_data(data, record_count, from_id, from_id)) {
+            Serial.print("Forwarded data to collector node: ");
+            Serial.println(from_id, DEC);
+            Serial.println("");
+        }
+    }
+            /* old way just looks to see if current node is next in line new way assumes if we get a message
+             *  payload we should be collecting
             if (data[i].node_id == NODE_ID) {
                 Serial.println("Time for current node to collect");
                 data[i] = {
@@ -602,11 +642,11 @@ void _handle_data_message()
                 }
             } else {
                 break; // there is still an uncollected node before current node
-            }
-        } else {
-            // continue through to find the first 0 id  
-        }
-    }
+            } */
+        //} else {
+        //    // continue through to find the first 0 id  
+        //}
+    //}
 }
 void check_incoming_message()
 {
