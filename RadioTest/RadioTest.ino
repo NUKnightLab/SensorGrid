@@ -557,11 +557,15 @@ void _handle_control_message(MultidataMessage* _msg, uint8_t len, uint8_t from, 
     }
 }
 
-bool set_node_data(Data* data, uint8_t record_count) {
+bool set_node_data(Data* data, uint8_t* record_count) {
     /* TODO: a node could have multiple data records to set. Set all within constraints of available
-     *  uncollected data records and return false if we still have records left to set
+     *  uncollected data records and return false (or flag?) if we still have records left to set. Also
+     *  set the record_count if new records are added (up to MAX_DATA_RECORDS)
+     *  
+     *  TODO: also add missing known nodes -- but do this only once and return directly to the collector
+     *  otherwise we may thrash and saturate w/ extra entries due to data space being smaller than address space
      */
-    for (int i=0; i<record_count; i++) {
+    for (int i=0; i<*record_count; i++) {
         if (data[i].node_id == NODE_ID) {
             data[i] = {
                 .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
@@ -591,7 +595,7 @@ void _handle_data_message()
         Serial.print(";");
     }
     Serial.println("} ");
-    set_node_data(data, record_count);
+    set_node_data(data, &record_count);
     /* TODO: set a flag in outgoing message to indicate if there are more records to collect from this node */
     bool success = false;
     /* TODO: prefer to send to node with known route w/ preference for single hop */
