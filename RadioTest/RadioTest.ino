@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -576,7 +576,30 @@ bool set_node_data(Data* data, uint8_t* record_count) {
     return true;
 }
 
-void _handle_data_message()
+void _collector_handle_data_message()
+{
+    uint8_t record_count;
+    Data* data = get_multidata_data_from_buffer(&record_count);
+    uint8_t missing_data_nodes[MAX_DATA_RECORDS] = {0};
+    Serial.print("Collector received data from nodes:");
+    for (int i=0; i<record_count; i++) {
+        if (data[i].id > 0) {
+            Serial.print(" ");
+            Serial.print(data[i].node_id, DEC);
+        }
+    }
+    Serial.println("");
+    if (missing_data_nodes[0] > 0) {
+        Serial.print("Nodes with missing data: ");
+        for (int i=0; i<record_count && data[i].node_id>0; i++) {
+            Serial.print(" ");
+            Serial.print(missing_data_nodes[i], DEC);
+        }
+    }
+    /* TODO: post the data to the API and determine if there are more nodes to collect */
+}
+
+void _node_handle_data_message()
 {
     //uint8_t len;
     uint8_t from_id = ((MultidataMessage*)recv_buf)->from_node;
@@ -620,38 +643,8 @@ void _handle_data_message()
             Serial.println("");
         }
     }
-            /* old way just looks to see if current node is next in line new way assumes if we get a message
-             *  payload we should be collecting
-            if (data[i].node_id == NODE_ID) {
-                Serial.println("Time for current node to collect");
-                data[i] = {
-                    .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
-                };
-                Serial.print("Sending aggregate data containing IDs: ");
-                for (int i=0; i<record_count; i++) {
-                    Serial.print(data[i].node_id);
-                    Serial.print(", ");
-                }
-                uint8_t next_node_id;
-                if (i == record_count - 1) {
-                    next_node_id = from_id;
-                } else {
-                    next_node_id = data[i+1].node_id;
-                }
-                Serial.println("");
-                if (send_multidata_data(data, record_count, next_node_id, from_id)) {
-                    Serial.print("Forwarded data to node: ");
-                    Serial.println(next_node_id, DEC);
-                    Serial.println("");
-                }
-            } else {
-                break; // there is still an uncollected node before current node
-            } */
-        //} else {
-        //    // continue through to find the first 0 id  
-        //}
-    //}
 }
+
 void check_incoming_message()
 {
     uint8_t from;
@@ -666,7 +659,11 @@ void check_incoming_message()
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
         _handle_control_message(_msg, len, from, dest, receive_time);
     } else if (msg_type == MESSAGE_TYPE_DATA) {
-        _handle_data_message();
+        if (NODE_ID == COLLECTOR_NODE_ID) {
+            _collector_handle_data_message();
+        } else {
+            _node_handle_data_message();
+        }
     } else {
         Serial.print("WARNING: Received unexpected Message type: ");
         Serial.print(msg_type, DEC);
