@@ -562,7 +562,7 @@ bool set_node_data(Data* data, uint8_t record_count) {
      *  uncollected data records and return false if we still have records left to set
      */
     for (int i=0; i<record_count; i++) {
-        if (data[i].node_id = NODE_ID) {
+        if (data[i].node_id == NODE_ID) {
             data[i] = {
                 .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
             };
