@@ -682,7 +682,7 @@ uint8_t* get_preferred_routing_order(Data* data, uint8_t num_data_records)
     for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
         Serial.print(" "); Serial.print(first_pref[i], DEC);
     }
-    Serial.println("");
+    Serial.println(" ]");
     return first_pref;
 }
 
