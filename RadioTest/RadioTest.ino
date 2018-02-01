@@ -649,7 +649,7 @@ uint8_t get_best_next_node(Data* data, uint8_t num_data_records)
     return dest;
 }
 
-uint8_t* get_preferred_routing_order(Data* data, uint8_t num_data_records)
+void get_preferred_routing_order(Data* data, uint8_t num_data_records, uint8_t* order)
 {
     uint8_t first_pref[MAX_DATA_RECORDS] = {0};
     uint8_t first_pref_index = 0;
@@ -708,7 +708,7 @@ uint8_t* get_preferred_routing_order(Data* data, uint8_t num_data_records)
         Serial.print(" "); Serial.print(first_pref[i], DEC);
     }
     Serial.println(" ]");
-    return first_pref;
+    memcpy(order, first_pref, MAX_DATA_RECORDS);
 }
 
 void _node_handle_data_message()
@@ -746,26 +746,27 @@ void _node_handle_data_message()
     set_node_data(data, &record_count);
     /* TODO: set a flag in outgoing message to indicate if there are more records to collect from this node */
     bool success = false;
-    /* TODO: prefer to send to node with known route w/ preference for single hop */
-    //uint8_t dest = get_best_next_node(data, record_count);
-    //for (int i=0; i<record_count && !success; i++) {
-    //if (data[i].node_id != NODE_ID && data[i].id == 0) { // send to the first uncollected node
-    uint8_t* order = get_preferred_routing_order(data, record_count);
-    for (int i=0; i<MAX_DATA_RECORDS && order[i] > 0 && !success; i++) {
-        if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, record_count, order[i], from_id)) {
+    uint8_t order[MAX_DATA_RECORDS] = {0};
+    get_preferred_routing_order(data, record_count, order);
+    Serial.print("SANITY CHECK on node routing order: ");
+    for (int i=0; i<5; i++) {
+        Serial.print(" ");
+        Serial.print(order[i], DEC);
+    }
+    Serial.println("");
+    for (int idx=0; (idx<MAX_DATA_RECORDS) && (order[idx] > 0) && (!success); idx++) {
+        if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, record_count, order[idx], from_id)) {
             Serial.print("Forwarded data to node: ");
-            Serial.println(order[i], DEC);
+            Serial.println(order[idx], DEC);
             Serial.println("");
             success = true;
         } else {
             Serial.print("Failed to forward data to node: "); // TODO try another node. Maybe get_best_next_node should
                                                               // return array of IDs to try in order?
-            Serial.print(order[i], DEC);
+            Serial.print(order[idx], DEC);
             Serial.println(". Trying next node if available");
         }
     }
-    //}
-    //}
     if (!success) {
         // send to the collector
         if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, record_count, from_id, from_id)) {
