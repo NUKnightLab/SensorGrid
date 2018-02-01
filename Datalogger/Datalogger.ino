@@ -76,11 +76,15 @@ void setup() {
   if (!rtc.begin()) {
     Serial.println("Error: Failed to initialize RTC");
   }
-  if (!rtc.initialized()) {
+  
     if (setClock) {
+      Serial.print("Printing initial DateTime: ");
       rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+      Serial.print(F(__DATE__));
+      Serial.print('/');
+      Serial.println(F(__TIME__));
     }
-  }
+  
 }
 
 void loop() {
