@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 1 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -174,6 +174,14 @@ void add_pending_node(uint8_t id)
     }
     pending_nodes[i] = id;
     pending_nodes_waiting_broadcast = true;
+}
+
+void remove_pending_node(uint8_t id) {
+    int dest = 0;
+    for (int i=0; i<MAX_CONTROL_NODES; i++) {
+        if (pending_nodes[i] != id)
+            pending_nodes[dest++] = pending_nodes[i];
+    }
 }
 
 void add_known_node(uint8_t id)
@@ -650,39 +658,56 @@ uint8_t* get_preferred_routing_order(Data* data, uint8_t num_data_records)
     uint8_t third_pref[MAX_DATA_RECORDS] = {0};
     uint8_t third_pref_index = 0;
     for (int i=0; i<num_data_records; i++) {
+        Serial.print("Checking Node ID: "); Serial.println(data[i].node_id, DEC);
         if (data[i].id == NODE_ID) {
             Serial.println("Skipping self ID for preferred routing");
-            continue;
+            //continue;
         } else if (data[i].id > 0) { // TODO: do this based on data type rather than ID
             Serial.print("Not routing to already collected node ID: ");
             Serial.println(data[i].node_id, DEC);
-            continue;
-        }
-        RHRouter::RoutingTableEntry* route = router->getRouteTo(data[i].node_id);
-        if (route->state == 2) { // what is RH constant name for a valid route?
-            if (route->next_hop == data[i].node_id) {
-                first_pref[first_pref_index++] = data[i].node_id;
-                Serial.print("Node is single hop to ID: ");
-                Serial.println(data[i].node_id, DEC);
-                break;
+            //continue;
+        } else {
+            RHRouter::RoutingTableEntry* route = router->getRouteTo(data[i].node_id);
+            if (route->state == 2) { // what is RH constant name for a valid route?
+                if (route->next_hop == data[i].node_id) {
+                    first_pref[first_pref_index++] = data[i].node_id;
+                    Serial.print("Node is single hop to ID: ");
+                    Serial.println(data[i].node_id, DEC);
+                    //break;
+                } else {
+                    second_pref[second_pref_index++] = data[i].node_id;
+                    Serial.print("Node is multihop to: ");
+                    Serial.println(data[i].node_id, DEC);
+                }
             } else {
-                second_pref[second_pref_index++] = data[i].node_id;
-                Serial.print("Node is multihop to: ");
+                third_pref[third_pref_index++] = data[i].node_id;
+                Serial.print("No known route to ID: ");
                 Serial.println(data[i].node_id, DEC);
             }
-        } else {
-            third_pref[third_pref_index++] = data[i].node_id;
-            Serial.print("No known route to ID: ");
-            Serial.println(data[i].node_id, DEC);
         }
     }
+    Serial.print("First pref:");
+    for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
+        Serial.print(" "); Serial.print(first_pref[i], DEC);
+    }
+    Serial.println("");
+    Serial.print("Second pref:");
+    for (int i=0; i<MAX_DATA_RECORDS && second_pref[i] > 0; i++) {
+        Serial.print(" "); Serial.print(second_pref[i], DEC);
+    }
+    Serial.println("");
+    Serial.print("Third pref:");
+    for (int i=0; i<MAX_DATA_RECORDS && third_pref[i] > 0; i++) {
+        Serial.print(" "); Serial.print(third_pref[i], DEC);
+    }
+    Serial.println("");
     memcpy(first_pref+first_pref_index, second_pref, second_pref_index);
     memcpy(first_pref+first_pref_index+second_pref_index, third_pref, third_pref_index);
     Serial.print("Determined preferred routing: [");
     for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
         Serial.print(" "); Serial.print(first_pref[i], DEC);
     }
-    Serial.println("");
+    Serial.println(" ]");
     return first_pref;
 }
 
@@ -703,8 +728,21 @@ void _node_handle_data_message()
         Serial.print(", value: ");
         Serial.print(data[i].value, DEC);
         Serial.print(";");
+        remove_pending_node(data[i].node_id);
     }
     Serial.println("} ");
+    if (pending_nodes[0] > 0) {
+        Serial.print("Known pending nodes: ");
+        for (int i=0; i<MAX_CONTROL_NODES && pending_nodes[i]>0; i++) {
+            Serial.print(" "); Serial.print(pending_nodes[i], DEC);
+            if (record_count < MAX_DATA_RECORDS) {
+                data[record_count++] = {
+                    .id = 0, .node_id = pending_nodes[i], .timestamp = 0, .type = 0, .value = 0
+                };
+            }
+        } // TODO: How to handle pending nodes if we have a full record set?
+        Serial.println("");
+    }
     set_node_data(data, &record_count);
     /* TODO: set a flag in outgoing message to indicate if there are more records to collect from this node */
     bool success = false;
@@ -854,7 +892,7 @@ void handle_collector_loop()
 
 void setup()
 {
-    while (!Serial);
+    //while (!Serial);
     Serial.print("Setting up radio with RadioHead Version ");
     Serial.print(RH_VERSION_MAJOR, DEC); Serial.print(".");
     Serial.println(RH_VERSION_MINOR, DEC);
