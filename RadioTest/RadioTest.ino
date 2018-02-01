@@ -641,6 +641,51 @@ uint8_t get_best_next_node(Data* data, uint8_t num_data_records)
     return dest;
 }
 
+uint8_t* get_preferred_routing_order(Data* data, uint8_t num_data_records)
+{
+    uint8_t first_pref[MAX_DATA_RECORDS] = {0};
+    uint8_t first_pref_index = 0;
+    uint8_t second_pref[MAX_DATA_RECORDS] = {0};
+    uint8_t second_pref_index = 0;
+    uint8_t third_pref[MAX_DATA_RECORDS] = {0};
+    uint8_t third_pref_index = 0;
+    for (int i=0; i<num_data_records; i++) {
+        if (data[i].id == NODE_ID) {
+            Serial.println("Skipping self ID for preferred routing");
+            continue;
+        } else if (data[i].id > 0) { // TODO: do this based on data type rather than ID
+            Serial.print("Not routing to already collected node ID: ");
+            Serial.println(data[i].node_id, DEC);
+            continue;
+        }
+        RHRouter::RoutingTableEntry* route = router->getRouteTo(data[i].node_id);
+        if (route->state == 2) { // what is RH constant name for a valid route?
+            if (route->next_hop == data[i].node_id) {
+                first_pref[first_pref_index++] = data[i].node_id;
+                Serial.print("Node is single hop to ID: ");
+                Serial.println(data[i].node_id, DEC);
+                break;
+            } else {
+                second_pref[second_pref_index++] = data[i].node_id;
+                Serial.print("Node is multihop to: ");
+                Serial.println(data[i].node_id, DEC);
+            }
+        } else {
+            third_pref[third_pref_index++] = data[i].node_id;
+            Serial.print("No known route to ID: ");
+            Serial.println(data[i].node_id, DEC);
+        }
+    }
+    memcpy(first_pref+first_pref_index, second_pref, second_pref_index);
+    memcpy(first_pref+first_pref_index+second_pref_index, third_pref, third_pref_index);
+    Serial.print("Determined preferred routing: [");
+    for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
+        Serial.print(" "); Serial.print(first_pref[i], DEC);
+    }
+    Serial.println("");
+    return first_pref;
+}
+
 void _node_handle_data_message()
 {
     //uint8_t len;
@@ -664,18 +709,22 @@ void _node_handle_data_message()
     /* TODO: set a flag in outgoing message to indicate if there are more records to collect from this node */
     bool success = false;
     /* TODO: prefer to send to node with known route w/ preference for single hop */
-    uint8_t dest = get_best_next_node(data, record_count);
+    //uint8_t dest = get_best_next_node(data, record_count);
     //for (int i=0; i<record_count && !success; i++) {
     //if (data[i].node_id != NODE_ID && data[i].id == 0) { // send to the first uncollected node
-    if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, record_count, dest, from_id)) {
-        Serial.print("Forwarded data to node: ");
-        Serial.println(dest, DEC);
-        Serial.println("");
-        success = true;
-    } else {
-        Serial.print("Failed to forward data to node: "); // TODO try another node. Maybe get_best_next_node should
-                                                          // return array of IDs to try in order?
-        Serial.println(dest, DEC);
+    uint8_t* order = get_preferred_routing_order(data, record_count);
+    for (int i=0; i<MAX_DATA_RECORDS && order[i] > 0 && !success; i++) {
+        if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, record_count, order[i], from_id)) {
+            Serial.print("Forwarded data to node: ");
+            Serial.println(order[i], DEC);
+            Serial.println("");
+            success = true;
+        } else {
+            Serial.print("Failed to forward data to node: "); // TODO try another node. Maybe get_best_next_node should
+                                                              // return array of IDs to try in order?
+            Serial.print(order[i], DEC);
+            Serial.println(". Trying next node if available");
+        }
     }
     //}
     //}
