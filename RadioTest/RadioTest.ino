@@ -117,6 +117,7 @@ uint8_t pending_nodes[MAX_CONTROL_NODES];
 bool pending_nodes_waiting_broadcast = false;
 //static long next_collect_time = millis();
 static long next_collection_time = 0;
+int16_t last_rssi[MAX_CONTROL_NODES];
 
 
 /* **** UTILS **** */
@@ -393,6 +394,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             Serial.print("; type: "); print_message_type(_msg->message_type);
             Serial.print("; from: "); Serial.print(*source, DEC);
             Serial.print("; rssi: "); Serial.println(radio.lastRssi(), DEC);
+            last_rssi[*source] = radio.lastRssi();
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
@@ -415,6 +417,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             Serial.print("; type: "); print_message_type(_msg->message_type);
             Serial.print("; from: "); Serial.print(*source, DEC);
             Serial.print("; rssi: "); Serial.println(radio.lastRssi(), DEC);
+            last_rssi[*source] = radio.lastRssi();
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
@@ -665,6 +668,32 @@ uint8_t get_best_next_node(Data* data, uint8_t num_data_records)
     return dest;
 }
 
+void rssi_sort(uint8_t* id_list) {
+    uint8_t tmp;
+    for (int i=0; i<MAX_DATA_RECORDS && id_list[i] > 0; i++) {
+        for (int j=0; j<(MAX_DATA_RECORDS-i-1); j++) {
+            Serial.print("Comparing: ");
+            Serial.print(id_list[j], DEC); Serial.print(":"); Serial.print(last_rssi[id_list[j]], DEC);
+            Serial.print(" :: ");
+            Serial.print(id_list[j+1], DEC); Serial.print(":"); Serial.println(last_rssi[id_list[j+1]], DEC);
+            if (last_rssi[id_list[j]] < last_rssi[id_list[j+1]]) {
+                tmp = id_list[j];
+                id_list[j] = id_list[j+1];
+                id_list[j+1] = tmp;
+            }
+        }
+    }
+    Serial.print("RSSI sorted: {");
+    for (int i=0; i<MAX_DATA_RECORDS && id_list[i] > 0; i++) {
+        Serial.print(" ");
+        Serial.print(id_list[i], DEC);
+        Serial.print(":");
+        Serial.print(last_rssi[id_list[i]], DEC);
+        Serial.print(";");
+    }
+    Serial.println(" }");
+}
+
 void get_preferred_routing_order(Data* data, uint8_t num_data_records, uint8_t* order)
 {
     uint8_t first_pref[MAX_DATA_RECORDS] = {0};
@@ -717,6 +746,11 @@ void get_preferred_routing_order(Data* data, uint8_t num_data_records, uint8_t* 
         Serial.print(" "); Serial.print(third_pref[i], DEC);
     }
     Serial.println("");
+
+    rssi_sort(first_pref);
+    rssi_sort(second_pref);
+    rssi_sort(third_pref);
+    
     memcpy(first_pref+first_pref_index, second_pref, second_pref_index);
     memcpy(first_pref+first_pref_index+second_pref_index, third_pref, third_pref_index);
     Serial.print("Determined preferred routing: [");
