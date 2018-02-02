@@ -115,7 +115,9 @@ uint8_t known_nodes[MAX_CONTROL_NODES];
 uint8_t uncollected_nodes[MAX_CONTROL_NODES];
 uint8_t pending_nodes[MAX_CONTROL_NODES];
 bool pending_nodes_waiting_broadcast = false;
-bool collector_waiting_for_data = false;
+//static long next_collect_time = millis();
+static long next_collection_time = 0;
+
 
 /* **** UTILS **** */
 
@@ -618,7 +620,15 @@ void _collector_handle_data_message()
             Serial.print(missing_data_nodes[i], DEC);
         }
     }
-    collector_waiting_for_data = false;
+    if (uncollected_nodes[0] > 0) {
+        next_collection_time = 0;
+    } else {
+        int COLLECTION_DELAY = 2000;
+        int16_t COLLECTION_PERIOD = 30000;
+        send_control_next_request_time(COLLECTION_PERIOD);
+        next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
+    }
+    //collector_waiting_for_data = false;
     /* TODO: post the data to the API and determine if there are more nodes to collect */
 }
 
@@ -838,7 +848,7 @@ bool send_aggregate_data_init() {
     } if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, num_data_records, dest)) {
         Serial.print("-- Sent data: AGGREGATE_DATA_INIT to ID: ");
         Serial.println(dest, DEC);
-        collector_waiting_for_data = true;
+        //collector_waiting_for_data = true;
     } else {
         Serial.println("ERROR: did not successfully send aggregate data collection request");
         Serial.print("Removing node ID: ");
@@ -848,6 +858,7 @@ bool send_aggregate_data_init() {
         remove_uncollected_node_id(dest); // TODO: should there be some fallback or retry?
         Serial.print("** WARNING:: Node appears to be offline: ");
         Serial.println(dest, DEC);
+        return send_aggregate_data_init();
     }
     //router->printRoutingTable();
     return true;
@@ -868,11 +879,42 @@ void send_control_next_request_time(int16_t timeout)
 
 void handle_collector_loop()
 {
+
+    //int COLLECTION_DELAY = 2000;
+    //int16_t COLLECTION_PERIOD = 30000;
+    int16_t DATA_COLLECTION_TIMEOUT = 20000;
+    bool collector_waiting_for_data = uncollected_nodes[0] > 0;
+    if (millis() > next_collection_time) {
+            if (known_nodes[0] == 0) {
+                Serial.println("No known nodes. Sending next activity signal for 10 sec");
+                send_control_next_request_time(10000);
+                next_collection_time = millis() + 10000;
+                return;
+            }
+            if (!collector_waiting_for_data) {
+                memcpy(uncollected_nodes, known_nodes, MAX_CONTROL_NODES);
+                Serial.print("Starting collection of known nodes: ");
+                for (int i=0; i<MAX_CONTROL_NODES && known_nodes[i]>0; i++) {
+                    Serial.print(" "); Serial.print(known_nodes[i], DEC);
+                }
+                Serial.println("");
+            }
+            if (send_aggregate_data_init()) {
+                //collector_waiting_for_data = true;
+                next_collection_time = millis() + DATA_COLLECTION_TIMEOUT; // this is a timeout in case data does not come back from the network
+            } /* else {
+                //collector_waiting_for_data = false;
+                send_control_next_request_time(COLLECTION_PERIOD);
+                next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
+            } */
+    }
+    /*
     static long next_collection_time = millis();
     int COLLECTION_DELAY = 2000;
     static bool collecting = false;
     int16_t COLLECTION_PERIOD = 30000;
     static long counter = 0;
+    static long data_requested_at = -1;
     if (collecting && !collector_waiting_for_data) {
        if (!send_aggregate_data_init()) {
           collecting = false;
@@ -887,6 +929,19 @@ void handle_collector_loop()
             Serial.print(" "); Serial.print(known_nodes[i], DEC);
         }
         Serial.println("");
+        data_requested_at = millis();
+    } else if (collector_waiting_for_data) {
+        counter++;
+        if (counter > 20000) {
+          Serial.print("*");
+          counter = 0;
+        }
+        if ( (millis() - data_requested_at) > 20000 ) {
+            Serial.println("No collection response from network. Restarting collection");
+            collecting = true;
+            collector_waiting_for_data = false;
+            data_requested_at = -1;
+        }
     } else {
         counter++;
         if (counter > 20000) {
@@ -894,6 +949,7 @@ void handle_collector_loop()
           counter = 0;
         }
     }
+    */
 }; /* test_aggregate_data_collection */
 
 /* END OF TEST FUNCTIONS */
