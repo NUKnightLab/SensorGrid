@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -870,6 +870,7 @@ void handle_collector_loop()
     int COLLECTION_DELAY = 2000;
     static bool collecting = false;
     int16_t COLLECTION_PERIOD = 30000;
+    static long counter = 0;
     if (collecting && !collector_waiting_for_data) {
        if (!send_aggregate_data_init()) {
           collecting = false;
@@ -884,6 +885,12 @@ void handle_collector_loop()
             Serial.print(" "); Serial.print(known_nodes[i], DEC);
         }
         Serial.println("");
+    } else {
+        counter++;
+        if (counter > 20000) {
+          Serial.print(".");
+          counter = 0;
+        }
     }
 }; /* test_aggregate_data_collection */
 
