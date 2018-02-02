@@ -559,7 +559,7 @@ void _handle_control_message(MultidataMessage* _msg, uint8_t len, uint8_t from, 
             Serial.print("Self in control list: ");
             Serial.println(self_in_list);
             if (self_in_list) {
-                if (collector_id > 0) {
+                if (collector_id) {
                     if (collector_id == _control.from_node) {
                         // nothing changes
                     } else {
@@ -731,6 +731,7 @@ void _node_handle_data_message()
 {
     //uint8_t len;
     uint8_t from_id = ((MultidataMessage*)recv_buf)->from_node;
+    collector_id = from_id;
     uint8_t record_count;
     Data* data = get_multidata_data_from_buffer(&record_count);
     Serial.print("Received data array of length: ");
