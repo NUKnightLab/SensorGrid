@@ -389,7 +389,8 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             validate_recv_buffer(*len);
             Serial.print("Received buffered message. len: "); Serial.print(*len, DEC);
             Serial.print("; type: "); print_message_type(_msg->message_type);
-            Serial.print("; from: "); Serial.println(*source);
+            Serial.print("; from: "); Serial.print(*source, DEC);
+            Serial.print("; rssi: "); Serial.println(radio.lastRssi(), DEC);
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
@@ -410,7 +411,8 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             validate_recv_buffer(*len);
             Serial.print("Received buffered message. len: "); Serial.print(*len, DEC);
             Serial.print("; type: "); print_message_type(_msg->message_type);
-            Serial.print("; from: "); Serial.println(*source);
+            Serial.print("; from: "); Serial.print(*source, DEC);
+            Serial.print("; rssi: "); Serial.println(radio.lastRssi(), DEC);
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
