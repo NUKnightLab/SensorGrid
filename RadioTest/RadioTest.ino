@@ -83,7 +83,7 @@ typedef struct Data {
     int16_t value;
 };
 
-typedef struct MultidataMessage {
+typedef struct Message {
     uint8_t sensorgrid_version;
     uint8_t network_id;
     uint8_t from_node;
@@ -95,9 +95,9 @@ typedef struct MultidataMessage {
     };
 };
 
-uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Data);
-uint8_t MAX_MULIDATA_MESSAGE_PAYLOAD = sizeof(MultidataMessage);
-uint8_t MULTIDATA_MESSAGE_OVERHEAD = sizeof(MultidataMessage) - MAX_DATA_RECORDS * MAX_MESSAGE_PAYLOAD;
+uint8_t DATA_SIZE = sizeof(Data);
+uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Message);
+uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_DATA_RECORDS * DATA_SIZE;
 
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
@@ -245,7 +245,7 @@ float batteryLevel()
 uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
     Serial.print("Sending message type: ");
-    print_message_type(((MultidataMessage*)msg)->message_type);
+    print_message_type(((Message*)msg)->message_type);
     Serial.print("; length: ");
     Serial.println(len, DEC);
     unsigned long start = millis();
@@ -292,9 +292,9 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     }
 }
 
-uint8_t send_multidata_control(Control *control, uint8_t dest)
+uint8_t send_control(Control *control, uint8_t dest)
 {
-    MultidataMessage msg = {
+    Message msg = {
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
         .from_node = NODE_ID,
@@ -302,14 +302,14 @@ uint8_t send_multidata_control(Control *control, uint8_t dest)
         .len = 1
     };
     memcpy(&msg.control, control, sizeof(Control));
-    uint8_t len = sizeof(Control) + MULTIDATA_MESSAGE_OVERHEAD;
+    uint8_t len = sizeof(Control) + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
-uint8_t send_multidata_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)
+uint8_t send_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)
 {
     if (!from_id) from_id = NODE_ID;
-    MultidataMessage msg = {
+    Message msg = {
         .sensorgrid_version = SENSORGRID_VERSION,
         .network_id = NETWORK_ID,
         .from_node = from_id,
@@ -317,13 +317,13 @@ uint8_t send_multidata_data(Data *data, uint8_t array_size, uint8_t dest, uint8_
         .len = array_size,
     };
     memcpy(msg.data, data, sizeof(Data)*array_size);
-    uint8_t len = sizeof(Data)*array_size + MULTIDATA_MESSAGE_OVERHEAD;
+    uint8_t len = sizeof(Data)*array_size + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
 
-bool send_multidata_data(Data *data, uint8_t array_size, uint8_t dest)
+bool send_data(Data *data, uint8_t array_size, uint8_t dest)
 {
-    return send_multidata_data(data, array_size, dest, 0);
+    return send_data(data, array_size, dest, 0);
 }
 
 
@@ -357,16 +357,16 @@ static void clear_recv_buffer()
 void validate_recv_buffer(uint8_t len)
 {
     // some basic checks for sanity
-    int8_t message_type = ((MultidataMessage*)recv_buf)->message_type;
+    int8_t message_type = ((Message*)recv_buf)->message_type;
     switch(message_type) {
         case MESSAGE_TYPE_DATA:
-            if (len != sizeof(Data)*((MultidataMessage*)recv_buf)->len + MULTIDATA_MESSAGE_OVERHEAD) {
+            if (len != sizeof(Data)*((Message*)recv_buf)->len + MESSAGE_OVERHEAD) {
                 Serial.print("WARNING: Received message of type DATA with incorrect size: ");
                 Serial.println(len, DEC);
             }
             break;
         case MESSAGE_TYPE_CONTROL:
-            if (len != sizeof(Control) + MULTIDATA_MESSAGE_OVERHEAD) {
+            if (len != sizeof(Control) + MESSAGE_OVERHEAD) {
                 Serial.print("WARNING: Received message of type CONTROL with incorrect size: ");
                 Serial.println(len, DEC);
             }
@@ -390,11 +390,11 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
         Serial.println("WARNING: Could not initiate receive message. Receive buffer is locked.");
         return MESSAGE_TYPE_NONE_BUFFER_LOCK;
     }
-    MultidataMessage* _msg;
+    Message* _msg;
     lock_recv_buffer(); // lock to be released by calling client
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, len, timeout, source, dest, id, flags)) {
-            _msg = (MultidataMessage*)recv_buf;
+            _msg = (Message*)recv_buf;
              if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
                 Serial.print("WARNING: Received message with wrong firmware version: ");
                 Serial.println(_msg->sensorgrid_version, DEC);
@@ -417,7 +417,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
         }
     } else {
         if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
-            _msg = (MultidataMessage*)recv_buf;
+            _msg = (Message*)recv_buf;
             if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
                 Serial.print("WARNING: Received message with wrong firmware version: ");
                 Serial.println(_msg->sensorgrid_version, DEC);
@@ -456,12 +456,12 @@ int8_t receive(uint16_t timeout, uint8_t* source=NULL, uint8_t* dest=NULL, uint8
 /**
  * Get the control array from the receive buffer and copy it's length to len
  */
-Control get_multidata_control_from_buffer()
+Control get_control_from_buffer()
 {
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract control from unlocked buffer");
     }
-    MultidataMessage* _msg = (MultidataMessage*)recv_buf;
+    Message* _msg = (Message*)recv_buf;
     if ( _msg->message_type != MESSAGE_TYPE_CONTROL) {
         Serial.print("WARNING: Attempt to extract control from non-control type: ");
         Serial.println(_msg->message_type, DEC);
@@ -473,12 +473,12 @@ Control get_multidata_control_from_buffer()
 /**
  * Get the data array from the receive buffer and copy it's length to len
  */
-Data* get_multidata_data_from_buffer(uint8_t* len)
+Data* get_data_from_buffer(uint8_t* len)
 {
     if (recv_buffer_avail) {
         Serial.println("WARNING: Attempt to extract data from unlocked buffer");
     }
-    MultidataMessage* _msg = (MultidataMessage*)recv_buf;
+    Message* _msg = (Message*)recv_buf;
     if (_msg->message_type != MESSAGE_TYPE_DATA) {
         Serial.print("WARNING: Attempt to extract data from non-data type: ");
         Serial.println(_msg->message_type, DEC);
@@ -489,14 +489,13 @@ Data* get_multidata_data_from_buffer(uint8_t* len)
 
 void check_collection_state() {
     if (!collector_id) add_pending_node(NODE_ID);
-    //if (pending_nodes_waiting_broadcast) {
     static long next_add_nodes_broadcast = 0;
     if(pending_nodes[0] > 0 && millis() > next_add_nodes_broadcast) {
         Serial.println("pending nodes are waiting broadcast");
         Control control = { .id = ++message_id,
           .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0 }; //, .nodes = pending_nodes };
         memcpy(control.nodes, pending_nodes, MAX_CONTROL_NODES);
-        if (RH_ROUTER_ERROR_NONE == send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
+        if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
             Serial.println("-- Sent ADD_NODE control");
             //pending_nodes_waiting_broadcast = false;
         } else {
@@ -506,7 +505,7 @@ void check_collection_state() {
     }
 } /* check_collection_state */
 
-void _handle_control_message(MultidataMessage* _msg, uint8_t len, uint8_t from, uint8_t dest, unsigned long receive_time)
+void _handle_control_message(Message* _msg, uint8_t len, uint8_t from, uint8_t dest, unsigned long receive_time)
 {
     if (_msg->control.from_node == NODE_ID) return; // ignore controls originating from self
     
@@ -528,7 +527,7 @@ void _handle_control_message(MultidataMessage* _msg, uint8_t len, uint8_t from, 
             Serial.println("NOT rebroadcasting control message recently received");
         }
     }
-    Control _control = get_multidata_control_from_buffer();
+    Control _control = get_control_from_buffer();
     Serial.print("Received control message from: "); Serial.print(from, DEC);
     Serial.print("; Message ID: "); Serial.println(_control.id, DEC);
     if (_control.code == CONTROL_NONE) {
@@ -542,7 +541,7 @@ void _handle_control_message(MultidataMessage* _msg, uint8_t len, uint8_t from, 
           .type = 111,
           .value = 123
         } };
-        if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, 1, from)) {
+        if (RH_ROUTER_ERROR_NONE == send_data(data, 1, from)) {
             Serial.println("Returned data");
             Serial.println("");
         }
@@ -625,7 +624,7 @@ bool set_node_data(Data* data, uint8_t* record_count) {
 void _collector_handle_data_message()
 {
     uint8_t record_count;
-    Data* data = get_multidata_data_from_buffer(&record_count);
+    Data* data = get_data_from_buffer(&record_count);
     uint8_t missing_data_nodes[MAX_DATA_RECORDS] = {0};
     Serial.print("Collector received data from nodes:");
     for (int i=0; i<record_count; i++) {
@@ -791,14 +790,14 @@ void get_preferred_routing_order(Data* data, uint8_t num_data_records, uint8_t* 
 void _node_handle_data_message()
 {
     //uint8_t len;
-    uint8_t from_id = ((MultidataMessage*)recv_buf)->from_node;
+    uint8_t from_id = ((Message*)recv_buf)->from_node;
     collector_id = from_id;
     uint8_t record_count;
-    Data* data = get_multidata_data_from_buffer(&record_count);
+    Data* data = get_data_from_buffer(&record_count);
     Serial.print("Received data array of length: ");
     Serial.print(record_count, DEC);
     Serial.print(" from ID: ");
-    Serial.print( ((MultidataMessage*)recv_buf)->from_node, DEC);
+    Serial.print( ((Message*)recv_buf)->from_node, DEC);
     Serial.print(" containing data: {");
     for (int i=0; i<record_count; i++) {
         Serial.print(" id: ");
@@ -833,7 +832,7 @@ void _node_handle_data_message()
     }
     Serial.println("");
     for (int idx=0; (idx<MAX_DATA_RECORDS) && (order[idx] > 0) && (!success); idx++) {
-        if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, record_count, order[idx], from_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_data(data, record_count, order[idx], from_id)) {
             Serial.print("Forwarded data to node: ");
             Serial.println(order[idx], DEC);
             Serial.println("");
@@ -847,7 +846,7 @@ void _node_handle_data_message()
     }
     if (!success) {
         // send to the collector
-        if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, record_count, from_id, from_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_data(data, record_count, from_id, from_id)) {
             Serial.print("Forwarded data to collector node: ");
             Serial.println(from_id, DEC);
             Serial.println("");
@@ -863,7 +862,7 @@ void check_incoming_message()
     uint8_t len;
     int8_t msg_type = receive(&from, &dest, &msg_id, &len);
     unsigned long receive_time = millis();
-    MultidataMessage *_msg = (MultidataMessage*)recv_buf;
+    Message *_msg = (Message*)recv_buf;
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
         // Do nothing
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
@@ -911,7 +910,7 @@ bool send_aggregate_data_init() {
     //router->printRoutingTable();
     if (!dest) {
         Serial.println("No remaining nodes in current data record");
-    } if (RH_ROUTER_ERROR_NONE == send_multidata_data(data, num_data_records, dest)) {
+    } if (RH_ROUTER_ERROR_NONE == send_data(data, num_data_records, dest)) {
         Serial.print("-- Sent data: AGGREGATE_DATA_INIT to ID: ");
         Serial.println(dest, DEC);
         //collector_waiting_for_data = true;
@@ -936,7 +935,7 @@ void send_control_next_request_time(int16_t timeout)
           .code = CONTROL_NEXT_REQUEST_TIME, .from_node = NODE_ID, .data = timeout };
     memcpy(control.nodes, known_nodes, MAX_CONTROL_NODES);
     Serial.println("Broadcasting next request time");
-    if (RH_ROUTER_ERROR_NONE == send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
+    if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.print("-- Sent control: CONTROL_NEXT_REQUEST_TIME to nodes:");
         for (int i=0; i<MAX_CONTROL_NODES && control.nodes[i] > 0; i++) {
             Serial.print(" "); Serial.print(control.nodes[i], DEC);
@@ -949,9 +948,6 @@ void send_control_next_request_time(int16_t timeout)
 
 void handle_collector_loop()
 {
-
-    //int COLLECTION_DELAY = 2000;
-    //int16_t COLLECTION_PERIOD = 30000;
     int16_t DATA_COLLECTION_TIMEOUT = 20000;
     bool collector_waiting_for_data = uncollected_nodes[0] > 0;
     if (millis() > next_collection_time) {
@@ -978,48 +974,6 @@ void handle_collector_loop()
                 next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
             } */
     }
-    /*
-    static long next_collection_time = millis();
-    int COLLECTION_DELAY = 2000;
-    static bool collecting = false;
-    int16_t COLLECTION_PERIOD = 30000;
-    static long counter = 0;
-    static long data_requested_at = -1;
-    if (collecting && !collector_waiting_for_data) {
-       if (!send_aggregate_data_init()) {
-          collecting = false;
-          send_control_next_request_time(COLLECTION_PERIOD);
-          next_collection_time = millis() + COLLECTION_PERIOD;
-       }
-    } else if (!collecting && millis() >= next_collection_time + COLLECTION_DELAY) {
-        collecting = true;
-        memcpy(uncollected_nodes, known_nodes, MAX_CONTROL_NODES);
-        Serial.print("Starting collection of known nodes: ");
-        for (int i=0; i<MAX_CONTROL_NODES && known_nodes[i]>0; i++) {
-            Serial.print(" "); Serial.print(known_nodes[i], DEC);
-        }
-        Serial.println("");
-        data_requested_at = millis();
-    } else if (collector_waiting_for_data) {
-        counter++;
-        if (counter > 20000) {
-          Serial.print("*");
-          counter = 0;
-        }
-        if ( (millis() - data_requested_at) > 20000 ) {
-            Serial.println("No collection response from network. Restarting collection");
-            collecting = true;
-            collector_waiting_for_data = false;
-            data_requested_at = -1;
-        }
-    } else {
-        counter++;
-        if (counter > 20000) {
-          Serial.print(".");
-          counter = 0;
-        }
-    }
-    */
 }; /* test_aggregate_data_collection */
 
 /* END OF TEST FUNCTIONS */
