@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -652,6 +652,15 @@ void _collector_handle_data_message()
         send_control_next_request_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
     }
+    Serial.print("Data received: {");
+    for (int i=0; i<record_count; i++) {
+        Serial.print(" id: ");
+        Serial.print(data[i].node_id, DEC);
+        Serial.print(", value: ");
+        Serial.print(data[i].value, DEC);
+        Serial.print(";");
+    }
+    Serial.println("} ");
     //collector_waiting_for_data = false;
     /* TODO: post the data to the API and determine if there are more nodes to collect */
 }
