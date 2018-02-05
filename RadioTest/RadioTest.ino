@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 3 // 1 is collector; 2,3 are sensors
+#define NODE_ID 2 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -57,6 +57,7 @@
 
 /* Data types */
 #define AGGREGATE_DATA_INIT 0
+#define BATTERY_LEVEL 1
 
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
@@ -221,6 +222,21 @@ bool is_pending_nodes()
 
 void clear_pending_nodes() {
     memset(pending_nodes, 0, MAX_CONTROL_NODES);
+}
+
+#define BUTTON_A 9
+#define VBATPIN 9
+
+float batteryLevel()
+{
+    pinMode(BUTTON_A, INPUT);
+    float measuredvbat = analogRead(VBATPIN);
+    pinMode(BUTTON_A, INPUT_PULLUP);
+    //attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
+    measuredvbat *= 2;    // we divided by 2, so multiply back
+    measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+    measuredvbat /= 1024; // convert to voltage
+    return measuredvbat;
 }
 /* END OF UTILS */
 
@@ -597,7 +613,8 @@ bool set_node_data(Data* data, uint8_t* record_count) {
     for (int i=0; i<*record_count; i++) {
         if (data[i].node_id == NODE_ID) {
             data[i] = {
-                .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = 1, .value = 12345
+                .id = ++message_id, .node_id = NODE_ID, .timestamp = 0, .type = BATTERY_LEVEL,
+                .value = (int16_t)(roundf(batteryLevel() * 100))
             };
             break;
         }
@@ -911,7 +928,11 @@ void send_control_next_request_time(int16_t timeout)
     memcpy(control.nodes, known_nodes, MAX_CONTROL_NODES);
     Serial.println("Broadcasting next request time");
     if (RH_ROUTER_ERROR_NONE == send_multidata_control(&control, RH_BROADCAST_ADDRESS)) {
-        Serial.println("-- Sent control: CONTROL_NEXT_REQUEST_TIME");
+        Serial.println("-- Sent control: CONTROL_NEXT_REQUEST_TIME to nodes:");
+        for (int i=0; i<MAX_CONTROL_NODES && control.nodes[i] > 0; i++) {
+            Serial.print(" "); Serial.print(control.nodes[i], DEC);
+        }
+        Serial.println("");
     } else {
         Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
     }
