@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 3 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -747,9 +747,10 @@ void get_preferred_routing_order(Data* data, uint8_t num_data_records, uint8_t* 
     }
     Serial.println("");
 
-    rssi_sort(first_pref);
-    rssi_sort(second_pref);
-    rssi_sort(third_pref);
+    /* RSSI sort not properly working. Also, we don't have regular RSSI updates to nodes we send to */
+    //rssi_sort(first_pref);
+    //rssi_sort(second_pref);
+    //rssi_sort(third_pref);
     
     memcpy(first_pref+first_pref_index, second_pref, second_pref_index);
     memcpy(first_pref+first_pref_index+second_pref_index, third_pref, third_pref_index);
