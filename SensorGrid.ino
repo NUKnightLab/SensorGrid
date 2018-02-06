@@ -470,6 +470,13 @@ bool set_node_data(Data* data, uint8_t* record_count) {
     return true;
 }
 
+char* get_data_type(uint8_t type)
+{
+    if (type == DATA_TYPE_BATTERY_LEVEL) return "DATA_TYPE_BATTERY_LEVEL";
+    if (type == DATA_TYPE_SHARP_GP2Y1010AU0F) return "DATA_TYPE_SHARP_GP2Y1010AU0F";
+    return "UNKNOWN";
+}
+
 void _collector_handle_data_message()
 {
     uint8_t record_count;
@@ -500,15 +507,15 @@ void _collector_handle_data_message()
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
     }
-    Serial.print("Data received: {");
+    Serial.println("DATA RECEIVED:");
     for (int i=0; i<record_count; i++) {
-        Serial.print(" id: ");
+        Serial.print(" ID: ");
         Serial.print(data[i].node_id, DEC);
-        Serial.print(", value: ");
-        Serial.print(data[i].value, DEC);
-        Serial.print(";");
+        Serial.print("; TYPE: ");
+        Serial.print(get_data_type(data[i].type));
+        Serial.print("; VALUE: ");
+        Serial.println(data[i].value, DEC);
     }
-    Serial.println(" }");
     /* TODO: post the data to the API and determine if there are more nodes to collect */
 }
 
@@ -979,9 +986,9 @@ void loop()
             check_collection_state();
             check_incoming_message();
         }
+        sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
     }
 
-    sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
     if (config.has_oled) {
         updateDisplayThread(&update_display_protothread, 1000);
         updateDisplayBatteryThread(&update_display_battery_protothread, 10 * 1000);
