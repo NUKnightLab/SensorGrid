@@ -890,7 +890,6 @@ static int updateDisplayThread(struct pt *pt, int interval)
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     if (oled_is_on)
         updateDisplay();
-        shutdown_requested = false;
     timestamp = millis();
   }
   PT_END(pt);
@@ -938,6 +937,8 @@ void aButton_ISR()
 
 void bButton_ISR()
 {
+    Serial.println("B Button");
+    Serial.println(shutdown_requested);
     if (shutdown_requested) {
         display.clearDisplay();
         display.setCursor(0,24);
@@ -949,6 +950,7 @@ void bButton_ISR()
 
 void cButton_ISR()
 {
+    Serial.println("C Button");
     if (shutdown_requested) {
         shutdown_requested = false;
         display.fillRect(0, 24, 128, 29, BLACK);
