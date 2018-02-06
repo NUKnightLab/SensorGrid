@@ -7,49 +7,6 @@
 #include <SPI.h>
 #include <pt.h>
 
-#define CAD_TIMEOUT 1000
-#define TIMEOUT 1000
-#define RF95_CS 8
-#define REQUIRED_RH_VERSION_MAJOR 1
-#define REQUIRED_RH_VERSION_MINOR 82
-#define RF95_INT 3
-#define MAX_MESSAGE_SIZE 255
-
-/**
- * Overall max message size is somewhere between 244 and 247 bytes. 247 will cause invalid length error
- * 
- * Note that these max sizes on the message structs are system specific due to struct padding. The values
- * here are specific to the Cortex M0
- * 
- */
-#define MAX_DATA_RECORDS 39
-#define MAX_NODES 230
-
-/* *
- *  Message types:
- *  Not using enum for message types to ensure small numeric size
- */
-#define MESSAGE_TYPE_NO_MESSAGE 0
-#define MESSAGE_TYPE_CONTROL 1 
-#define MESSAGE_TYPE_DATA 2
-#define MESSAGE_TYPE_UNKNOWN -1
-#define MESSAGE_TYPE_MESSAGE_ERROR -2
-#define MESSAGE_TYPE_NONE_BUFFER_LOCK -3
-#define MESSAGE_TYPE_WRONG_VERSION -4
-#define MESSAGE_TYPE_WRONG_NETWORK -5 // for testing only. Normally we will just skip messages from other networks
-
-/**
- * Control codes
- */
-//#define CONTROL_SEND_DATA 1
-#define CONTROL_NONE 1 // no-op used for testing
-#define CONTROL_NEXT_ACTIVITY_TIME 2
-#define CONTROL_ADD_NODE 3
-
-/* Data types */
-#define AGGREGATE_DATA_INIT 0
-#define BATTERY_LEVEL 1
-
 static RH_RF95 radio(RF95_CS, RF95_INT);
 static RHMesh* router;
 static uint8_t message_id = 0;
@@ -66,36 +23,6 @@ volatile int bButtonState = 0;
 volatile int cButtonState = 0;
 static bool shutdown_requested = false;
 
-/* Defining list of nodes */
-int sensorArray[2] = {};
-
-typedef struct Control {
-    uint8_t id;
-    uint8_t code;
-    uint8_t from_node;
-    int16_t data;
-    uint8_t nodes[MAX_NODES];
-};
-
-typedef struct Data {
-    uint8_t id; // 1-255 indicates Data
-    uint8_t node_id;
-    uint8_t timestamp;
-    int8_t type;
-    int16_t value;
-};
-
-typedef struct Message {
-    uint8_t sensorgrid_version;
-    uint8_t network_id;
-    uint8_t from_node;
-    uint8_t message_type;
-    uint8_t len;
-    union {
-      struct Control control;
-      struct Data data[MAX_DATA_RECORDS];
-    };
-};
 
 uint8_t DATA_SIZE = sizeof(Data);
 uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Message);
