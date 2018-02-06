@@ -563,8 +563,7 @@ void _handle_control_next_activity_time(Control _control, unsigned long receive_
         } else {
             if (!collector_id || collector_id == _control.from_node) {
                 add_pending_node(NODE_ID);
-                //pending_nodes_waiting_broadcast = true; // broadcast self as pending even
-            }                                            // if previous attempt
+            }
         }
         p(F("Received control code: NEXT_ACTIVITY_TIME. Sleeping for: %d\n"), _control.data - (millis() - receive_time));
         next_listen = receive_time + _control.data;
@@ -647,7 +646,6 @@ void _collector_handle_data_message()
         Serial.print(";");
     }
     Serial.println(" }");
-    //collector_waiting_for_data = false;
     /* TODO: post the data to the API and determine if there are more nodes to collect */
 }
 
@@ -863,6 +861,7 @@ void handle_collector_loop()
 {
     int16_t DATA_COLLECTION_TIMEOUT = 20000;
     bool collector_waiting_for_data = uncollected_nodes[0] > 0;
+    static int cycle = 0;
     if (millis() > next_collection_time) {
             if (known_nodes[0] == 0) {
                 Serial.println("No known nodes. Sending next activity signal for 10 sec");
@@ -879,6 +878,7 @@ void handle_collector_loop()
                 Serial.println("");
             }
             if (send_aggregate_data_init()) {
+                p(F("Cycle: %d\n"), cycle++);
                 next_collection_time = millis() + DATA_COLLECTION_TIMEOUT; // this is a timeout in case data does not come back from the network
             }
     }
