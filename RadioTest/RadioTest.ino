@@ -27,7 +27,7 @@
  * 
  */
 #define MAX_DATA_RECORDS 39
-#define MAX_CONTROL_NODES 230
+#define MAX_NODES 230
 
 /* *
  *  Message types:
@@ -68,7 +68,7 @@ typedef struct Control {
     uint8_t code;
     uint8_t from_node;
     int16_t data;
-    uint8_t nodes[MAX_CONTROL_NODES];
+    uint8_t nodes[MAX_NODES];
 };
 
 typedef struct Data {
@@ -104,16 +104,16 @@ static bool recv_buffer_avail = true;
  * This is the application layer control ID, not the RadioHead message ID since
  * RadioHead does not let us explictly set the ID for sendToWait
  */
-uint8_t received_broadcast_control_messages[MAX_CONTROL_NODES];
+uint8_t received_broadcast_control_messages[MAX_NODES];
 
 /* Collection state */
 uint8_t collector_id = 0;
-uint8_t known_nodes[MAX_CONTROL_NODES];
-uint8_t uncollected_nodes[MAX_CONTROL_NODES];
-uint8_t pending_nodes[MAX_CONTROL_NODES];
+uint8_t known_nodes[MAX_NODES];
+uint8_t uncollected_nodes[MAX_NODES];
+uint8_t pending_nodes[MAX_NODES];
 bool pending_nodes_waiting_broadcast = false;
 static long next_collection_time = 0;
-int16_t last_rssi[MAX_CONTROL_NODES];
+int16_t last_rssi[MAX_NODES];
 
 
 /* **** UTILS **** */
@@ -189,7 +189,7 @@ void print_ram()
 void add_pending_node(uint8_t id)
 {
     int i;
-    for (i=0; i<MAX_CONTROL_NODES && pending_nodes[i] != 0; i++) {
+    for (i=0; i<MAX_NODES && pending_nodes[i] != 0; i++) {
         if (pending_nodes[i] == id) {
             return;
         }
@@ -200,7 +200,7 @@ void add_pending_node(uint8_t id)
 
 void remove_pending_node(uint8_t id) {
     int dest = 0;
-    for (int i=0; i<MAX_CONTROL_NODES; i++) {
+    for (int i=0; i<MAX_NODES; i++) {
         if (pending_nodes[i] != id)
             pending_nodes[dest++] = pending_nodes[i];
     }
@@ -209,7 +209,7 @@ void remove_pending_node(uint8_t id) {
 void add_known_node(uint8_t id)
 {
     int i;
-    for (i=0; i<MAX_CONTROL_NODES && known_nodes[i] != 0; i++) {
+    for (i=0; i<MAX_NODES && known_nodes[i] != 0; i++) {
         if (known_nodes[i] == id) {
             return;
         }
@@ -219,7 +219,7 @@ void add_known_node(uint8_t id)
 
 void remove_known_node_id(uint8_t id) {
     int dest = 0;
-    for (int i=0; i<MAX_CONTROL_NODES; i++) {
+    for (int i=0; i<MAX_NODES; i++) {
         if (known_nodes[i] != id)
             known_nodes[dest++] = known_nodes[i];
     }
@@ -227,7 +227,7 @@ void remove_known_node_id(uint8_t id) {
 
 void remove_uncollected_node_id(uint8_t id) {
     int dest = 0;
-    for (int i=0; i<MAX_CONTROL_NODES; i++) {
+    for (int i=0; i<MAX_NODES; i++) {
         if (uncollected_nodes[i] != id)
             uncollected_nodes[dest++] = uncollected_nodes[i];
     }
@@ -239,7 +239,7 @@ bool is_pending_nodes()
 }
 
 void clear_pending_nodes() {
-    memset(pending_nodes, 0, MAX_CONTROL_NODES);
+    memset(pending_nodes, 0, MAX_NODES);
 }
 
 #define BUTTON_A 9
@@ -489,7 +489,7 @@ void check_collection_state() {
         Serial.println("Pending nodes are waiting broadcast");
         Control control = { .id = ++message_id,
           .code = CONTROL_ADD_NODE, .from_node = NODE_ID, .data = 0 }; //, .nodes = pending_nodes };
-        memcpy(control.nodes, pending_nodes, MAX_CONTROL_NODES);
+        memcpy(control.nodes, pending_nodes, MAX_NODES);
         if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
             Serial.println("-- Sent ADD_NODE control");
         } else {
@@ -524,7 +524,7 @@ void _handle_control_add_node(Control _control)
 {
     if (NODE_ID == COLLECTOR_NODE_ID) {
         Serial.print("Received control code: ADD_NODES. Adding known IDs: ");
-        for (int i=0; i<MAX_CONTROL_NODES && _control.nodes[i] != 0; i++) {
+        for (int i=0; i<MAX_NODES && _control.nodes[i] != 0; i++) {
             Serial.print(_control.nodes[i]);
             Serial.print(" ");
             add_known_node(_control.nodes[i]);
@@ -532,7 +532,7 @@ void _handle_control_add_node(Control _control)
         Serial.println("");
     } else {
         Serial.print("Received control code: ADD_NODES. Adding pending IDs: ");
-        for (int i=0; i<MAX_CONTROL_NODES && _control.nodes[i] != 0; i++) {
+        for (int i=0; i<MAX_NODES && _control.nodes[i] != 0; i++) {
             Serial.print(_control.nodes[i]);
             Serial.print(" ");
             add_pending_node(_control.nodes[i]);
@@ -546,7 +546,7 @@ void _handle_control_next_activity_time(Control _control, unsigned long receive_
     if (NODE_ID != COLLECTOR_NODE_ID) {
         radio.sleep();
         bool self_in_list = false;
-        for (int i=0; i<MAX_CONTROL_NODES; i++) {
+        for (int i=0; i<MAX_NODES; i++) {
             if (_control.nodes[i] == NODE_ID) {
                 self_in_list = true;
             }
@@ -745,7 +745,7 @@ void _node_handle_data_message()
     Serial.println("} ");
     if (pending_nodes[0]) {
         Serial.print("Known pending nodes: ");
-        for (int i=0; i<MAX_CONTROL_NODES && pending_nodes[i]>0; i++) {
+        for (int i=0; i<MAX_NODES && pending_nodes[i]>0; i++) {
             p(F(" %d"), pending_nodes[i]);
             if (record_count < MAX_DATA_RECORDS) {
                 data[record_count++] = {
@@ -844,11 +844,11 @@ void send_control_next_activity_time(int16_t timeout)
 {
     Control control = { .id = ++message_id,
           .code = CONTROL_NEXT_ACTIVITY_TIME, .from_node = NODE_ID, .data = timeout };
-    memcpy(control.nodes, known_nodes, MAX_CONTROL_NODES);
+    memcpy(control.nodes, known_nodes, MAX_NODES);
     Serial.println("Broadcasting next request time");
     if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.print("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to nodes:");
-        for (int i=0; i<MAX_CONTROL_NODES && control.nodes[i] > 0; i++) {
+        for (int i=0; i<MAX_NODES && control.nodes[i] > 0; i++) {
             p(F(" %d"), control.nodes[i]);
         }
         Serial.println("");
@@ -870,9 +870,9 @@ void handle_collector_loop()
                 return;
             }
             if (!collector_waiting_for_data) {
-                memcpy(uncollected_nodes, known_nodes, MAX_CONTROL_NODES);
+                memcpy(uncollected_nodes, known_nodes, MAX_NODES);
                 Serial.print("Starting collection of known nodes: ");
-                for (int i=0; i<MAX_CONTROL_NODES && known_nodes[i]>0; i++) {
+                for (int i=0; i<MAX_NODES && known_nodes[i]>0; i++) {
                     p(F(" %d"), known_nodes[i]);
                 }
                 Serial.println("");

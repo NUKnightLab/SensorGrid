@@ -28,8 +28,9 @@ void setupRadio(RH_RF95 rf95)
     Serial.print("Node ID: ");
     Serial.println(config.node_id);
     router = new RHMesh(rf95, config.node_id);
-    
-    rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
+
+    // TODO: test low-slow mode
+    //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
         Serial.println(F("Router init failed"));
         
