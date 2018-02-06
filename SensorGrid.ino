@@ -23,7 +23,6 @@ volatile int bButtonState = 0;
 volatile int cButtonState = 0;
 static bool shutdown_requested = false;
 
-
 uint8_t DATA_SIZE = sizeof(Data);
 uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Message);
 uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_DATA_RECORDS * DATA_SIZE;
@@ -47,7 +46,6 @@ uint8_t pending_nodes[MAX_NODES];
 bool pending_nodes_waiting_broadcast = false;
 static long next_collection_time = 0;
 int16_t last_rssi[MAX_NODES];
-
 
 /* **** UTILS **** */
 
@@ -276,11 +274,11 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
         if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
             _msg = (Message*)recv_buf;
             if ( _msg->sensorgrid_version != config.sensorgrid_version ) {
-                p(F("WARNING: Received message with wrong firmware version: %d\n"), _msg->sensorgrid_version);
+                p(F("IGNORING: Received message with wrong firmware version: %d\n"), _msg->sensorgrid_version);
                 return MESSAGE_TYPE_WRONG_VERSION;
             }
             if ( _msg->network_id != config.network_id ) {
-                p(F("WARNING: Received message from wrong network: %d\n"), _msg->network_id);
+                p(F("IGNORING: Received message from wrong network: %d\n"), _msg->network_id);
                 return MESSAGE_TYPE_WRONG_NETWORK;
             }
             validate_recv_buffer(*len);
@@ -654,6 +652,10 @@ void check_incoming_message()
         } else {
             _node_handle_data_message();
         }
+    } else if (msg_type == MESSAGE_TYPE_WRONG_VERSION) {
+        // ignore
+    } else if (msg_type == MESSAGE_TYPE_WRONG_NETWORK) {
+        // ignore
     } else {
         p(F("WARNING: Received unexpected Message type: %s from ID: %d\n"), get_message_type(msg_type), from);
     }
@@ -886,7 +888,7 @@ void check_radiohead_version()
 
 void setup()
 {
-    while (!Serial);
+    //while (!Serial);
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);
