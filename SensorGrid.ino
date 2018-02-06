@@ -50,6 +50,7 @@ uint8_t pending_nodes[MAX_NODES];
 bool pending_nodes_waiting_broadcast = false;
 static long next_collection_time = 0;
 int16_t last_rssi[MAX_NODES];
+static uint8_t latest_collected_records[MAX_NODES+1] = {0};
 
 /* **** UTILS **** */
 
@@ -509,12 +510,13 @@ void _collector_handle_data_message()
     }
     Serial.println("DATA RECEIVED:");
     for (int i=0; i<record_count; i++) {
-        Serial.print(" ID: ");
-        Serial.print(data[i].node_id, DEC);
-        Serial.print("; TYPE: ");
-        Serial.print(get_data_type(data[i].type));
-        Serial.print("; VALUE: ");
-        Serial.println(data[i].value, DEC);
+        p(F(" NODE ID: %d"), data[i].node_id);
+        p(F("; RECORD ID: %d"), data[i].id);
+        p(F("; TYPE: %s"), get_data_type(data[i].type));
+        p(F("; VALUE: %d\n"), data[i].value);
+        if (data[i].id > latest_collected_records[data[i].node_id]) {
+            latest_collected_records[data[i].node_id] = data[i].id;
+        }
     }
     /* TODO: post the data to the API and determine if there are more nodes to collect */
 }
@@ -691,7 +693,7 @@ bool send_aggregate_data_init() {
     uint8_t num_data_records = 0;
     for (int i=0; i<MAX_DATA_RECORDS && uncollected_nodes[i] != 0; i++) {
         data[i] = {
-            .id = 0, .node_id = uncollected_nodes[i], .timestamp = 0, .type = 0, .value = 0 };
+            .id = 0, .node_id = uncollected_nodes[i], .timestamp = 0, .type = 0, .value = latest_collected_records[uncollected_nodes[i]] };
         Serial.print(uncollected_nodes[i], DEC);
         Serial.print(" ");
         num_data_records++;
