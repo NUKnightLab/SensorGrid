@@ -20,7 +20,7 @@
 #define DEFAULT_NODE_ID "1"
 #define DEFAULT_RF95_FREQ "915.0"  // for U.S.
 #define DEFAULT_TX_POWER "10"
-#define DEFAULT_PROTOCOL_VERSION "0.11"
+#define DEFAULT_SENSORGRID_VERSION "1"
 #define DEFAULT_DISPLAY_TIMEOUT "60"
 #define DEFAULT_COLLECTOR_ID "1"
 #define DEFAULT_OLED "0"
@@ -41,7 +41,7 @@ typedef struct Config {
     uint32_t collector_id;
     float rf95_freq;
     uint8_t tx_power;
-    uint16_t protocol_version;
+    uint8_t sensorgrid_version;
     char  *log_file;
     char  *log_mode;
     uint32_t display_timeout;

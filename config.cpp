@@ -23,7 +23,7 @@ void loadConfig() {
         config.node_id = (uint32_t)(atoi(getConfig("NODE_ID")));
         config.rf95_freq = (float)(atof(getConfig("RF95_FREQ")));
         config.tx_power = (uint8_t)(atoi(getConfig("TX_POWER")));
-        config.protocol_version = atof(getConfig("PROTOCOL_VERSION"));
+        config.sensorgrid_version = atoi(getConfig("SENSORGRID_VERSION"));
         config.log_file = getConfig("LOGFILE", DEFAULT_LOG_FILE);
         config.log_mode = getConfig("LOGMODE", DEFAULT_LOG_MODE);
         config.display_timeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", DEFAULT_DISPLAY_TIMEOUT)));
@@ -77,7 +77,7 @@ void loadConfig() {
         config.node_id = (uint32_t)(atoi(DEFAULT_NODE_ID));
         config.rf95_freq = (float)(atof(DEFAULT_RF95_FREQ));
         config.tx_power = (uint8_t)(atoi(DEFAULT_TX_POWER));
-        config.protocol_version = (float)(atof(DEFAULT_PROTOCOL_VERSION));
+        config.sensorgrid_version = (uint8_t)(atoi(DEFAULT_SENSORGRID_VERSION));
         config.log_file = DEFAULT_LOG_FILE;
         config.log_mode = DEFAULT_LOG_MODE;
         config.display_timeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));

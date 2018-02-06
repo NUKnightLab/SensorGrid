@@ -87,5 +87,7 @@ float batteryLevel();
 void printRam();
 int freeRam();
 void aButton_ISR();
+void p(char *fmt, ...);
+void p(const __FlashStringHelper *fmt, ... );
 
 #endif

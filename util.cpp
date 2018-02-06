@@ -16,6 +16,30 @@ static int _freeRam()
 }
 #endif
 
+
+#include <stdarg.h>
+void p(char *fmt, ... ){
+        char buf[128]; // resulting string limited to 128 chars
+        va_list args;
+        va_start (args, fmt );
+        vsnprintf(buf, 128, fmt, args);
+        va_end (args);
+        Serial.print(buf);
+}
+
+void p(const __FlashStringHelper *fmt, ... ){
+  char buf[128]; // resulting string limited to 128 chars
+  va_list args;
+  va_start (args, fmt);
+#ifdef __AVR__
+  vsnprintf_P(buf, sizeof(buf), (const char *)fmt, args); // progmem for AVR
+#else
+  vsnprintf(buf, sizeof(buf), (const char *)fmt, args); // for the rest of the world
+#endif
+  va_end(args);
+  Serial.print(buf);
+}
+
 void fail(enum ERRORS err)
 {
     Serial.print(F("ERR: "));
@@ -55,4 +79,23 @@ int freeRam()
 {
     return _freeRam();
 }
+
+unsigned long hash(uint8_t* msg, uint8_t len)
+{
+    unsigned long h = 5381;
+    for (int i=0; i<len; i++){
+        h = ((h << 5) + h) + msg[i];
+    }
+    return h;
+}
+
+unsigned checksum(void *buffer, size_t len, unsigned int seed)
+{
+      unsigned char *buf = (unsigned char *)buffer;
+      size_t i;
+      for (i = 0; i < len; ++i)
+            seed += (unsigned int)(*buf++);
+      return seed;
+}
+
 

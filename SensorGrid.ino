@@ -8,7 +8,6 @@
 #include <pt.h>
 
 #define FREQ 915.00
-#define TX 5
 #define CAD_TIMEOUT 1000
 #define TIMEOUT 1000
 #define RF95_CS 8
@@ -16,7 +15,6 @@
 #define REQUIRED_RH_VERSION_MINOR 82
 #define RF95_INT 3
 #define MAX_MESSAGE_SIZE 255
-#define SENSORGRID_VERSION 1
 
 /**
  * Overall max message size is somewhere between 244 and 247 bytes. 247 will cause invalid length error
@@ -45,10 +43,9 @@
  * Control codes
  */
 //#define CONTROL_SEND_DATA 1
-#define CONTROL_NEXT_COLLECTION 2
-#define CONTROL_NONE 3 // no-op used for testing
-#define CONTROL_NEXT_ACTIVITY_TIME 5
-#define CONTROL_ADD_NODE 6
+#define CONTROL_NONE 1 // no-op used for testing
+#define CONTROL_NEXT_ACTIVITY_TIME 2
+#define CONTROL_ADD_NODE 3
 
 /* Data types */
 #define AGGREGATE_DATA_INIT 0
@@ -59,6 +56,7 @@ static RHMesh* router;
 static uint8_t message_id = 0;
 static unsigned long next_listen = 0;
 
+RTC_PCF8523 rtc;
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 uint32_t display_clock_time = 0;
 static uint32_t oled_activated_time = 0;
@@ -127,28 +125,6 @@ int16_t last_rssi[MAX_NODES];
 
 /* **** UTILS **** */
 
-#include <stdarg.h>
-void p(char *fmt, ... ){
-        char buf[128]; // resulting string limited to 128 chars
-        va_list args;
-        va_start (args, fmt );
-        vsnprintf(buf, 128, fmt, args);
-        va_end (args);
-        Serial.print(buf);
-}
-
-void p(const __FlashStringHelper *fmt, ... ){
-  char buf[128]; // resulting string limited to 128 chars
-  va_list args;
-  va_start (args, fmt);
-#ifdef __AVR__
-  vsnprintf_P(buf, sizeof(buf), (const char *)fmt, args); // progmem for AVR
-#else
-  vsnprintf(buf, sizeof(buf), (const char *)fmt, args); // for the rest of the world
-#endif
-  va_end(args);
-  Serial.print(buf);
-}
 
 void print_message_type(int8_t num)
 {
@@ -162,37 +138,6 @@ void print_message_type(int8_t num)
         default:
             Serial.print("UNKNOWN");
     }
-}
-
-unsigned long hash(uint8_t* msg, uint8_t len)
-{
-    unsigned long h = 5381;
-    for (int i=0; i<len; i++){
-        h = ((h << 5) + h) + msg[i];
-    }
-    return h;
-}
-
-unsigned checksum(void *buffer, size_t len, unsigned int seed)
-{
-      unsigned char *buf = (unsigned char *)buffer;
-      size_t i;
-      for (i = 0; i < len; ++i)
-            seed += (unsigned int)(*buf++);
-      return seed;
-}
-
-extern "C" char *sbrk(int i);
-static int free_ram()
-{
-    char stack_dummy = 0;
-    return &stack_dummy - sbrk(0);
-}
-
-void print_ram()
-{
-    Serial.print("Avail RAM: ");
-    Serial.println(free_ram(), DEC);
 }
 
 void add_pending_node(uint8_t id)
@@ -293,7 +238,7 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 uint8_t send_control(Control *control, uint8_t dest)
 {
     Message msg = {
-        .sensorgrid_version = SENSORGRID_VERSION,
+        .sensorgrid_version = config.sensorgrid_version,
         .network_id = config.network_id,
         .from_node = config.node_id,
         .message_type = MESSAGE_TYPE_CONTROL,
@@ -308,7 +253,7 @@ uint8_t send_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)
 {
     if (!from_id) from_id = config.node_id;
     Message msg = {
-        .sensorgrid_version = SENSORGRID_VERSION,
+        .sensorgrid_version = config.sensorgrid_version,
         .network_id = config.network_id,
         .from_node = from_id,
         .message_type = MESSAGE_TYPE_DATA,
@@ -390,7 +335,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, len, timeout, source, dest, id, flags)) {
             _msg = (Message*)recv_buf;
-             if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
+             if ( _msg->sensorgrid_version != config.sensorgrid_version ) {
                 p(F("WARNING: Received message with wrong firmware version: %d\n"), _msg->sensorgrid_version);
                 return MESSAGE_TYPE_WRONG_VERSION;
             }           
@@ -410,7 +355,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
     } else {
         if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
             _msg = (Message*)recv_buf;
-            if ( _msg->sensorgrid_version != SENSORGRID_VERSION ) {
+            if ( _msg->sensorgrid_version != config.sensorgrid_version ) {
                 p(F("WARNING: Received message with wrong firmware version: %d\n"), _msg->sensorgrid_version);
                 return MESSAGE_TYPE_WRONG_VERSION;
             }
@@ -1045,6 +990,27 @@ void setup()
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);
+
+    Serial.print("Node type: "); Serial.println(config.node_type);
+    pinMode(LED, OUTPUT);
+    pinMode(config.RFM95_RST, OUTPUT);
+    pinMode(BUTTON_A, INPUT_PULLUP);
+    pinMode(BUTTON_B, INPUT_PULLUP);
+    pinMode(BUTTON_C, INPUT_PULLUP);  
+    digitalWrite(LED, LOW);
+    digitalWrite(config.RFM95_RST, HIGH);
+    
+    if (config.has_oled) {
+        Serial.print(F("Display timeout set to: ")); Serial.println(config.display_timeout);
+        setupDisplay();
+        oled_is_on = true;
+        attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
+        attachInterrupt(BUTTON_B, bButton_ISR, FALLING);
+        attachInterrupt(BUTTON_C, cButton_ISR, FALLING);
+    }
+    
+    rtc.begin();
+    
     router = new RHMesh(radio, config.node_id);
     //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
@@ -1053,7 +1019,7 @@ void setup()
     if (!radio.setFrequency(FREQ)) {
         Serial.println("Radio frequency set failed");
     } 
-    radio.setTxPower(TX, false);
+    radio.setTxPower(config.tx_power, false);
     radio.setCADTimeout(CAD_TIMEOUT);
     router->setTimeout(TIMEOUT);
     Serial.println("");
