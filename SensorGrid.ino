@@ -456,6 +456,7 @@ bool set_node_data(Data* data, uint8_t* record_count) {
     int index;
     for (index=0; index<*record_count; index++) {
         if (data[index].node_id == config.node_id) {
+            p(F("Received aggregation request with latest record received: %d\n"), data[index].value);
             data[index] = {
                 .id = ++data_id, .node_id = config.node_id, .timestamp = 0, .type = DATA_TYPE_BATTERY_LEVEL,
                 .value = (int16_t)(roundf(batteryLevel() * 100))
