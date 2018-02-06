@@ -888,7 +888,7 @@ void check_radiohead_version()
 
 void setup()
 {
-    //while (!Serial);
+    while (!Serial);
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);

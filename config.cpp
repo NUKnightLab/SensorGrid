@@ -55,6 +55,7 @@ void loadConfig() {
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
 
+        /*
         if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
             char* nodeIdsConfig = strdup(getConfig("ORDERED_NODE_IDS", ""));
             if (nodeIdsConfig[0] == NULL) {
@@ -70,7 +71,7 @@ void loadConfig() {
                 config.node_ids[index++] = node;
             }
             Serial.println("");
-        }
+        } */
     } else {
         Serial.println(F("Using default configs"));
         config.network_id = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
