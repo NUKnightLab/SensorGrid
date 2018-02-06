@@ -7,7 +7,6 @@
 #include <SPI.h>
 #include <pt.h>
 
-#define FREQ 915.00
 #define CAD_TIMEOUT 1000
 #define TIMEOUT 1000
 #define RF95_CS 8
@@ -1015,8 +1014,8 @@ void setup()
     //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
         Serial.println("Router init failed");
-    Serial.print(F("FREQ: ")); Serial.println(FREQ);
-    if (!radio.setFrequency(FREQ)) {
+    p(F("FREQ: %d\n"), config.rf95_freq);
+    if (!radio.setFrequency(config.rf95_freq)) {
         Serial.println("Radio frequency set failed");
     } 
     radio.setTxPower(config.tx_power, false);
