@@ -65,6 +65,7 @@ typedef struct Config {
 
     /* sensors */
     uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
+    uint16_t SHARP_GP2Y1010AU0F_DUST_PERIOD;
     uint8_t GROVE_AIR_QUALITY_1_3_PIN;
 };
 

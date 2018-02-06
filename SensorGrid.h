@@ -53,7 +53,8 @@
 #define CONTROL_ADD_NODE 3
 
 /* Data types */
-#define BATTERY_LEVEL 1
+#define DATA_TYPE_BATTERY_LEVEL 1
+#define DATA_TYPE_SHARP_GP2Y1010AU0F 2
 
 /* Module defs */
 #include "WINC1500.h"

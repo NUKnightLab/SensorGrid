@@ -43,6 +43,7 @@ void loadConfig() {
 
         /* sensor configs */
         config.SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
+        config.SHARP_GP2Y1010AU0F_DUST_PERIOD = (uint16_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PERIOD")));
         config.GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
 
         /* radio and SD card pinouts */

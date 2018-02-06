@@ -30,6 +30,10 @@ uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_DATA_RECORDS * DATA_SIZE;
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
 
+static Data historical_data[100] = {0};
+static uint8_t historical_data_index = 0;
+static uint8_t data_id = 0;
+
 /**
  * Track the latest broadcast control message received for each node
  * 
@@ -448,15 +452,21 @@ bool set_node_data(Data* data, uint8_t* record_count) {
      *  TODO: also add missing known nodes -- but do this only once and return directly to the collector
      *  otherwise we may thrash and saturate w/ extra entries due to data space being smaller than address space
      */
-    for (int i=0; i<*record_count; i++) {
-        if (data[i].node_id == config.node_id) {
-            data[i] = {
-                .id = ++message_id, .node_id = config.node_id, .timestamp = 0, .type = BATTERY_LEVEL,
+    int index;
+    for (index=0; index<*record_count; index++) {
+        if (data[index].node_id == config.node_id) {
+            data[index] = {
+                .id = ++data_id, .node_id = config.node_id, .timestamp = 0, .type = DATA_TYPE_BATTERY_LEVEL,
                 .value = (int16_t)(roundf(batteryLevel() * 100))
             };
             break;
-        }
+        } 
     }
+    /* TODO: Don't overrun the record max */
+    memcpy(&data[*record_count], historical_data, historical_data_index*sizeof(Data));
+    memset(historical_data, 0, sizeof(Data)*100);
+    *record_count += historical_data_index;
+    historical_data_index = 0;
     return true;
 }
 
@@ -750,6 +760,7 @@ static struct pt update_clock_protothread;
 static struct pt update_display_protothread;
 static struct pt update_display_battery_protothread;
 static struct pt display_timeout_protothread;
+static struct pt sharp_dust_data_sample_protothread;
 
 static int updateClockThread(struct pt *pt, int interval)
 {
@@ -812,6 +823,25 @@ static int displayTimeoutThread(struct pt *pt, int interval)
   }
   PT_END(pt);
 }
+
+
+static int sharpDustDataSampleThread(struct pt *pt, int interval)
+{
+  static unsigned long timestamp = 0;
+  PT_BEGIN(pt);
+  while(1) { // never stop 
+    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
+    int32_t val = SHARP_GP2Y1010AU0F::read_average(100);
+    p(F("DUST VAL: %d\n"), val);
+    historical_data[historical_data_index++] = {
+      .id = ++data_id, .node_id = config.node_id, .timestamp = 0, .type = DATA_TYPE_SHARP_GP2Y1010AU0F,
+      .value = (int16_t)(val)
+    };
+    timestamp = millis();
+  }
+  PT_END(pt);
+}
+
 
 /*
  * interrupts
@@ -888,7 +918,7 @@ void check_radiohead_version()
 
 void setup()
 {
-    while (!Serial);
+    //while (!Serial);
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);
@@ -926,6 +956,17 @@ void setup()
     router->setTimeout(TIMEOUT);
     Serial.println("");
     delay(100);
+
+    setupSensors();
+
+    /* initialize protothreads */
+    PT_INIT(&update_clock_protothread);
+    if (config.has_oled) {
+        PT_INIT(&update_display_protothread);
+        PT_INIT(&update_display_battery_protothread);
+        PT_INIT(&display_timeout_protothread);
+    }
+    PT_INIT(&sharp_dust_data_sample_protothread);
 }
 
 void loop()
@@ -940,6 +981,7 @@ void loop()
         }
     }
 
+    sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
     if (config.has_oled) {
         updateDisplayThread(&update_display_protothread, 1000);
         updateDisplayBatteryThread(&update_display_battery_protothread, 10 * 1000);
