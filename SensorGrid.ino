@@ -124,18 +124,15 @@ int16_t last_rssi[MAX_NODES];
 
 /* **** UTILS **** */
 
-
-void print_message_type(int8_t num)
+char* get_message_type(int8_t num)
 {
     switch (num) {
         case MESSAGE_TYPE_CONTROL:
-            Serial.print("CONTROL");
-            break;
+            return "CONTROL";
         case MESSAGE_TYPE_DATA:
-            Serial.print("DATA");
-            break;
+            return "DATA";
         default:
-            Serial.print("UNKNOWN");
+            return "UNKNOWN";
     }
 }
 
@@ -201,8 +198,7 @@ void clear_pending_nodes() {
 
 uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
-    p(F("Sending message type: "));
-    print_message_type(((Message*)msg)->message_type);
+    p(F("Sending message type: %s"), ((Message*)msg)->message_type);
     p(F("; length: %d\n"), len);
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
@@ -312,8 +308,7 @@ void validate_recv_buffer(uint8_t len)
             }
             break;
         default:
-            p(F("WARNING: Received message of unknown type: "));
-            print_message_type(message_type);
+            p(F("WARNING: Received message of unknown type: %s\n"), get_message_type(message_type));
     }
 }
 
@@ -343,8 +338,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
                 return MESSAGE_TYPE_WRONG_NETWORK;
             }
             validate_recv_buffer(*len);
-            p(F("Received buffered message. len: %d; type: "), *len);
-            print_message_type(_msg->message_type);
+            p(F("Received buffered message. len: %d; type: %s"), *len, get_message_type(_msg->message_type));
             p(F("; from: %d; rssi: %d\n"), *source, radio.lastRssi());
             last_rssi[*source] = radio.lastRssi();
             return _msg->message_type;
@@ -363,8 +357,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
                 return MESSAGE_TYPE_WRONG_NETWORK;
             }
             validate_recv_buffer(*len);
-            p(F("Received buffered message. len: %d; type: "), *len);
-            print_message_type(_msg->message_type);
+            p(F("Received buffered message. len: %d; type: %s"), *len, get_message_type(_msg->message_type));
             p(F("; from: %d; rssi: %d\n"), *source, radio.lastRssi());
             last_rssi[*source] = radio.lastRssi();
             return _msg->message_type;
@@ -396,9 +389,7 @@ Control get_control_from_buffer()
     }
     Message* _msg = (Message*)recv_buf;
     if ( _msg->message_type != MESSAGE_TYPE_CONTROL) {
-        Serial.print("WARNING: Attempt to extract control from non-control type: ");
-        print_message_type(_msg->message_type);
-        Serial.println("");
+        p(F("WARNING: Attempt to extract control from non-control type: %s\n"), get_message_type(_msg->message_type));
     } 
     return _msg->control;
 }
@@ -413,9 +404,7 @@ Data* get_data_from_buffer(uint8_t* len)
     }
     Message* _msg = (Message*)recv_buf;
     if (_msg->message_type != MESSAGE_TYPE_DATA) {
-        Serial.print("WARNING: Attempt to extract data from non-data type: ");
-        print_message_type(_msg->message_type);
-        Serial.println("");
+        p(F("WARNING: Attempt to extract data from non-data type: %s\n"), get_message_type(_msg->message_type));
     }
     *len = _msg->len;
     return _msg->data;
@@ -739,9 +728,7 @@ void check_incoming_message()
             _node_handle_data_message();
         }
     } else {
-        Serial.print("WARNING: Received unexpected Message type: ");
-        print_message_type(msg_type);
-        p(F(" from ID: %d\n"), from);
+        p(F("WARNING: Received unexpected Message type: %s from ID: %d\n"), get_message_type(msg_type), from);
     }
     release_recv_buffer();
 } /* check_incoming_message */
@@ -830,25 +817,10 @@ void handle_collector_loop()
  * protothreads (https://github.com/fernandomalmeida/protothreads-arduino) 
  */
 
-static struct pt radio_transmit_protothread;
 static struct pt update_clock_protothread;
 static struct pt update_display_protothread;
 static struct pt update_display_battery_protothread;
 static struct pt display_timeout_protothread;
-
-/*
-static int radioTransmitThread(struct pt *pt, int interval)
-{
-  static unsigned long timestamp = 0;
-  PT_BEGIN(pt);
-  while(1) { // never stop 
-    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    sendCurrentMessage(*radio, config.collector_id);
-    timestamp = millis();
-  }
-  PT_END(pt);
-}
-*/
 
 static int updateClockThread(struct pt *pt, int interval)
 {
