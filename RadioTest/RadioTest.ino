@@ -4,7 +4,7 @@
 #include <SPI.h>
 
 /* SET THIS FOR EACH NODE */
-#define NODE_ID 2 // 1 is collector; 2,3 are sensors
+#define NODE_ID 1 // 1 is collector; 2,3 are sensors
 #define COLLECTOR_NODE_ID 1
 
 #define FREQ 915.00
@@ -500,6 +500,26 @@ void check_collection_state() {
 } /* check_collection_state */
 
 
+void _rebroadcast_control_message(Message* _msg, uint8_t len, uint8_t dest)
+{
+    /* rebroadcast control messages to 255 */
+    if (dest == RH_BROADCAST_ADDRESS) {   
+        if (NODE_ID != COLLECTOR_NODE_ID
+                && _msg->control.from_node != NODE_ID
+                && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
+            received_broadcast_control_messages[_msg->control.from_node] = _msg->control.id;
+            p(F("Rebroadcasting broadcast control message originally from ID: %d\n"), _msg->control.from_node);
+            if (RH_ROUTER_ERROR_NONE == send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
+                Serial.println("-- Sent broadcast control");
+            } else {
+                Serial.println("ERROR: could not re-broadcast control");
+            }
+        } else if (received_broadcast_control_messages[_msg->control.from_node] == _msg->control.id) {
+            Serial.println("NOT rebroadcasting control message recently received");
+        }
+    }
+}
+
 void _handle_control_add_node(Control _control)
 {
     if (NODE_ID == COLLECTOR_NODE_ID) {
@@ -520,78 +540,49 @@ void _handle_control_add_node(Control _control)
         Serial.println("");
     }
 }
+
+void _handle_control_next_activity_time(Control _control, unsigned long receive_time)
+{
+    if (NODE_ID != COLLECTOR_NODE_ID) {
+        radio.sleep();
+        bool self_in_list = false;
+        for (int i=0; i<MAX_CONTROL_NODES; i++) {
+            if (_control.nodes[i] == NODE_ID) {
+                self_in_list = true;
+            }
+        }
+        p(F("Self in control list: %d\n"), self_in_list);
+        if (self_in_list) {
+            if (collector_id) {
+                if (collector_id == _control.from_node) {
+                    // nothing changes
+                } else {
+                    // This node has a collector. Do we switch collectors here if not the same?
+                }
+            }
+        } else {
+            if (!collector_id || collector_id == _control.from_node) {
+                add_pending_node(NODE_ID);
+                //pending_nodes_waiting_broadcast = true; // broadcast self as pending even
+            }                                            // if previous attempt
+        }
+        p(F("Received control code: NEXT_ACTIVITY_TIME. Sleeping for: %d\n"), _control.data - (millis() - receive_time));
+        next_listen = receive_time + _control.data;
+    }
+}
+
 void _handle_control_message(Message* _msg, uint8_t len, uint8_t from, uint8_t dest, unsigned long receive_time)
 {
     if (_msg->control.from_node == NODE_ID) return; // ignore controls originating from self
-    
-    /* rebroadcast control messages to 255 */
-    if (dest == RH_BROADCAST_ADDRESS) {   
-        if (NODE_ID != COLLECTOR_NODE_ID
-                && _msg->control.from_node != NODE_ID
-                && received_broadcast_control_messages[_msg->control.from_node] != _msg->control.id) {
-            received_broadcast_control_messages[_msg->control.from_node] = _msg->control.id;
-            p(F("Rebroadcasting broadcast control message originally from ID: %d\n"), _msg->control.from_node);
-            if (RH_ROUTER_ERROR_NONE == send_message(recv_buf, len, RH_BROADCAST_ADDRESS)) {
-                Serial.println("-- Sent broadcast control");
-            } else {
-                Serial.println("ERROR: could not re-broadcast control");
-            }
-        } else if (received_broadcast_control_messages[_msg->control.from_node] == _msg->control.id) {
-            Serial.println("NOT rebroadcasting control message recently received");
-        }
-    }
+    _rebroadcast_control_message(_msg, len, dest);
     Control _control = get_control_from_buffer();
     p(F("Received control message from: %d; Message ID: %d\n"), from, _control.id);
     if (_control.code == CONTROL_NONE) {
       Serial.println("Received control code: NONE. Doing nothing");
     } else if (_control.code == CONTROL_ADD_NODE) {
         _handle_control_add_node(_control);
-        /*
-        if (NODE_ID == COLLECTOR_NODE_ID) {
-            Serial.print("Received control code: ADD_NODES. Adding known IDs: ");
-            for (int i=0; i<MAX_CONTROL_NODES && _control.nodes[i] != 0; i++) {
-                Serial.print(_control.nodes[i]);
-                Serial.print(" ");
-                add_known_node(_control.nodes[i]);
-            }
-            Serial.println("");
-        } else {
-            Serial.print("Received control code: ADD_NODES. Adding pending IDs: ");
-            for (int i=0; i<MAX_CONTROL_NODES && _control.nodes[i] != 0; i++) {
-                Serial.print(_control.nodes[i]);
-                Serial.print(" ");
-                add_pending_node(_control.nodes[i]);
-            }
-            Serial.println("");
-        } */
     } else if (_control.code == CONTROL_NEXT_ACTIVITY_TIME) {
-        if (NODE_ID != COLLECTOR_NODE_ID) {
-            radio.sleep();
-            bool self_in_list = false;
-            for (int i=0; i<MAX_CONTROL_NODES; i++) {
-                if (_control.nodes[i] == NODE_ID) {
-                    self_in_list = true;
-                }
-            }
-            p(F("Self in control list: %d\n"), self_in_list);
-            if (self_in_list) {
-                if (collector_id) {
-                    if (collector_id == _control.from_node) {
-                        // nothing changes
-                    } else {
-                        // This node has a collector. Do we switch collectors here if not the same?
-                    }
-                }
-            } else {
-                if (!collector_id || collector_id == _control.from_node) {
-                    add_pending_node(NODE_ID);
-                    //pending_nodes_waiting_broadcast = true; // broadcast self as pending even
-                }                                            // if previous attempt
-            }
-            radio.sleep();
-            p(F("Received control code: NEXT_ACTIVITY_TIME. Sleeping for: %d\n"), _control.data - (millis() - receive_time));
-            next_listen = receive_time + _control.data;
-        } 
+        _handle_control_next_activity_time(_control, receive_time);
     } else {
         p(F("WARNING: Received unexpected control code: %d\n"), _control.code);
     }
