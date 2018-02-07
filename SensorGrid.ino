@@ -7,7 +7,8 @@
 #include <SPI.h>
 #include <pt.h>
 
-static RH_RF95 radio(RF95_CS, RF95_INT);
+//static RH_RF95 radio(RF95_CS, RF95_INT);
+RH_RF95 *radio;
 static RHMesh* router;
 static uint8_t message_id = 0;
 static unsigned long next_listen = 0;
@@ -134,7 +135,7 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     uint8_t err = router->sendtoWait(msg, len, toID);
     if (millis() < next_listen) {
         Serial.println("Listen timeout not expired. Sleeping.");
-        radio.sleep();
+        radio->sleep();
     }
     p(F("Time to send: %d\n"), millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
@@ -269,8 +270,8 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             }
             validate_recv_buffer(*len);
             p(F("Received buffered message. len: %d; type: %s"), *len, get_message_type(_msg->message_type));
-            p(F("; from: %d; rssi: %d\n"), *source, radio.lastRssi());
-            last_rssi[*source] = radio.lastRssi();
+            p(F("; from: %d; rssi: %d\n"), *source, radio->lastRssi());
+            last_rssi[*source] = radio->lastRssi();
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
@@ -288,8 +289,8 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             }
             validate_recv_buffer(*len);
             p(F("Received buffered message. len: %d; type: %s"), *len, get_message_type(_msg->message_type));
-            p(F("; from: %d; rssi: %d\n"), *source, radio.lastRssi());
-            last_rssi[*source] = radio.lastRssi();
+            p(F("; from: %d; rssi: %d\n"), *source, radio->lastRssi());
+            last_rssi[*source] = radio->lastRssi();
             return _msg->message_type;
         } else {
             return MESSAGE_TYPE_NO_MESSAGE;
@@ -402,7 +403,7 @@ void _handle_control_add_node(Control _control)
 void _handle_control_next_activity_time(Control _control, unsigned long receive_time)
 {
     if (config.node_type != NODE_TYPE_ORDERED_COLLECTOR) {
-        radio.sleep();
+        radio->sleep();
         bool self_in_list = false;
         for (int i=0; i<MAX_NODES; i++) {
             if (_control.nodes[i] == config.node_id) {
@@ -952,20 +953,32 @@ void setup()
     }
     
     rtc.begin();
-    
-    router = new RHMesh(radio, config.node_id);
+    radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
+    router = new RHMesh(*radio, config.node_id);
     //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init())
         Serial.println("Router init failed");
     p(F("FREQ: %d\n"), config.rf95_freq);
-    if (!radio.setFrequency(config.rf95_freq)) {
+    if (!radio->setFrequency(config.rf95_freq)) {
         Serial.println("Radio frequency set failed");
     } 
-    radio.setTxPower(config.tx_power, false);
-    radio.setCADTimeout(CAD_TIMEOUT);
+    radio->setTxPower(config.tx_power, false);
+    radio->setCADTimeout(CAD_TIMEOUT);
     router->setTimeout(TIMEOUT);
     Serial.println("");
     delay(100);
+
+    /*
+    if (config.wifi_password) {
+        Serial.print("Attempting to connect to Wifi: ");
+        Serial.print(config.wifi_ssid);
+        Serial.print(" With password: ");
+        Serial.println(config.wifi_password);
+        connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port); 
+        WiFiPresent = true; // TODO: can we set this based on success of connect?
+    } else {
+        Serial.println("No WiFi configuration found");
+    } */
 
     setupSensors();
 
@@ -989,7 +1002,9 @@ void loop()
             check_collection_state();
             check_incoming_message();
         }
-        sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
+        if (config.SHARP_GP2Y1010AU0F_DUST_PIN && config.SHARP_GP2Y1010AU0F_DUST_PERIOD) {
+            sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
+        }
     }
 
     if (config.has_oled) {
