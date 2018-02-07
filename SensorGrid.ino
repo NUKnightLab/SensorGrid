@@ -7,7 +7,6 @@
 #include <SPI.h>
 #include <pt.h>
 
-//static RH_RF95 radio(RF95_CS, RF95_INT);
 RH_RF95 *radio;
 static RHMesh* router;
 static uint8_t message_id = 0;
@@ -23,6 +22,9 @@ volatile int aButtonState = 0;
 volatile int bButtonState = 0;
 volatile int cButtonState = 0;
 static bool shutdown_requested = false;
+
+WiFiClient client;
+bool WiFiPresent = false;
 
 uint8_t DATA_SIZE = sizeof(Data);
 uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Message);
@@ -480,6 +482,46 @@ char* get_data_type(uint8_t type)
     return "UNKNOWN";
 }
 
+
+void reconnectClient(WiFiClient& client, char* ssid) {
+  //close conncetion before a new request
+  client.stop();
+  Serial.print("Reconnecting to ");
+  Serial.print(config.api_host);
+  Serial.print(":");
+  Serial.println(config.api_port);
+  if (client.connect(config.api_host, config.api_port)) {
+    Serial.println("connecting...");
+  } else {
+    Serial.println("Failed to reconnect");
+  }
+}
+
+void postToAPI(WiFiClient& client, Data* data, uint8_t record_count)
+{
+    Serial.println("Starting to post to API...");
+    for (int i=0; i<record_count; i++) {
+        Data record = data[i];
+        char str[200];
+        sprintf(str,
+          "{\"ver\":%i,\"net\":%i,\"orig\":%i,\"id\":%i,\"bat\":%3.2f,\"ram\":%i,\"timestamp\":%i,\"data\":[%i,%i,%i,%i,%i,%i,%i,%i,%i,%i]}",
+           1, 1, record.node_id, record.id, 0.0, 0, record.timestamp, record.type, record.value, 0, 0, 0, 0, 0, 0, 0, 0);
+        Serial.println(str);
+        client.println("POST /data HTTP/1.1");
+        client.println("Content-Type: application/json");
+        client.print("Content-Length: ");
+        client.println(strlen(str));
+        client.println();
+        client.println(str);
+        Serial.println("Post to API completed.");
+        while (client.available()) {
+           char c = client.read();
+           Serial.write(c);
+        }
+        client.println("Connection: close"); //close connection before sending a new request
+    }
+}
+
 void _collector_handle_data_message()
 {
     uint8_t record_count;
@@ -521,6 +563,16 @@ void _collector_handle_data_message()
         }
     }
     /* TODO: post the data to the API and determine if there are more nodes to collect */
+    if (WiFiPresent) {
+        if (WiFi.status() == WL_CONNECTED) {
+            while (!client.connected()) {
+                reconnectClient(client, config.wifi_ssid);
+            }
+            postToAPI(client, data, record_count);
+        }
+    } else {
+        Serial.println("Collector Node with no WiFi configuration. Assuming serial collection");
+    }
 }
 
 
@@ -968,7 +1020,6 @@ void setup()
     Serial.println("");
     delay(100);
 
-    /*
     if (config.wifi_password) {
         Serial.print("Attempting to connect to Wifi: ");
         Serial.print(config.wifi_ssid);
@@ -978,7 +1029,7 @@ void setup()
         WiFiPresent = true; // TODO: can we set this based on success of connect?
     } else {
         Serial.println("No WiFi configuration found");
-    } */
+    }
 
     setupSensors();
 
