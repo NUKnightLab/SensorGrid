@@ -11,6 +11,49 @@
 #include "io.h"
 #include <WiFi101.h>
 
+#define CAD_TIMEOUT 1000
+#define TIMEOUT 1000
+#define REQUIRED_RH_VERSION_MAJOR 1
+#define REQUIRED_RH_VERSION_MINOR 82
+#define MAX_MESSAGE_SIZE 255
+
+/**
+ * Overall max message size is somewhere between 244 and 247 bytes. 247 will cause invalid length error
+ * 
+ * Note that these max sizes on the message structs are system specific due to struct padding. The values
+ * here are specific to the Cortex M0
+ * 
+ */
+#define MAX_DATA_RECORDS 39
+#define MAX_NODES 230
+
+
+
+/* *
+ *  Message types:
+ *  Not using enum for message types to ensure small numeric size
+ */
+#define MESSAGE_TYPE_NO_MESSAGE 0
+#define MESSAGE_TYPE_CONTROL 1 
+#define MESSAGE_TYPE_DATA 2
+#define MESSAGE_TYPE_UNKNOWN -1
+#define MESSAGE_TYPE_MESSAGE_ERROR -2
+#define MESSAGE_TYPE_NONE_BUFFER_LOCK -3
+#define MESSAGE_TYPE_WRONG_VERSION -4
+#define MESSAGE_TYPE_WRONG_NETWORK -5 // for testing only. Normally we will just skip messages from other networks
+
+/**
+ * Control codes
+ */
+//#define CONTROL_SEND_DATA 1
+#define CONTROL_NONE 1 // no-op used for testing
+#define CONTROL_NEXT_ACTIVITY_TIME 2
+#define CONTROL_ADD_NODE 3
+
+/* Data types */
+#define DATA_TYPE_BATTERY_LEVEL 1
+#define DATA_TYPE_SHARP_GP2Y1010AU0F 2
+
 /* Module defs */
 #include "WINC1500.h"
 
@@ -46,18 +89,32 @@ enum ERRORS {
 extern Adafruit_FeatherOLED display;
 extern uint32_t display_clock_time;
 
-typedef struct Message {
-    uint16_t ver;
-    uint16_t net;
-    uint16_t bat_100;
-    uint32_t timestamp;
-    uint16_t ram;
-    int32_t data[10]; /* -2147483648 through 2147483647 */
+typedef struct Control {
+    uint8_t id;
+    uint8_t code;
+    uint8_t from_node;
+    int16_t data;
+    uint8_t nodes[MAX_NODES];
 };
 
-typedef struct Control {
-    uint8_t type;
-    uint32_t data;
+typedef struct Data {
+    uint8_t id; // 1-255 indicates Data
+    uint8_t node_id;
+    uint8_t timestamp;
+    int8_t type;
+    int16_t value;
+};
+
+typedef struct Message {
+    uint8_t sensorgrid_version;
+    uint8_t network_id;
+    uint8_t from_node;
+    uint8_t message_type;
+    uint8_t len;
+    union {
+      struct Control control;
+      struct Data data[MAX_DATA_RECORDS];
+    };
 };
 
 #else
@@ -84,5 +141,7 @@ float batteryLevel();
 void printRam();
 int freeRam();
 void aButton_ISR();
+void p(char *fmt, ...);
+void p(const __FlashStringHelper *fmt, ... );
 
 #endif

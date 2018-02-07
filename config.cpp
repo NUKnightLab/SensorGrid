@@ -23,7 +23,7 @@ void loadConfig() {
         config.node_id = (uint32_t)(atoi(getConfig("NODE_ID")));
         config.rf95_freq = (float)(atof(getConfig("RF95_FREQ")));
         config.tx_power = (uint8_t)(atoi(getConfig("TX_POWER")));
-        config.protocol_version = atof(getConfig("PROTOCOL_VERSION"));
+        config.sensorgrid_version = (uint8_t)atoi(getConfig("SENSORGRID_VERSION", DEFAULT_SENSORGRID_VERSION));
         config.log_file = getConfig("LOGFILE", DEFAULT_LOG_FILE);
         config.log_mode = getConfig("LOGMODE", DEFAULT_LOG_MODE);
         config.display_timeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", DEFAULT_DISPLAY_TIMEOUT)));
@@ -43,6 +43,7 @@ void loadConfig() {
 
         /* sensor configs */
         config.SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
+        config.SHARP_GP2Y1010AU0F_DUST_PERIOD = (uint16_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PERIOD")));
         config.GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
 
         /* radio and SD card pinouts */
@@ -55,6 +56,7 @@ void loadConfig() {
         char *node_ids_str[254] = {0};
         config.node_ids[254] = {0};
 
+        /*
         if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
             char* nodeIdsConfig = strdup(getConfig("ORDERED_NODE_IDS", ""));
             if (nodeIdsConfig[0] == NULL) {
@@ -70,14 +72,14 @@ void loadConfig() {
                 config.node_ids[index++] = node;
             }
             Serial.println("");
-        }
+        } */
     } else {
         Serial.println(F("Using default configs"));
         config.network_id = (uint32_t)(atoi(DEFAULT_NETWORK_ID));
         config.node_id = (uint32_t)(atoi(DEFAULT_NODE_ID));
         config.rf95_freq = (float)(atof(DEFAULT_RF95_FREQ));
         config.tx_power = (uint8_t)(atoi(DEFAULT_TX_POWER));
-        config.protocol_version = (float)(atof(DEFAULT_PROTOCOL_VERSION));
+        config.sensorgrid_version = (uint8_t)(atoi(DEFAULT_SENSORGRID_VERSION));
         config.log_file = DEFAULT_LOG_FILE;
         config.log_mode = DEFAULT_LOG_MODE;
         config.display_timeout = (uint32_t)(atoi(DEFAULT_DISPLAY_TIMEOUT));

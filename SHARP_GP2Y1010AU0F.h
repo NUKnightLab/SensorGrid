@@ -16,6 +16,7 @@ namespace SHARP_GP2Y1010AU0F {
     bool setup(uint8_t data_pin);
     float read_legacy();
     int32_t read();
+    int32_t read_average(uint8_t num_samples);
 }
 
 #endif
