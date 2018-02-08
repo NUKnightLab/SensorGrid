@@ -69,4 +69,30 @@ namespace SHARP_GP2Y1010AU0F {
             return 0;
         }
     }
+
+    /**
+     * Get the analogRead value from the dust data pin
+     */
+    int32_t read_average(uint8_t num_samples)
+    {
+        if (_data_pin) {
+            uint8_t max_samples = 100;
+            if (num_samples > max_samples) {
+                num_samples = max_samples;
+            }
+            int32_t total = 0;
+            uint8_t count = 0;
+            for (int i=0; i<num_samples; i++) {
+                int32_t val = read();
+                if (val > 0) {
+                    total += val;
+                    count++;
+                }
+            }
+            if (count == 0) return 0;
+            return total / count;
+        } else {
+            return 0;
+        }
+    }
 }
