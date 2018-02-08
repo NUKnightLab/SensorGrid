@@ -4,6 +4,19 @@
 struct Config config;
 struct SensorConfig *sensor_config_head;
 
+#define TYPE_GPS_FIX 1
+#define TYPE_GPS_SATS 2
+#define TYPE_GPS_SATFIX 3
+#define TYPE_GPS_LAT_DEG 4
+#define TYPE_GPS_LON_DEG 5
+#define TYPE_SI7021_TEMP 6
+#define TYPE_SI7021_HUMIDITY 7
+#define TYPE_SI1145_VIS 8
+#define TYPE_SI1145_IR 9
+#define TYPE_SI1145_UV 10
+#define TYPE_SHARP_GP2Y1010AU0F_DUST 11
+#define TYPE_GROVE_AIR_QUALITY_1_3 12
+
 /* We pull both pins 8 and 19 HIGH during SD card read. The default configuration
  * on the integrated LoRa M0 uses pin 8 for RFM95 chip select, but the WiFi
  * collector module with a LoRa wing uses pin 19 as the chip select. Since we have
@@ -45,6 +58,7 @@ void loadConfig() {
         config.SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
         config.SHARP_GP2Y1010AU0F_DUST_PERIOD = (uint16_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PERIOD")));
         config.GROVE_AIR_QUALITY_1_3_PIN = (uint8_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PIN")));
+        config.GROVE_AIR_QUALITY_1_3_PERIOD = (uint16_t)(atoi(getConfig("GROVE_AIR_QUALITY_1_3_PERIOD")));
 
         /* radio and SD card pinouts */
         config.SD_CHIP_SELECT_PIN = (uint32_t)(atoi(getConfig("SD_CHIP_SELECT_PIN", DEFAULT_SD_CHIP_SELECT_PIN)));
@@ -107,27 +121,37 @@ void setupSensors() {
         /* fix */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "GPS_FIX";
+        sensor_config->id = TYPE_GPS_FIX;
+        sensor_config->id_str = "GPS_FIX";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::fix);
         /* sats */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "GPS_SATS";
+        sensor_config->id = TYPE_GPS_SATS;
+        sensor_config->id_str = "GPS_SATS";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::satellites);
         /* satfix */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "GPS_SATFIX";
+        sensor_config->id = TYPE_GPS_SATFIX;
+        sensor_config->id_str = "GPS_SATFIX";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::satfix);
         /* latitude (degrees) */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "GPS_LAT_DEG";
+        sensor_config->id = TYPE_GPS_LAT_DEG;
+        sensor_config->id_str = "GPS_LAT_DEG";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::latitudeDegrees);
         /* longitude (degrees) */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "GPS_LON_DEG";
+        sensor_config->id = TYPE_GPS_LON_DEG;
+        sensor_config->id_str = "GPS_LON_DEG";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::longitudeDegrees);
     }
 
@@ -136,12 +160,16 @@ void setupSensors() {
         /* temperature */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "SI7021_TEMP";
+        sensor_config->id = TYPE_SI7021_TEMP;
+        sensor_config->id_str = "SI7021_TEMP";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_SI7021::readTemperature);
         /* humidity */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "SI7021_HUMIDITY";
+        sensor_config->id = TYPE_SI7021_HUMIDITY;
+        sensor_config->id_str = "SI7021_HUMIDITY";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_SI7021::readHumidity);
     }
 
@@ -150,17 +178,23 @@ void setupSensors() {
         /* visible light */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "SI1145_VIS";
+        sensor_config->id = TYPE_SI1145_VIS;
+        sensor_config->id_str = "SI1145_VIS";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_SI1145::readVisible);
         /* IR */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "SI1145_IR";
+        sensor_config->id = TYPE_SI1145_IR;
+        sensor_config->id_str = "SI1145_IR";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_SI1145::readIR);
         /* UV */
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "SI1145_UV";
+        sensor_config->id = TYPE_SI1145_UV;
+        sensor_config->id_str = "SI1145_UV";
+        sensor_config->period = 60000;
         sensor_config->read_function = &(ADAFRUIT_SI1145::readUV);              
     }
 
@@ -168,7 +202,9 @@ void setupSensors() {
     if (SHARP_GP2Y1010AU0F::setup(config.SHARP_GP2Y1010AU0F_DUST_PIN)) {
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "SHARP_GP2Y1010AU0F_DUST";
+        sensor_config->id = TYPE_SHARP_GP2Y1010AU0F_DUST;
+        sensor_config->id_str = "SHARP_GP2Y1010AU0F_DUST";
+        sensor_config->period = config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000;
         sensor_config->read_function = &(SHARP_GP2Y1010AU0F::read);
     }
 
@@ -176,7 +212,9 @@ void setupSensors() {
     if (GROVE_AIR_QUALITY_1_3::setup(config.GROVE_AIR_QUALITY_1_3_PIN)) {
         sensor_config->next = new SensorConfig();
         sensor_config = sensor_config->next;
-        sensor_config->id = "GROVE_AIR_QUALITY_1_3";
+        sensor_config->id = TYPE_GROVE_AIR_QUALITY_1_3;
+        sensor_config->id_str = "GROVE_AIR_QUALITY_1_3";
+        sensor_config->period = config.GROVE_AIR_QUALITY_1_3_PERIOD * 1000;
         sensor_config->read_function = &(GROVE_AIR_QUALITY_1_3::read);
     }
 }

@@ -68,6 +68,7 @@ typedef struct Config {
     uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
     uint16_t SHARP_GP2Y1010AU0F_DUST_PERIOD;
     uint8_t GROVE_AIR_QUALITY_1_3_PIN;
+    uint16_t GROVE_AIR_QUALITY_1_3_PERIOD;
 };
 
 extern void loadConfig();
@@ -77,8 +78,11 @@ extern struct Config config;
 typedef int32_t (*SensorReadFunction)();
 
 typedef struct SensorConfig {
-    char *id;
+    uint8_t id;
+    char *id_str;
     SensorReadFunction read_function;
+    uint16_t period;
+    uint32_t last_sample_time;
     struct SensorConfig *next;
 };
 extern struct SensorConfig *sensor_config_head;

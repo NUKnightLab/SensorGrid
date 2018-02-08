@@ -905,7 +905,6 @@ static int sharpDustDataSampleThread(struct pt *pt, int interval)
   PT_END(pt);
 }
 
-
 /*
  * interrupts
  */
@@ -1030,9 +1029,29 @@ void writeLogLine(int fromNode, int id)
     }
 }
 
+static uint32_t getDataByTypeName(char* type)
+{
+    Serial.print(F("Getting data for type: ")); Serial.println(type);
+    struct SensorConfig *sensor_config = sensor_config_head;
+    do {
+        if (!strcmp(type, sensor_config->id_str)) {
+            int32_t val = sensor_config->read_function();
+            return val;
+        }
+        sensor_config = sensor_config->next;
+    } while (sensor_config != NULL);
+
+    int32_t constant_value = atoi(type);
+    if (constant_value) {
+        return constant_value;
+    }
+    Serial.print(F("WARNING! Unknown named data type: ")); Serial.println(type);
+    return 0;
+}
+
 void setup()
 {
-    //while (!Serial);
+    while (!Serial);
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);
@@ -1091,7 +1110,7 @@ void setup()
         PT_INIT(&update_display_battery_protothread);
         PT_INIT(&display_timeout_protothread);
     }
-    PT_INIT(&sharp_dust_data_sample_protothread);
+    //PT_INIT(&sharp_dust_data_sample_protothread);
 }
 
 void loop()
@@ -1109,11 +1128,19 @@ void loop()
         }
     } else if (config.node_type == NODE_TYPE_SENSOR_LOGGER) {
         //stand-alone sensor that will log data
-        Serial.println("Writing to logger...");
-        writeLogLine(config.node_id,config.node_id);
-        delay(config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
-    }
-    else {
+        //Serial.println("Writing to logger...");
+        //writeLogLine(config.node_id,config.node_id);
+        //delay(config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
+        struct SensorConfig *sensor_config = sensor_config_head->next;
+        while (sensor_config != NULL) {
+            if (millis() - sensor_config->last_sample_time > sensor_config->period) {
+                int32_t val = sensor_config->read_function();
+                p(F("%s VAL: %d\n"), sensor_config->id_str, val);
+                sensor_config->last_sample_time = millis();
+            }
+            sensor_config = sensor_config->next;
+        }
+    } else {
         Serial.print("Unknown node type: "); Serial.println(config.node_type, DEC);
         while(1);
     }
