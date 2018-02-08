@@ -979,6 +979,57 @@ void check_radiohead_version()
     }
 }
 
+void _writeToSD(char* filename, char* str)
+{
+    static SdFat sd;
+    Serial.print(F("Init SD card .."));
+    if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
+          Serial.println(F(" .. SD card init failed!"));
+          return;
+    }
+    if (false) {  // true to check available SD filespace
+        Serial.print(F("SD free: "));
+        uint32_t volFree = sd.vol()->freeClusterCount();
+        float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
+        Serial.println(fs);
+    }
+    File file;
+    Serial.print(F("Writing log line to ")); Serial.println(filename);
+    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
+    file.println(str);
+    file.close();
+    Serial.println(F("File closed"));
+}
+
+void writeToSD(char* filename, char* str)
+{
+    digitalWrite(8, HIGH);
+    _writeToSD(filename, str);
+    digitalWrite(8, LOW);
+}
+
+static char* logline(int fromNode, int id)
+{
+    char str[100];
+    int32_t val = SHARP_GP2Y1010AU0F::read_average(100); // currently only supporting logging of the SHARP
+    DateTime t = rtc.now();
+    sprintf(str, "%i-%02d-%02dT%02d:%02d:%02d+00:00 %i",
+        t.year(), t.month(), t.day(), t.hour(), t.minute(), t.second(), val);
+    return str;
+}
+
+void writeLogLine(int fromNode, int id)
+{
+    char* line = logline(fromNode, id);
+    Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
+    Serial.println(line);
+    if (config.log_file) {
+        digitalWrite(config.SD_CHIP_SELECT_PIN, LOW);
+        writeToSD(config.log_file, line);
+        digitalWrite(config.SD_CHIP_SELECT_PIN, HIGH);
+    }
+}
+
 void setup()
 {
     //while (!Serial);
@@ -1057,11 +1108,10 @@ void loop()
             sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
         }
     } else if (config.node_type == NODE_TYPE_SENSOR_LOGGER) {
-      //stand-alone sensor that will log data
-      Serial.println("Writing to logger...");
-      fillCurrentMessageData();
-      writeLogLine(config.node_id,config.node_id);
-      delay(1000);
+        //stand-alone sensor that will log data
+        Serial.println("Writing to logger...");
+        writeLogLine(config.node_id,config.node_id);
+        delay(config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
     }
     else {
         Serial.print("Unknown node type: "); Serial.println(config.node_type, DEC);
