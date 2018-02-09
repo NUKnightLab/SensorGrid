@@ -1007,19 +1007,19 @@ void writeToSD(char* filename, char* str)
     digitalWrite(8, LOW);
 }
 
-static char* logline(int fromNode, int id)
+static char* logline(char* data_type, int16_t val)
 {
-    char str[100];
-    int32_t val = SHARP_GP2Y1010AU0F::read_average(100); // currently only supporting logging of the SHARP
+    char str[200];
+    //int32_t val = SHARP_GP2Y1010AU0F::read_average(100); // currently only supporting logging of the SHARP
     DateTime t = rtc.now();
-    sprintf(str, "%i-%02d-%02dT%02d:%02d:%02d+00:00 %i",
-        t.year(), t.month(), t.day(), t.hour(), t.minute(), t.second(), val);
+    sprintf(str, "%i-%02d-%02dT%02d:%02d:%02d+00:00 %i %s",
+        t.year(), t.month(), t.day(), t.hour(), t.minute(), t.second(), val, data_type);
     return str;
 }
 
-void writeLogLine(int fromNode, int id)
+void writeLogLine(char* data_type, int16_t val)
 {
-    char* line = logline(fromNode, id);
+    char* line = logline(data_type, val);
     Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
     Serial.println(line);
     if (config.log_file) {
@@ -1137,6 +1137,7 @@ void loop()
                 int32_t val = sensor_config->read_function();
                 p(F("%s VAL: %d\n"), sensor_config->id_str, val);
                 sensor_config->last_sample_time = millis();
+                writeLogLine(sensor_config->id_str, val);
             }
             sensor_config = sensor_config->next;
         }
