@@ -4,19 +4,6 @@
 struct Config config;
 struct SensorConfig *sensor_config_head;
 
-#define TYPE_GPS_FIX 1
-#define TYPE_GPS_SATS 2
-#define TYPE_GPS_SATFIX 3
-#define TYPE_GPS_LAT_DEG 4
-#define TYPE_GPS_LON_DEG 5
-#define TYPE_SI7021_TEMP 6
-#define TYPE_SI7021_HUMIDITY 7
-#define TYPE_SI1145_VIS 8
-#define TYPE_SI1145_IR 9
-#define TYPE_SI1145_UV 10
-#define TYPE_SHARP_GP2Y1010AU0F_DUST 11
-#define TYPE_GROVE_AIR_QUALITY_1_3 12
-
 /* We pull both pins 8 and 19 HIGH during SD card read. The default configuration
  * on the integrated LoRa M0 uses pin 8 for RFM95 chip select, but the WiFi
  * collector module with a LoRa wing uses pin 19 as the chip select. Since we have
@@ -40,7 +27,6 @@ void loadConfig() {
         config.log_file = getConfig("LOGFILE", DEFAULT_LOG_FILE);
         config.log_mode = getConfig("LOGMODE", DEFAULT_LOG_MODE);
         config.display_timeout = (uint32_t)(atoi(getConfig("DISPLAY_TIMEOUT", DEFAULT_DISPLAY_TIMEOUT)));
-        config.gps_module = getConfig("GPS_MODULE");
         config.has_oled = (uint8_t)(atoi(getConfig("DISPLAY", DEFAULT_OLED)));
         config.do_transmit = (uint8_t)(atoi(getConfig("TRANSMIT", DEFAULT_TRANSMIT)));
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
@@ -53,6 +39,14 @@ void loadConfig() {
         config.wifi_password = getConfig("WIFI_PASSWORD");
         config.api_host = getConfig("API_HOST");
         config.api_port = (uint16_t)(atoi(getConfig("API_PORT", DEFAULT_API_PORT)));
+
+        /* GPS configs */
+        config.ADAFRUIT_ULTIMATE_GPS_FIX_PERIOD = (uint16_t)(atoi(getConfig("ADAFRUIT_ULTIMATE_GPS_FIX_PERIOD")));
+        config.ADAFRUIT_ULTIMATE_GPS_SATS_PERIOD = (uint16_t)(atoi(getConfig("ADAFRUIT_ULTIMATE_GPS_SATS_PERIOD")));
+        config.ADAFRUIT_ULTIMATE_GPS_SATFIX_PERIOD = (uint16_t)(atoi(getConfig("ADAFRUIT_ULTIMATE_GPS_SATFIX_PERIOD")));
+        config.ADAFRUIT_ULTIMATE_GPS_LAT_DEG_PERIOD = (uint16_t)(atoi(getConfig("ADAFRUIT_ULTIMATE_GPS_LAT_DEG_PERIOD")));
+        config.ADAFRUIT_ULTIMATE_GPS_LON_DEG_PERIOD = (uint16_t)(atoi(getConfig("ADAFRUIT_ULTIMATE_GPS_LON_DEG_PERIOD")));
+        config.ADAFRUIT_ULTIMATE_GPS_LOGGING_PERIOD = (uint16_t)(atoi(getConfig("ADAFRUIT_ULTIMATE_GPS_LOGGING_PERIOD")));
 
         /* sensor configs */
         config.SHARP_GP2Y1010AU0F_DUST_PIN = (uint8_t)(atoi(getConfig("SHARP_GP2Y1010AU0F_DUST_PIN")));
@@ -117,42 +111,61 @@ void setupSensors() {
     sensor_config_head = sensor_config;
 
     /* Adafruit Ultimate GPS FeatherWing */
-    if (ADAFRUIT_ULTIMATE_GPS::setup()) {
-        /* fix */
-        sensor_config->next = new SensorConfig();
-        sensor_config = sensor_config->next;
-        sensor_config->id = TYPE_GPS_FIX;
-        sensor_config->id_str = "GPS_FIX";
-        sensor_config->period = 60000;
-        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::fix);
-        /* sats */
-        sensor_config->next = new SensorConfig();
-        sensor_config = sensor_config->next;
-        sensor_config->id = TYPE_GPS_SATS;
-        sensor_config->id_str = "GPS_SATS";
-        sensor_config->period = 60000;
-        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::satellites);
-        /* satfix */
-        sensor_config->next = new SensorConfig();
-        sensor_config = sensor_config->next;
-        sensor_config->id = TYPE_GPS_SATFIX;
-        sensor_config->id_str = "GPS_SATFIX";
-        sensor_config->period = 60000;
-        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::satfix);
-        /* latitude (degrees) */
-        sensor_config->next = new SensorConfig();
-        sensor_config = sensor_config->next;
-        sensor_config->id = TYPE_GPS_LAT_DEG;
-        sensor_config->id_str = "GPS_LAT_DEG";
-        sensor_config->period = 60000;
-        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::latitudeDegrees);
-        /* longitude (degrees) */
-        sensor_config->next = new SensorConfig();
-        sensor_config = sensor_config->next;
-        sensor_config->id = TYPE_GPS_LON_DEG;
-        sensor_config->id_str = "GPS_LON_DEG";
-        sensor_config->period = 60000;
-        sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::longitudeDegrees);
+    if (ADAFRUIT_ULTIMATE_GPS::setup()) { // Note: this current always returns true
+        if (config.ADAFRUIT_ULTIMATE_GPS_LOGGING_PERIOD) {
+            /* sample logging for SD card logging only. TX of GPS data requires data-point specific records defined below */
+            sensor_config->next = new SensorConfig();
+            sensor_config = sensor_config->next;
+            sensor_config->id = TYPE_ADAFRUIT_ULTIMATE_GPS_LOGGING;
+            sensor_config->id_str = "ADAFRUIT_ULTIMATE_GPS_LOGGING";
+            sensor_config->period = config.ADAFRUIT_ULTIMATE_GPS_LOGGING_PERIOD * 1000;
+            //sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::logline);
+        }
+        if (config.ADAFRUIT_ULTIMATE_GPS_FIX_PERIOD) {
+            /* satellite fix */
+            sensor_config->next = new SensorConfig();
+            sensor_config = sensor_config->next;
+            sensor_config->id = TYPE_ADAFRUIT_ULTIMATE_GPS_FIX;
+            sensor_config->id_str = "ADAFRUIT_ULTIMATE_GPS_FIX";
+            sensor_config->period = config.ADAFRUIT_ULTIMATE_GPS_FIX_PERIOD * 1000;
+            sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::fix);
+        }
+        if (config.ADAFRUIT_ULTIMATE_GPS_SATS_PERIOD) {
+            /* sats */
+            sensor_config->next = new SensorConfig();
+            sensor_config = sensor_config->next;
+            sensor_config->id = TYPE_ADAFRUIT_ULTIMATE_GPS_SATS;
+            sensor_config->id_str = "ADAFRUIT_ULTIMATE_GPS_SATS";
+            sensor_config->period = config.ADAFRUIT_ULTIMATE_GPS_SATS_PERIOD * 1000;
+            sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::satellites);
+        }
+        if (config.ADAFRUIT_ULTIMATE_GPS_SATFIX_PERIOD) {
+            /* satfix */
+            sensor_config->next = new SensorConfig();
+            sensor_config = sensor_config->next;
+            sensor_config->id = TYPE_ADAFRUIT_ULTIMATE_GPS_SATFIX;
+            sensor_config->id_str = "ADAFRUIT_ULTIMATE_GPS_SATFIX";
+            sensor_config->period = config.ADAFRUIT_ULTIMATE_GPS_SATFIX_PERIOD * 1000;
+            sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::satfix);
+        }
+        if (config.ADAFRUIT_ULTIMATE_GPS_LAT_DEG_PERIOD) {
+            /* latitude (degrees) */
+            sensor_config->next = new SensorConfig();
+            sensor_config = sensor_config->next;
+            sensor_config->id = TYPE_ADAFRUIT_ULTIMATE_GPS_LAT_DEG;
+            sensor_config->id_str = "ADAFRUIT_ULTIMATE_GPS_LAT_DEG";
+            sensor_config->period = config.ADAFRUIT_ULTIMATE_GPS_LAT_DEG_PERIOD * 1000;
+            sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::latitudeDegrees);
+        }
+        if (config.ADAFRUIT_ULTIMATE_GPS_LON_DEG_PERIOD) {
+            /* longitude (degrees) */
+            sensor_config->next = new SensorConfig();
+            sensor_config = sensor_config->next;
+            sensor_config->id = TYPE_ADAFRUIT_ULTIMATE_GPS_LON_DEG;
+            sensor_config->id_str = "ADAFRUIT_ULTIMATE_GPS_LON_DEG";
+            sensor_config->period = config.ADAFRUIT_ULTIMATE_GPS_LON_DEG_PERIOD * 1000;
+            sensor_config->read_function = &(ADAFRUIT_ULTIMATE_GPS::longitudeDegrees);
+        }
     }
 
     /* Adafruit Si7021 temperature/humidity breakout */

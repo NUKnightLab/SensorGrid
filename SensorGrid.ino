@@ -1007,6 +1007,14 @@ void writeToSD(char* filename, char* str)
     digitalWrite(8, LOW);
 }
 
+static char* utctime() {
+    char str[25];
+    DateTime t = rtc.now();
+    sprintf(str, "%i-%02d-%02dT%02d:%02d:%02d+00:00",
+        t.year(), t.month(), t.day(), t.hour(), t.minute(), t.second());
+    return str;
+}
+
 static char* logline(char* data_type, int16_t val)
 {
     char str[200];
@@ -1017,16 +1025,21 @@ static char* logline(char* data_type, int16_t val)
     return str;
 }
 
-void writeLogLine(char* data_type, int16_t val)
+void writeLogLine(char* line)
 {
-    char* line = logline(data_type, val);
-    Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
-    Serial.println(line);
     if (config.log_file) {
         digitalWrite(config.SD_CHIP_SELECT_PIN, LOW);
         writeToSD(config.log_file, line);
         digitalWrite(config.SD_CHIP_SELECT_PIN, HIGH);
     }
+}
+
+void writeLogData(char* data_type, int16_t val)
+{
+    char* line = logline(data_type, val);
+    Serial.print(F("LOGLINE (")); Serial.print(strlen(line)); Serial.println("):");
+    Serial.println(line);
+    writeLogLine(line);
 }
 
 static uint32_t getDataByTypeName(char* type)
@@ -1110,7 +1123,6 @@ void setup()
         PT_INIT(&update_display_battery_protothread);
         PT_INIT(&display_timeout_protothread);
     }
-    //PT_INIT(&sharp_dust_data_sample_protothread);
 }
 
 void loop()
@@ -1128,16 +1140,24 @@ void loop()
         }
     } else if (config.node_type == NODE_TYPE_SENSOR_LOGGER) {
         //stand-alone sensor that will log data
-        //Serial.println("Writing to logger...");
-        //writeLogLine(config.node_id,config.node_id);
-        //delay(config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
         struct SensorConfig *sensor_config = sensor_config_head->next;
         while (sensor_config != NULL) {
             if (millis() - sensor_config->last_sample_time > sensor_config->period) {
-                int32_t val = sensor_config->read_function();
-                p(F("%s VAL: %d\n"), sensor_config->id_str, val);
+                if (sensor_config->id == TYPE_ADAFRUIT_ULTIMATE_GPS_LOGGING) {
+                    /* special case just for SD logging of GPS. Not sure yet how to abstract this better */
+                    char str[200];
+                    sprintf(str, "%s ADAFRUIT_ULTIMATE_GPS FIX:%d SATS:%d SATFIX:%d LAT:%d LON:%d", utctime(), 
+                        ADAFRUIT_ULTIMATE_GPS::fix, ADAFRUIT_ULTIMATE_GPS::satellites, ADAFRUIT_ULTIMATE_GPS::satfix,
+                        ADAFRUIT_ULTIMATE_GPS::latitudeDegrees, ADAFRUIT_ULTIMATE_GPS::longitudeDegrees);
+                    Serial.println(str);
+                    writeLogLine(str);
+                } else {
+                    int32_t val = sensor_config->read_function();
+                    p(F("%s VAL: %d\n"), sensor_config->id_str, val);
+                    writeLogData(sensor_config->id_str, val);
+                }
                 sensor_config->last_sample_time = millis();
-                writeLogLine(sensor_config->id_str, val);
+
             }
             sensor_config = sensor_config->next;
         }

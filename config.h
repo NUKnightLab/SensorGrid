@@ -15,6 +15,21 @@
 #define NODE_TYPE_ORDERED_SENSOR_ROUTER 5
 #define NODE_TYPE_SENSOR_LOGGER 6
 
+/* data types */
+#define TYPE_ADAFRUIT_ULTIMATE_GPS_FIX 1
+#define TYPE_ADAFRUIT_ULTIMATE_GPS_SATS 2
+#define TYPE_ADAFRUIT_ULTIMATE_GPS_SATFIX 3
+#define TYPE_ADAFRUIT_ULTIMATE_GPS_LAT_DEG 4
+#define TYPE_ADAFRUIT_ULTIMATE_GPS_LON_DEG 5
+#define TYPE_ADAFRUIT_ULTIMATE_GPS_LOGGING 6
+#define TYPE_SI7021_TEMP 7
+#define TYPE_SI7021_HUMIDITY 8
+#define TYPE_SI1145_VIS 9
+#define TYPE_SI1145_IR 10
+#define TYPE_SI1145_UV 11
+#define TYPE_SHARP_GP2Y1010AU0F_DUST 12
+#define TYPE_GROVE_AIR_QUALITY_1_3 13
+
 /* Config defaults are strings so they can be passed to getConfig */
 //char* DEFAULT_NETWORK_ID = "1";
 #define DEFAULT_NETWORK_ID "1"
@@ -46,7 +61,6 @@ typedef struct Config {
     char  *log_file;
     char  *log_mode;
     uint32_t display_timeout;
-    char  *gps_module;
     uint8_t has_oled;
     uint8_t do_transmit;
     uint8_t node_type;
@@ -63,6 +77,14 @@ typedef struct Config {
     char *wifi_password;
     char *api_host;
     uint16_t api_port;
+
+    /* GPS */
+    uint16_t ADAFRUIT_ULTIMATE_GPS_FIX_PERIOD;
+    uint16_t ADAFRUIT_ULTIMATE_GPS_SATS_PERIOD;
+    uint16_t ADAFRUIT_ULTIMATE_GPS_SATFIX_PERIOD;
+    uint16_t ADAFRUIT_ULTIMATE_GPS_LAT_DEG_PERIOD;
+    uint16_t ADAFRUIT_ULTIMATE_GPS_LON_DEG_PERIOD;
+    uint16_t ADAFRUIT_ULTIMATE_GPS_LOGGING_PERIOD;
 
     /* sensors */
     uint8_t SHARP_GP2Y1010AU0F_DUST_PIN;
