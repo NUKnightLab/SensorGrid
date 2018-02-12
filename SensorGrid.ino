@@ -755,6 +755,149 @@ void _node_handle_data_message()
     }
 }
 
+bool next_8_bit(uint8_t* data, int len, int* index, uint8_t* val)
+{
+    *val = data[*index];
+    *index += 1;
+    if (*index > len) {
+        Serial.println("BAD BYTE SEQUENCE");
+        return false;
+    }
+    return true;
+}
+
+void _node_handle_flexible_data_message()
+{
+    uint8_t from_id = ((Message*)recv_buf)->from_node;
+    collector_id = from_id;
+    //uint8_t record_count;
+    //Data* data = get_data_from_buffer(&record_count);
+    uint8_t* data = ((Message*)recv_buf)->flexdata;
+    uint8_t len = ((Message*)recv_buf)->len;
+    p(F("Received FLEXIBLE data mssage from ID: %d; len: %d\n"), from_id, len);
+    uint8_t node_id;
+    uint8_t msg_id;
+    uint8_t record_count;
+    uint8_t data_type;
+    uint8_t val8;
+    uint16_t val16;
+    uint32_t val32;
+    uint8_t new_data[240];
+    uint8_t new_data_index = 0;
+    uint8_t new_data_len = 0;
+    uint8_t next_nodes[100];
+    uint8_t next_nodes_index = 0;
+    for (int i=0; i+4<len;) {
+        //p(F("%d "), data[i]);
+        node_id = data[i++];
+        msg_id = data[i++];
+        record_count = data[i++];
+        p(F("NODE ID: %d; MSG ID: %d; MSG COUNT: %d; MESSAGES:\n"),
+            node_id, msg_id, record_count);
+        for (int j=0; j<record_count; j++) {
+            data_type = data[i++];
+            switch(data_type) {
+                case DATA_TYPE_NODE_COLLECTION_LIST :
+                    uint8_t node_count;
+                    if (!next_8_bit(data, len, &i, &node_count)) break;
+                    new_data[new_data_index++] = node_id;
+                    new_data[new_data_index++] = msg_id;
+                    new_data[new_data_index++] = record_count;
+                    new_data[new_data_index++] = DATA_TYPE_NODE_COLLECTION_LIST;
+                    uint8_t node_count_index = new_data_index++;
+                    new_data[node_count_index] = 0;                 
+                    for (int k=0; k<node_count; k++) {
+                        uint8_t list_node_id;
+                        if (!next_8_bit(data, len, &i, &list_node_id)) break;
+                        p(F("LIST NODE: %d\n"), list_node_id); 
+                        if (list_node_id == config.node_id) {
+                            p(F("REMOVING self ID from uncollected node list: %d\n"), list_node_id);
+                        } else {
+                            new_data[node_count_index]++;
+                            new_data[new_data_index++] = list_node_id;
+                            new_data_len++;
+                            next_nodes[next_nodes_index++] = list_node_id;
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+    Serial.println("");
+    Serial.println("Adding self data to new data\n");
+
+    new_data[new_data_index++] = config.node_id;
+    new_data_len++;
+    new_data[new_data_index++] = 1; // TODO: proper message id
+    new_data_len++;
+    uint8_t self_data_record_count_index = new_data_index++;
+    new_data[self_data_record_count_index] = 0;
+    new_data_len++;
+    for (int i=0; i<historical_data_index*sizeof(Data); i++) {
+        p("Adding new data record: %d\n", historical_data[i].id);
+        new_data[new_data_index++] = historical_data[i].type;
+        new_data_len++;
+        new_data[new_data_index++] = historical_data[i].value >> 8;
+        new_data_len++;
+        new_data[new_data_index++] = historical_data[i].value & 0xff;
+        new_data_len++;
+        new_data[self_data_record_count_index]++;
+        new_data_len++;
+    }
+    /*
+    p(F("Received data array of length: %d from ID: %d containing data: {"), record_count, ((Message*)recv_buf)->from_node);
+    for (int i=0; i<record_count; i++) {
+        p(F(" id: %d; value: %d;"), data[i].node_id, data[i].value);
+        remove_pending_node(data[i].node_id);
+    }
+    Serial.println("} ");
+    if (pending_nodes[0]) {
+        Serial.print("Known pending nodes: ");
+        for (int i=0; i<MAX_NODES && pending_nodes[i]>0; i++) {
+            p(F(" %d"), pending_nodes[i]);
+            if (record_count < MAX_DATA_RECORDS) {
+                data[record_count++] = {
+                    .id = 0, .node_id = pending_nodes[i], .timestamp = 0, .type = 0, .value = 0
+                };
+            }
+        } // TODO: How to handle pending nodes if we have a full record set?
+        Serial.println("");
+    }
+    set_node_data(data, &record_count);
+    */
+    // TODO: set a flag in outgoing message to indicate if there are more records to collect from this node
+    bool success = false;
+    uint8_t order[MAX_DATA_RECORDS] = {0};
+    // TODO: get preferred order
+    //get_preferred_routing_order(data, record_count, order);
+    p("Routing data to nodes based on this data msg: ");
+    for (int i=0; i<new_data_len; i++) p("%d ", new_data[i]);
+    p("\nRouting to these nodes: ");
+    for (int i=0; i<next_nodes_index; i++) p("%d ", next_nodes[i]);
+    p("\n-\n");
+    /*
+    Serial.print("SANITY CHECK on node routing order: ");
+    for (int i=0; i<5; i++) {
+        p(F(" %d"), order[i]);
+    }
+    Serial.println("");
+    */
+    /* TODO: not the right max here */
+    for (int idx=0; (idx<MAX_DATA_RECORDS) && (next_nodes[idx] > 0) && (!success); idx++) {
+        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_len, next_nodes[idx], from_id)) {
+            p(F("Forwarded data to node: %d\n"), order[idx]);
+            success = true;
+        } else {
+            p(F("Failed to forward data to node: %d. Trying next node if available\n"), order[idx]);
+        }
+    }
+    if (!success) { // send to the collector
+        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_len, from_id, from_id)) {
+            p(F("Forwarded data to collector node: %d\n"), from_id);
+        }
+    }
+}
+
 void check_incoming_message()
 {
     uint8_t from;
@@ -773,6 +916,12 @@ void check_incoming_message()
             _collector_handle_data_message();
         } else {
             _node_handle_data_message();
+        }
+    } else if (msg_type == MESSAGE_TYPE_FLEXIBLE_DATA) {
+        if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
+            // TODO: _collector_handle_data_message();
+        } else {
+            _node_handle_flexible_data_message();
         }
     } else if (msg_type == MESSAGE_TYPE_WRONG_VERSION) {
         // ignore
