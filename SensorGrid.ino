@@ -137,6 +137,7 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
         Serial.print("SANITY check of flex data bytes: ");
         for (int i=0; i<len; i++) p(F("%d "), ((Message*)msg)->flexdata[i]);
     }
+    Serial.println("");
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
     if (millis() < next_listen) {
@@ -215,6 +216,7 @@ uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t fro
     memcpy(msg.flexdata, data, len);
     Serial.print("memcopied flexdata into message: ");
     for (int i=0; i<len; i++) p("%d ", msg.flexdata[i]);
+    Serial.println("");
     uint8_t msg_len = len + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, msg_len, dest);
 }
@@ -855,7 +857,6 @@ void _node_handle_flexible_data_message()
     uint32_t val32;
     uint8_t new_data[240];
     uint8_t new_data_index = 0;
-    uint8_t new_data_len = 0;
     uint8_t next_nodes[100];
     uint8_t next_nodes_index = 0;
     for (int i=0; i+4<len;) {
@@ -876,7 +877,7 @@ void _node_handle_flexible_data_message()
                     new_data[new_data_index++] = record_count;
                     new_data[new_data_index++] = DATA_TYPE_NODE_COLLECTION_LIST;
                     uint8_t node_count_index = new_data_index++;
-                    new_data[node_count_index] = 0;                 
+                    new_data[node_count_index] = 0;  
                     for (int k=0; k<node_count; k++) {
                         uint8_t list_node_id;
                         if (!next_8_bit(data, len, &i, &list_node_id)) break;
@@ -886,7 +887,6 @@ void _node_handle_flexible_data_message()
                         } else {
                             new_data[node_count_index]++;
                             new_data[new_data_index++] = list_node_id;
-                            new_data_len++;
                             next_nodes[next_nodes_index++] = list_node_id;
                         }
                     }
@@ -898,22 +898,15 @@ void _node_handle_flexible_data_message()
     Serial.println("Adding self data to new data\n");
 
     new_data[new_data_index++] = config.node_id;
-    new_data_len++;
     new_data[new_data_index++] = 1; // TODO: proper message id
-    new_data_len++;
     uint8_t self_data_record_count_index = new_data_index++;
     new_data[self_data_record_count_index] = 0;
-    new_data_len++;
-    for (int i=0; i<historical_data_index*sizeof(Data); i++) {
+    for (int i=0; i<historical_data_index; i++) {
         p("Adding new data record: %d\n", historical_data[i].id);
         new_data[new_data_index++] = historical_data[i].type;
-        new_data_len++;
         new_data[new_data_index++] = historical_data[i].value >> 8;
-        new_data_len++;
         new_data[new_data_index++] = historical_data[i].value & 0xff;
-        new_data_len++;
         new_data[self_data_record_count_index]++;
-        new_data_len++;
     }
     /*
     p(F("Received data array of length: %d from ID: %d containing data: {"), record_count, ((Message*)recv_buf)->from_node);
@@ -942,7 +935,7 @@ void _node_handle_flexible_data_message()
     // TODO: get preferred order
     //get_preferred_routing_order(data, record_count, order);
     p("Routing data to nodes based on this data msg: ");
-    for (int i=0; i<new_data_len; i++) p("%d ", new_data[i]);
+    for (int i=0; i<new_data_index; i++) p("%d ", new_data[i]);
     p("\nRouting to these nodes: ");
     for (int i=0; i<next_nodes_index; i++) p("%d ", next_nodes[i]);
     p("\n-\n");
@@ -955,7 +948,7 @@ void _node_handle_flexible_data_message()
     */
     /* TODO: not the right max here */
     for (int idx=0; (idx<MAX_DATA_RECORDS) && (next_nodes[idx] > 0) && (!success); idx++) {
-        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_len, next_nodes[idx], from_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, next_nodes[idx], from_id)) {
             p(F("Forwarded data to node: %d\n"), order[idx]);
             success = true;
         } else {
@@ -963,7 +956,7 @@ void _node_handle_flexible_data_message()
         }
     }
     if (!success) { // send to the collector
-        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_len, from_id, from_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, from_id, from_id)) {
             p(F("Forwarded data to collector node: %d\n"), from_id);
         }
     }
