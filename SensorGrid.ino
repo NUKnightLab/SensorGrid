@@ -600,6 +600,71 @@ void _collector_handle_data_message()
     }
 }
 
+void _collector_handle_flexible_data_message()
+{
+    uint8_t from_id = ((Message*)recv_buf)->from_node;
+    uint8_t* data = ((Message*)recv_buf)->flexdata;
+    uint8_t len = ((Message*)recv_buf)->len;
+    p(F("Received FLEXIBLE data message from ID: %d; len: %d\n"), from_id, len);
+    for (int i=0; i<len; i++) {
+        p("%d ", data[i]);
+    }
+    Serial.println("");
+
+    /*
+    uint8_t record_count;
+    Data* data = get_data_from_buffer(&record_count);
+    uint8_t missing_data_nodes[MAX_DATA_RECORDS] = {0};
+    Serial.print("Collector received data from nodes:");
+    for (int i=0; i<record_count; i++) {
+        if (data[i].id > 0) {
+            Serial.print(" ");
+            Serial.print(data[i].node_id, DEC);
+            // TODO: should be a check for node having more data
+            remove_uncollected_node_id(data[i].node_id);
+        }
+    }
+    Serial.println("");
+    if (missing_data_nodes[0] > 0) {
+        Serial.print("Nodes with missing data: ");
+        for (int i=0; i<record_count && data[i].node_id>0; i++) {
+            Serial.print(" ");
+            Serial.print(missing_data_nodes[i], DEC);
+        }
+    }
+    if (uncollected_nodes[0] > 0) {
+        next_collection_time = 0;
+    } else {
+        int COLLECTION_DELAY = 2000;
+        int16_t COLLECTION_PERIOD = 30000;
+        send_control_next_activity_time(COLLECTION_PERIOD);
+        next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
+    }
+    Serial.println("DATA RECEIVED:");
+    for (int i=0; i<record_count; i++) {
+        p(F(" NODE ID: %d"), data[i].node_id);
+        p(F("; RECORD ID: %d"), data[i].id);
+        p(F("; TYPE: %s"), get_data_type(data[i].type));
+        p(F("; VALUE: %d\n"), data[i].value);
+        if (data[i].id > latest_collected_records[data[i].node_id]) {
+            latest_collected_records[data[i].node_id] = data[i].id;
+        }
+    }
+    // TODO: post the data to the API and determine if there are more nodes to collect
+    if (WiFiPresent) {
+        if (WiFi.status() == WL_CONNECTED) {
+            while (!client.connected()) {
+                reconnectClient(client, config.wifi_ssid);
+            }
+            postToAPI(client, data, record_count);
+        }
+    } else {
+        Serial.println("Collector Node with no WiFi configuration. Assuming serial collection");
+    }
+    
+    */
+}
+
 
 uint8_t get_best_next_node(Data* data, uint8_t num_data_records)
 {
@@ -925,7 +990,7 @@ void check_incoming_message()
         }
     } else if (msg_type == MESSAGE_TYPE_FLEXIBLE_DATA) {
         if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-            // TODO: _collector_handle_data_message();
+            _collector_handle_flexible_data_message();
         } else {
             _node_handle_flexible_data_message();
         }
