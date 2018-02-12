@@ -131,7 +131,7 @@ void clear_pending_nodes() {
 
 uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
-    p(F("Sending message type: %s"), ((Message*)msg)->message_type);
+    p(F("Sending message type: %d"), ((Message*)msg)->message_type);
     p(F("; length: %d\n"), len);
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
@@ -200,6 +200,7 @@ bool send_data(Data *data, uint8_t array_size, uint8_t dest)
 uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t from_id)
 {
     if (!from_id) from_id = config.node_id;
+    Serial.println("SENDING FLEXIBLE DATA ........");
     Message msg = {
         .sensorgrid_version = config.sensorgrid_version,
         .network_id = config.network_id,
@@ -596,7 +597,12 @@ void _collector_handle_data_message()
 
 uint8_t get_best_next_node(Data* data, uint8_t num_data_records)
 {
-  uint8_t dest = 0;
+    Serial.print("Determining best next node from: ");
+    for (int i=0; i<num_data_records; i++) {
+        p("%d ", data[i]);
+    }
+    Serial.println("");
+    uint8_t dest = 0;
     for (int i=0; i<num_data_records; i++) {
         RHRouter::RoutingTableEntry* route = router->getRouteTo(data[i].node_id);
         if (route->state == 2) { // what is RH constant name for a valid route?
@@ -840,7 +846,7 @@ bool send_aggregate_flexible_data_init() {
         data[4]++;
     }
     //memcpy(init_data.data, uncollected_nodes, num_data_records);
-    uint8_t dest = get_best_next_node(data, data[4]);
+    uint8_t dest = get_best_next_node(data+5, data[4]);
     if (!dest) {
         Serial.println("No remaining nodes in current data record");
     //} if (RH_ROUTER_ERROR_NONE == send_data(data, num_data_records, dest)) {
