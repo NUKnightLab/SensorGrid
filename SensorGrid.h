@@ -107,12 +107,13 @@ typedef struct Data {
     int16_t value;
 };
 
+/*
 typedef struct FlexibleData {
     uint8_t id; // 1-255 indicates Data
     uint8_t node_id;
     uint32_t timestamp;
     unsigned char data[];
-};
+}; */
 
 typedef struct Message {
     uint8_t sensorgrid_version;

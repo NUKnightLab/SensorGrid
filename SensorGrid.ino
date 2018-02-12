@@ -133,6 +133,10 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
     p(F("Sending message type: %d"), ((Message*)msg)->message_type);
     p(F("; length: %d\n"), len);
+    if (((Message*)msg)->message_type == MESSAGE_TYPE_FLEXIBLE_DATA) {
+        Serial.print("SANITY check of flex data bytes: ");
+        for (int i=0; i<len; i++) p(F("%d "), ((Message*)msg)->flexdata[i]);
+    }
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
     if (millis() < next_listen) {
@@ -206,11 +210,13 @@ uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t fro
         .network_id = config.network_id,
         .from_node = from_id,
         .message_type = MESSAGE_TYPE_FLEXIBLE_DATA,
-        .len = 0,
+        .len = len,
     };
     memcpy(msg.flexdata, data, len);
+    Serial.print("memcopied flexdata into message: ");
+    for (int i=0; i<len; i++) p("%d ", msg.flexdata[i]);
     uint8_t msg_len = len + MESSAGE_OVERHEAD;
-    return send_message((uint8_t*)&msg, len, dest);
+    return send_message((uint8_t*)&msg, msg_len, dest);
 }
 
 bool send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest)
@@ -984,6 +990,10 @@ bool send_aggregate_flexible_data_init() {
     //Data init_data = {
     //     .id = 0, .node_id = config.node_id, .timestamp = 0 };
     //uint8_t num_data_records = 0;
+    Serial.print("UNCOLLECTED NODES TO BE COLLECTED: ");
+    for (int i=0; i<10; i++) {
+        p("%d ", uncollected_nodes[i]);
+    }
     /* TODO: mismatch between MAX_BYTES and number of possible nodes */
     for (int i=5; i<MAX_BYTES-5 && uncollected_nodes[i-5] != 0; i++) {
         //data[i] = {
