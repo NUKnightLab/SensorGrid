@@ -36,12 +36,13 @@
 #define MESSAGE_TYPE_NO_MESSAGE 0
 #define MESSAGE_TYPE_CONTROL 1 
 #define MESSAGE_TYPE_DATA 2
+#define MESSAGE_TYPE_FLEXIBLE_DATA 3
+
 #define MESSAGE_TYPE_UNKNOWN -1
 #define MESSAGE_TYPE_MESSAGE_ERROR -2
 #define MESSAGE_TYPE_NONE_BUFFER_LOCK -3
 #define MESSAGE_TYPE_WRONG_VERSION -4
 #define MESSAGE_TYPE_WRONG_NETWORK -5 // for testing only. Normally we will just skip messages from other networks
-
 /**
  * Control codes
  */
@@ -51,8 +52,9 @@
 #define CONTROL_ADD_NODE 3
 
 /* Data types */
-#define DATA_TYPE_BATTERY_LEVEL 1
-#define DATA_TYPE_SHARP_GP2Y1010AU0F 2
+#define DATA_TYPE_NODE_COLLECTION_LIST 1
+#define DATA_TYPE_BATTERY_LEVEL 2
+#define DATA_TYPE_SHARP_GP2Y1010AU0F 3
 
 /* Module defs */
 #include "WINC1500.h"
@@ -105,6 +107,13 @@ typedef struct Data {
     int16_t value;
 };
 
+typedef struct FlexibleData {
+    uint8_t id; // 1-255 indicates Data
+    uint8_t node_id;
+    uint32_t timestamp;
+    unsigned char data[];
+};
+
 typedef struct Message {
     uint8_t sensorgrid_version;
     uint8_t network_id;
@@ -114,6 +123,7 @@ typedef struct Message {
     union {
       struct Control control;
       struct Data data[MAX_DATA_RECORDS];
+      uint8_t flexdata[];
     };
 };
 

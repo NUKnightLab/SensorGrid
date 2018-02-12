@@ -197,7 +197,25 @@ bool send_data(Data *data, uint8_t array_size, uint8_t dest)
     return send_data(data, array_size, dest, 0);
 }
 
+uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t from_id)
+{
+    if (!from_id) from_id = config.node_id;
+    Message msg = {
+        .sensorgrid_version = config.sensorgrid_version,
+        .network_id = config.network_id,
+        .from_node = from_id,
+        .message_type = MESSAGE_TYPE_FLEXIBLE_DATA,
+        .len = 0,
+    };
+    memcpy(msg.flexdata, data, len);
+    uint8_t msg_len = len + MESSAGE_OVERHEAD;
+    return send_message((uint8_t*)&msg, len, dest);
+}
 
+bool send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest)
+{
+    return send_flexible_data(data, len, dest, 0);
+}
 /* END OF SEND  FUNCTIONS */
 
 /* **** RECEIVE FUNCTIONS. THESE FUNCTIONS HAVE DIRECT ACCESS TO recv_buf **** */
@@ -601,6 +619,31 @@ uint8_t get_best_next_node(Data* data, uint8_t num_data_records)
     return dest;
 }
 
+uint8_t get_best_next_node(uint8_t* data, uint8_t num_data_records)
+{
+  uint8_t dest = 0;
+    for (int i=0; i<num_data_records; i++) {
+        RHRouter::RoutingTableEntry* route = router->getRouteTo(data[i]);
+        if (route->state == 2) { // what is RH constant name for a valid route?
+            if (route->next_hop == data[i]) {
+                dest = data[i];
+                p(F("Next node is single hop to ID: %d\n"), dest);
+                break;
+            } else {
+                if (!dest) {
+                    dest = data[i];
+                    p(F("Potential next node is multihop to: %d\n"), dest);
+                }
+            }
+        }
+    }
+    if (!dest && num_data_records > 0) {
+        dest = data[0];
+        p(F("No known routes found to remaining nodes. Sending to first node ID: %d\n"), dest);
+    }
+    return dest;
+}
+
 void get_preferred_routing_order(Data* data, uint8_t num_data_records, uint8_t* order)
 {
     uint8_t first_pref[MAX_DATA_RECORDS] = {0};
@@ -744,6 +787,8 @@ bool send_aggregate_data_init() {
     if (uncollected_nodes[0] == 0) return false;
     
     Data data[MAX_DATA_RECORDS];
+    Data init_data = {
+         .id = 0, .node_id = config.node_id, .timestamp = 0 };
     uint8_t num_data_records = 0;
     for (int i=0; i<MAX_DATA_RECORDS && uncollected_nodes[i] != 0; i++) {
         data[i] = {
@@ -768,6 +813,49 @@ bool send_aggregate_data_init() {
     return true;
 } /* send_aggregate_data_init */
 
+
+bool send_aggregate_flexible_data_init() {
+
+    if (uncollected_nodes[0] == 0) return false;
+
+    uint8_t MAX_BYTES = 240;
+    //FlexibleData data[MAX_BYTES];
+    uint8_t data[MAX_BYTES];
+    data[0] = config.node_id;
+    data[1] = 0; // msg ID
+    data[2] = 1; // num records
+    data[3] = DATA_TYPE_NODE_COLLECTION_LIST;
+    data[4] = 0; // count the number of nodes into here
+    //Data init_data = {
+    //     .id = 0, .node_id = config.node_id, .timestamp = 0 };
+    //uint8_t num_data_records = 0;
+    /* TODO: mismatch between MAX_BYTES and number of possible nodes */
+    for (int i=5; i<MAX_BYTES-5 && uncollected_nodes[i-5] != 0; i++) {
+        //data[i] = {
+        //    .id = 0, .node_id = uncollected_nodes[i], .timestamp = 0, .type = 0, .value = latest_collected_records[uncollected_nodes[i]] };
+        data[i] = uncollected_nodes[i-5];
+        Serial.print(uncollected_nodes[i-5], DEC);
+        Serial.print(" ");
+        //num_data_records++;
+        data[4]++;
+    }
+    //memcpy(init_data.data, uncollected_nodes, num_data_records);
+    uint8_t dest = get_best_next_node(data, data[4]);
+    if (!dest) {
+        Serial.println("No remaining nodes in current data record");
+    //} if (RH_ROUTER_ERROR_NONE == send_data(data, num_data_records, dest)) {
+    } if (RH_ROUTER_ERROR_NONE == send_flexible_data(data, data[4] + 5, dest, config.node_id)) {
+        p(F("-- Sent data: AGGREGATE_DATA_INIT to ID: %d\n"), dest);
+    } else {
+        Serial.println("ERROR: did not successfully send aggregate data collection request");
+        p(F("Removing node ID: %d from known_nodes\n"), dest);
+        remove_known_node_id(dest);
+        remove_uncollected_node_id(dest); // TODO: should there be some fallback or retry?
+        p(F("** WARNING:: Node appears to be offline: %d\n"), dest);
+        return send_aggregate_data_init();
+    }
+    return true;
+} /* send_aggregate_flexible_data_init */
 void send_control_next_activity_time(int16_t timeout)
 {
     Control control = { .id = ++message_id,
@@ -805,7 +893,8 @@ void handle_collector_loop()
                 }
                 Serial.println("");
             }
-            if (send_aggregate_data_init()) {
+            //if (send_aggregate_data_init()) {
+            if (send_aggregate_flexible_data_init()) {
                 p(F("Cycle: %d\n"), cycle++);
                 next_collection_time = millis() + DATA_COLLECTION_TIMEOUT; // this is a timeout in case data does not come back from the network
             }
@@ -1064,7 +1153,7 @@ static uint32_t getDataByTypeName(char* type)
 
 void setup()
 {
-    //while (!Serial);
+    while (!Serial);
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);
