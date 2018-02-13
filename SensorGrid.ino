@@ -65,6 +65,8 @@ char* get_message_type(int8_t num)
             return "CONTROL";
         case MESSAGE_TYPE_DATA:
             return "DATA";
+        case MESSAGE_TYPE_FLEXIBLE_DATA:
+            return "FLEXIBLE_DATA";
         default:
             return "UNKNOWN";
     }
