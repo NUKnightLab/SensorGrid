@@ -776,7 +776,7 @@ void _collector_handle_flexible_data_message()
         int16_t COLLECTION_PERIOD = 30000;
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
-        p(F("--- NEXT COLLECTION TIME: %d; CURRENT TIME: %d\n"), next_collection_time, millis()
+        p(F("--- NEXT COLLECTION TIME: %d; CURRENT TIME: %d\n"), next_collection_time, millis());
     }
     
         // TODO: post the data to the API and determine if there are more nodes to collect
