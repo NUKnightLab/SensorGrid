@@ -769,12 +769,14 @@ void _collector_handle_flexible_data_message()
     Serial.println("");
 
     if (uncollected_nodes[0] > 0) {
+        p(F("uncollected_nodes[0] is %d. Collecting immediately\n"), uncollected_nodes[0]);
         next_collection_time = 0;
     } else {
         int COLLECTION_DELAY = 2000;
         int16_t COLLECTION_PERIOD = 30000;
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
+        p(F("--- NEXT COLLECTION TIME: %d; CURRENT TIME: %d\n"), next_collection_time, millis()
     }
     
         // TODO: post the data to the API and determine if there are more nodes to collect
