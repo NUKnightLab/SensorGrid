@@ -615,7 +615,7 @@ void print_flex_data(uint8_t* data, uint8_t len)
     uint16_t val16;
     uint32_t val32;
     p(F("Printing message of len: %d\n"), len);
-    for (int i=0; i+4<len;) { // min 5 bytes for a node message
+    for (int i=0; i+3<len;) { // min node msg is 3 bytes: node_id msg_id 0
         node_id = data[i++];
         msg_id = data[i++];
         record_count = data[i++];
@@ -982,7 +982,7 @@ void _node_handle_flexible_data_message()
     uint8_t new_data_index = 0;
     uint8_t next_nodes[100];
     uint8_t next_nodes_index = 0;
-    for (int i=0; i+4<len;) {
+    for (int i=0; i+3<len;) {
         node_id = data[i++];
         msg_id = data[i++];
         record_count = data[i++];
