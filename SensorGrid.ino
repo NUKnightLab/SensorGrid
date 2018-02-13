@@ -29,6 +29,7 @@ bool WiFiPresent = false;
 uint8_t DATA_SIZE = sizeof(Data);
 uint8_t MAX_MESSAGE_PAYLOAD = sizeof(Message);
 uint8_t MESSAGE_OVERHEAD = sizeof(Message) - MAX_DATA_RECORDS * DATA_SIZE;
+uint8_t MAX_MESSAGE_DATA_BYTES = 200; // TODO: Calculate this based on Message size
 
 uint8_t recv_buf[MAX_MESSAGE_SIZE] = {0};
 static bool recv_buffer_avail = true;
@@ -133,10 +134,6 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
     p(F("Sending message type: %d"), ((Message*)msg)->message_type);
     p(F("; length: %d\n"), len);
-    if (((Message*)msg)->message_type == MESSAGE_TYPE_FLEXIBLE_DATA) {
-        Serial.print("SANITY check of flex data bytes: ");
-        for (int i=0; i<len; i++) p(F("%d "), ((Message*)msg)->flexdata[i]);
-    }
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
     if (millis() < next_listen) {
@@ -215,6 +212,7 @@ uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t fro
     memcpy(msg.flexdata, data, len);
     Serial.print("memcopied flexdata into message: ");
     for (int i=0; i<len; i++) p("%d ", msg.flexdata[i]);
+    Serial.println("");
     uint8_t msg_len = len + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, msg_len, dest);
 }
@@ -582,6 +580,57 @@ bool next_32_bit(uint8_t* data, int len, int* index, uint32_t* val)
     *index += 4;
     return true;
 }
+
+
+void print_flex_data(uint8_t* data, uint8_t len)
+{
+    uint8_t node_id;
+    uint8_t msg_id;
+    uint8_t record_count;
+    uint8_t data_type;
+    uint8_t val8;
+    uint16_t val16;
+    uint32_t val32;
+    for (int i=0; i+4<len;) { // min 5 bytes for a node message
+        node_id = data[i++];
+        msg_id = data[i++];
+        record_count = data[i++];
+        p("NODE ID: %d; MSG ID: %d; MSG COUNT: %d; MESSAGES:\n",
+            node_id, msg_id, record_count);
+        for (int j=0; j<record_count; j++) {
+            data_type = data[i++];
+            switch(data_type) {
+                case DATA_TYPE_NODE_COLLECTION_LIST :
+                    uint8_t node_count;
+                    if (!next_8_bit(data, len, &i, &node_count)) break;
+                    p(F("COLLECTION_LIST (%d IDs): "), node_count);
+                    for (int k=0; k<node_count; k++) {
+                        if (!next_8_bit(data, len, &i, &val8)) break;
+                        p(F("%d "), val8);
+                    }
+                case DATA_TYPE_BATTERY_LEVEL :
+                    if (!next_8_bit(data, len, &i, &val8)) break;
+                    p("BAT: %2.1f; ", val8 / 10.0);
+                    break;
+                //case GPS :
+                //    if (!next_8_bit(data, len, &i, &val8)) break;
+                //    p("SATS: %d; ", val8);
+                //    if (!next_32_bit(data, len, &i, &val32)) break;
+                //    p("LAT: %8.5f; ", (int32_t)val32 / 100000.0);
+                //    if (!next_32_bit(example, len, &i, &val32)) break;
+                //    p("LON: %8.5f; ", (int32_t)val32 / 100000.0);
+                //    break;
+                case DATA_TYPE_SHARP_GP2Y1010AU0F :
+                    if (!next_8_bit(data, len, &i, &val8)) break;
+                    p("DUST: %d; ", val8);
+                    //if (!next_16_bit(data, len, &i, &val16)) break;
+                    //p("TIMESTAMP: %d; ", val16);
+                    //break;
+            }
+        }
+        Serial.println("\n");
+    }
+}
 void send_control_next_activity_time(int16_t timeout)
 {
     Control control = { .id = ++message_id,
@@ -630,7 +679,7 @@ void _collector_handle_data_message()
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
     }
-    Serial.println("DATA RECEIVED:");
+    Serial.println("DATA RECEIVED (historical struct type data):");
     for (int i=0; i<record_count; i++) {
         p(F(" NODE ID: %d"), data[i].node_id);
         p(F("; RECORD ID: %d"), data[i].id);
@@ -659,7 +708,7 @@ void _collector_handle_flexible_data_message()
     uint8_t* data = ((Message*)recv_buf)->flexdata;
     uint8_t len = ((Message*)recv_buf)->len;
     p(F("Received FLEXIBLE data message from ID: %d; len: %d\n"), from_id, len);
-
+    print_flex_data(data, len);
     uint8_t node_id;
     uint8_t msg_id;
     uint8_t record_count;
@@ -671,8 +720,7 @@ void _collector_handle_flexible_data_message()
         node_id = data[i++];
         msg_id = data[i++];
         record_count = data[i++];
-        printf("NODE ID: %d; MSG ID: %d; MSG COUNT: %d; MESSAGES:\n",
-            node_id, msg_id, record_count);
+        remove_uncollected_node_id(node_id);
         for (int j=0; j<record_count; j++) {
             data_type = data[i++];
             switch (data_type) {    
@@ -686,39 +734,22 @@ void _collector_handle_flexible_data_message()
                     }
                     Serial.println("");
                     break;
+                case DATA_TYPE_BATTERY_LEVEL :
+                    if (!next_8_bit(data, len, &i, &val8)) break;
+                    p("BAT: %2.1f; ", val8 / 10.0);
+                    break;
                 case DATA_TYPE_SHARP_GP2Y1010AU0F :
                     if (!next_16_bit(data, len, &i, &val16)) break;
                     p(F("DUST: %d "), val16);
                     break;
+                default :
+                    Serial.println("UNKNOWN DATA TYPE IN FLEX DATA STREAM");
             }
         }
         Serial.println("");
     }
     Serial.println("");
-    
-        // TODO: post the data to the API and determine if there are more nodes to collect
 
-    /*
-    uint8_t record_count;
-    Data* data = get_data_from_buffer(&record_count);
-    uint8_t missing_data_nodes[MAX_DATA_RECORDS] = {0};
-    Serial.print("Collector received data from nodes:");
-    for (int i=0; i<record_count; i++) {
-        if (data[i].id > 0) {
-            Serial.print(" ");
-            Serial.print(data[i].node_id, DEC);
-            // TODO: should be a check for node having more data
-            remove_uncollected_node_id(data[i].node_id);
-        }
-    }
-    Serial.println("");
-    if (missing_data_nodes[0] > 0) {
-        Serial.print("Nodes with missing data: ");
-        for (int i=0; i<record_count && data[i].node_id>0; i++) {
-            Serial.print(" ");
-            Serial.print(missing_data_nodes[i], DEC);
-        }
-    }
     if (uncollected_nodes[0] > 0) {
         next_collection_time = 0;
     } else {
@@ -727,17 +758,10 @@ void _collector_handle_flexible_data_message()
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
     }
-    Serial.println("DATA RECEIVED:");
-    for (int i=0; i<record_count; i++) {
-        p(F(" NODE ID: %d"), data[i].node_id);
-        p(F("; RECORD ID: %d"), data[i].id);
-        p(F("; TYPE: %s"), get_data_type(data[i].type));
-        p(F("; VALUE: %d\n"), data[i].value);
-        if (data[i].id > latest_collected_records[data[i].node_id]) {
-            latest_collected_records[data[i].node_id] = data[i].id;
-        }
-    }
-    if (WiFiPresent) {
+    
+        // TODO: post the data to the API and determine if there are more nodes to collect
+   /*
+   if (WiFiPresent) {
         if (WiFi.status() == WL_CONNECTED) {
             while (!client.connected()) {
                 reconnectClient(client, config.wifi_ssid);
@@ -747,7 +771,6 @@ void _collector_handle_flexible_data_message()
     } else {
         Serial.println("Collector Node with no WiFi configuration. Assuming serial collection");
     }
-    
     */
 }
 
@@ -912,17 +935,14 @@ void _node_handle_data_message()
     }
 }
 
-
-
 void _node_handle_flexible_data_message()
 {
     uint8_t from_id = ((Message*)recv_buf)->from_node;
     collector_id = from_id;
-    //uint8_t record_count;
-    //Data* data = get_data_from_buffer(&record_count);
     uint8_t* data = ((Message*)recv_buf)->flexdata;
     uint8_t len = ((Message*)recv_buf)->len;
     p(F("Received FLEXIBLE data mssage from ID: %d; len: %d\n"), from_id, len);
+    print_flex_data(data, len);
     uint8_t node_id;
     uint8_t msg_id;
     uint8_t record_count;
@@ -930,13 +950,11 @@ void _node_handle_flexible_data_message()
     uint8_t val8;
     uint16_t val16;
     uint32_t val32;
-    uint8_t new_data[240];
+    uint8_t new_data[MAX_MESSAGE_DATA_BYTES];
     uint8_t new_data_index = 0;
-    uint8_t new_data_len = 0;
     uint8_t next_nodes[100];
     uint8_t next_nodes_index = 0;
     for (int i=0; i+4<len;) {
-        //p(F("%d "), data[i]);
         node_id = data[i++];
         msg_id = data[i++];
         record_count = data[i++];
@@ -963,7 +981,6 @@ void _node_handle_flexible_data_message()
                         } else {
                             new_data[node_count_index]++;
                             new_data[new_data_index++] = list_node_id;
-                            new_data_len++;
                             next_nodes[next_nodes_index++] = list_node_id;
                         }
                     }
@@ -975,22 +992,15 @@ void _node_handle_flexible_data_message()
     Serial.println("Adding self data to new data\n");
 
     new_data[new_data_index++] = config.node_id;
-    new_data_len++;
     new_data[new_data_index++] = 1; // TODO: proper message id
-    new_data_len++;
     uint8_t self_data_record_count_index = new_data_index++;
     new_data[self_data_record_count_index] = 0;
-    new_data_len++;
     for (int i=0; i<historical_data_index*sizeof(Data); i++) {
         p("Adding new data record: %d\n", historical_data[i].id);
         new_data[new_data_index++] = historical_data[i].type;
-        new_data_len++;
         new_data[new_data_index++] = historical_data[i].value >> 8;
-        new_data_len++;
         new_data[new_data_index++] = historical_data[i].value & 0xff;
-        new_data_len++;
         new_data[self_data_record_count_index]++;
-        new_data_len++;
     }
     /*
     p(F("Received data array of length: %d from ID: %d containing data: {"), record_count, ((Message*)recv_buf)->from_node);
@@ -1019,7 +1029,7 @@ void _node_handle_flexible_data_message()
     // TODO: get preferred order
     //get_preferred_routing_order(data, record_count, order);
     p("Routing data to nodes based on this data msg: ");
-    for (int i=0; i<new_data_len; i++) p("%d ", new_data[i]);
+    for (int i=0; i<new_data_index; i++) p("%d ", new_data[i]);
     p("\nRouting to these nodes: ");
     for (int i=0; i<next_nodes_index; i++) p("%d ", next_nodes[i]);
     p("\n-\n");
@@ -1032,7 +1042,7 @@ void _node_handle_flexible_data_message()
     */
     /* TODO: not the right max here */
     for (int idx=0; (idx<MAX_DATA_RECORDS) && (next_nodes[idx] > 0) && (!success); idx++) {
-        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_len, next_nodes[idx], from_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, next_nodes[idx], from_id)) {
             p(F("Forwarded data to node: %d\n"), order[idx]);
             success = true;
         } else {
@@ -1040,7 +1050,7 @@ void _node_handle_flexible_data_message()
         }
     }
     if (!success) { // send to the collector
-        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_len, from_id, from_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, from_id, from_id)) {
             p(F("Forwarded data to collector node: %d\n"), from_id);
         }
     }
@@ -1121,36 +1131,23 @@ bool send_aggregate_flexible_data_init() {
 
     if (uncollected_nodes[0] == 0) return false;
 
-    uint8_t MAX_BYTES = 240;
-    //FlexibleData data[MAX_BYTES];
-    uint8_t data[MAX_BYTES];
+    uint8_t data[MAX_MESSAGE_DATA_BYTES];
     data[0] = config.node_id;
     data[1] = 0; // msg ID
     data[2] = 1; // num records
     data[3] = DATA_TYPE_NODE_COLLECTION_LIST;
     data[4] = 0; // count the number of nodes into here
-    //Data init_data = {
-    //     .id = 0, .node_id = config.node_id, .timestamp = 0 };
-    //uint8_t num_data_records = 0;
     Serial.print("UNCOLLECTED NODES TO BE COLLECTED: ");
-    for (int i=0; i<10; i++) {
-        p("%d ", uncollected_nodes[i]);
-    }
-    /* TODO: mismatch between MAX_BYTES and number of possible nodes */
-    for (int i=5; i<MAX_BYTES-5 && uncollected_nodes[i-5] != 0; i++) {
-        //data[i] = {
-        //    .id = 0, .node_id = uncollected_nodes[i], .timestamp = 0, .type = 0, .value = latest_collected_records[uncollected_nodes[i]] };
+    uint8_t MAX_COLLECT_NODES = 100; // TODO: what is best number here?
+    for (int i=5; i<MAX_COLLECT_NODES && uncollected_nodes[i-5] != 0; i++) {
         data[i] = uncollected_nodes[i-5];
-        Serial.print(uncollected_nodes[i-5], DEC);
-        Serial.print(" ");
-        //num_data_records++;
+        p(F("%d "), uncollected_nodes[i-5]);
         data[4]++;
     }
-    //memcpy(init_data.data, uncollected_nodes, num_data_records);
+    Serial.println("");
     uint8_t dest = get_best_next_node(data+5, data[4]);
     if (!dest) {
         Serial.println("No remaining nodes in current data record");
-    //} if (RH_ROUTER_ERROR_NONE == send_data(data, num_data_records, dest)) {
     } if (RH_ROUTER_ERROR_NONE == send_flexible_data(data, data[4] + 5, dest, config.node_id)) {
         p(F("-- Sent data: AGGREGATE_DATA_INIT to ID: %d\n"), dest);
     } else {
