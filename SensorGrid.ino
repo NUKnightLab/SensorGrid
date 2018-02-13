@@ -547,12 +547,12 @@ void postToAPI(WiFiClient& client, Data* data, uint8_t record_count)
 
 bool next_8_bit(uint8_t* data, int len, int* index, uint8_t* val)
 {
-    *val = data[*index];
-    *index += 1;
-    if (*index > len) {
+    if (*index >= len) {
         Serial.println("\nBAD BYTE SEQUENCE");
         return false;
     }
+    *val = data[*index];
+    *index += 1;
     return true;
 }
 
@@ -591,6 +591,7 @@ void print_flex_data(uint8_t* data, uint8_t len)
     uint8_t val8;
     uint16_t val16;
     uint32_t val32;
+    p(F("Printing message of len: %d\n"), len);
     for (int i=0; i+4<len;) { // min 5 bytes for a node message
         node_id = data[i++];
         msg_id = data[i++];
@@ -599,15 +600,19 @@ void print_flex_data(uint8_t* data, uint8_t len)
             node_id, msg_id, record_count);
         for (int j=0; j<record_count; j++) {
             data_type = data[i++];
+            p(F("DATA TYPE: %d\n"), data_type);
             switch(data_type) {
                 case DATA_TYPE_NODE_COLLECTION_LIST :
                     uint8_t node_count;
+                    p("i: %d\n", i);
                     if (!next_8_bit(data, len, &i, &node_count)) break;
                     p(F("COLLECTION_LIST (%d IDs): "), node_count);
+                    p("\nnode_count: %d; i: %d\n", node_count, i);
                     for (int k=0; k<node_count; k++) {
                         if (!next_8_bit(data, len, &i, &val8)) break;
                         p(F("%d "), val8);
                     }
+                    break;
                 case DATA_TYPE_BATTERY_LEVEL :
                     if (!next_8_bit(data, len, &i, &val8)) break;
                     p("BAT: %2.1f; ", val8 / 10.0);
@@ -960,15 +965,16 @@ void _node_handle_flexible_data_message()
         record_count = data[i++];
         p(F("NODE ID: %d; MSG ID: %d; MSG COUNT: %d; MESSAGES:\n"),
             node_id, msg_id, record_count);
+        new_data[new_data_index++] = node_id;
+        new_data[new_data_index++] = msg_id;
+        new_data[new_data_index++] = record_count;
         for (int j=0; j<record_count; j++) {
             data_type = data[i++];
             switch(data_type) {
                 case DATA_TYPE_NODE_COLLECTION_LIST :
+                {
                     uint8_t node_count;
                     if (!next_8_bit(data, len, &i, &node_count)) break;
-                    new_data[new_data_index++] = node_id;
-                    new_data[new_data_index++] = msg_id;
-                    new_data[new_data_index++] = record_count;
                     new_data[new_data_index++] = DATA_TYPE_NODE_COLLECTION_LIST;
                     uint8_t node_count_index = new_data_index++;
                     new_data[node_count_index] = 0;                 
@@ -985,9 +991,31 @@ void _node_handle_flexible_data_message()
                         }
                     }
                     break;
+                }
+                case DATA_TYPE_BATTERY_LEVEL :
+                {
+                    if (!next_8_bit(data, len, &i, &val8)) break;
+                    new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
+                    new_data[new_data_index++] = val8;
+                    break;
+                }
+                case DATA_TYPE_SHARP_GP2Y1010AU0F :
+                {
+                    new_data[new_data_index++] = DATA_TYPE_SHARP_GP2Y1010AU0F;
+                    if (!next_8_bit(data, len, &i, &val8)) break;
+                    new_data[new_data_index++] = val8;
+                    if (!next_8_bit(data, len, &i, &val8)) break;
+                    new_data[new_data_index++] = val8;
+                    break;
+                }
+                default :
+                    Serial.println("UNKNOWN DATA TYPE IN FLEX DATA STREAM");
             }
         }
     }
+    Serial.println("New data before adding self:");
+    print_flex_data(new_data, new_data_index);
+    Serial.println("-----");
     Serial.println("");
     Serial.println("Adding self data to new data\n");
 
@@ -995,7 +1023,7 @@ void _node_handle_flexible_data_message()
     new_data[new_data_index++] = 1; // TODO: proper message id
     uint8_t self_data_record_count_index = new_data_index++;
     new_data[self_data_record_count_index] = 0;
-    for (int i=0; i<historical_data_index*sizeof(Data); i++) {
+    for (int i=0; i<historical_data_index; i++) {
         p("Adding new data record: %d\n", historical_data[i].id);
         new_data[new_data_index++] = historical_data[i].type;
         new_data[new_data_index++] = historical_data[i].value >> 8;
