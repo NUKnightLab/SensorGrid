@@ -1046,7 +1046,7 @@ void _node_handle_flexible_data_message()
     uint8_t self_data_record_count_index = new_data_index++;
     new_data[self_data_record_count_index] = 0;
 
-    uint8_t bat = round(batteryLevel() * 10.0);
+    uint8_t bat = (uint8_t)(roundf(batteryLevel() * 10));
     if (bat != last_battery_level) {
         new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
         new_data[new_data_index++] = bat;
