@@ -649,8 +649,8 @@ void print_flex_data(uint8_t* data, uint8_t len)
                 //    p("LON: %8.5f; ", (int32_t)val32 / 100000.0);
                 //    break;
                 case DATA_TYPE_SHARP_GP2Y1010AU0F :
-                    if (!next_8_bit(data, len, &i, &val8)) break;
-                    p("DUST: %d; ", val8);
+                    if (!next_16_bit(data, len, &i, &val16)) break;
+                    p("DUST: %d; ", val16);
                     //if (!next_16_bit(data, len, &i, &val16)) break;
                     //p("TIMESTAMP: %d; ", val16);
                     break;
@@ -761,8 +761,8 @@ void _collector_handle_flexible_data_message()
                     Serial.println("");
                     break;
                 case DATA_TYPE_BATTERY_LEVEL :
-                    if (!next_16_bit(data, len, &i, &val16)) break;
-                    p("BAT: %2.1f; ", val16 / 10.0);
+                    if (!next_8_bit(data, len, &i, &val8)) break;
+                    p("BAT: %2.1f; ", val8 / 10.0);
                     break;
                 case DATA_TYPE_SHARP_GP2Y1010AU0F :
                     if (!next_16_bit(data, len, &i, &val16)) break;
@@ -1017,10 +1017,9 @@ void _node_handle_flexible_data_message()
                 }
                 case DATA_TYPE_BATTERY_LEVEL :
                 {
-                    if (!next_16_bit(data, len, &i, &val16)) break;
+                    if (!next_8_bit(data, len, &i, &val8)) break;
                     new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
-                    new_data[new_data_index++] = val16 >> 8;
-                    new_data[new_data_index++] = val16 & 0xff;
+                    new_data[new_data_index++] = val8;
                     break;
                 }
                 case DATA_TYPE_SHARP_GP2Y1010AU0F :
