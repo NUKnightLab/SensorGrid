@@ -1050,6 +1050,7 @@ void _node_handle_flexible_data_message()
     if (bat != last_battery_level) {
         new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
         new_data[new_data_index++] = bat;
+        new_data[self_data_record_count_index]++;
         last_battery_level = bat;
     }
     
