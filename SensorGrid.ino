@@ -137,7 +137,6 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
         Serial.print("SANITY check of flex data bytes: ");
         for (int i=0; i<len; i++) p(F("%d "), ((Message*)msg)->flexdata[i]);
     }
-    Serial.println("");
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
     if (millis() < next_listen) {
@@ -216,7 +215,6 @@ uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t fro
     memcpy(msg.flexdata, data, len);
     Serial.print("memcopied flexdata into message: ");
     for (int i=0; i<len; i++) p("%d ", msg.flexdata[i]);
-    Serial.println("");
     uint8_t msg_len = len + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, msg_len, dest);
 }
@@ -549,6 +547,59 @@ void postToAPI(WiFiClient& client, Data* data, uint8_t record_count)
     }
 }
 
+bool next_8_bit(uint8_t* data, int len, int* index, uint8_t* val)
+{
+    *val = data[*index];
+    *index += 1;
+    if (*index > len) {
+        Serial.println("\nBAD BYTE SEQUENCE");
+        return false;
+    }
+    return true;
+}
+
+bool next_16_bit(uint8_t* data, int len, int* index, uint16_t* val)
+{
+    if (*index > len-2) {
+        Serial.println("\nBAD BYTE SEQUENCE: Not enough data for 16-bit value");
+        return false;
+    }
+    *val = (data[*index] << 8) | (data[*index+1] & 0xff);
+    *index += 2;
+    return true;
+}
+
+bool next_32_bit(uint8_t* data, int len, int* index, uint32_t* val)
+{
+    if (*index > len-4) {
+        Serial.println("\nBAD BYTE SEQUENCE: Not enough data for 32-bit value");
+        return false;
+    }
+    *val = (data[*index] << 24)
+         | (data[*index+1] << 16)
+         | (data[*index+2] << 8)
+         | (data[*index+3] & 0xff);
+    *index += 4;
+    return true;
+}
+void send_control_next_activity_time(int16_t timeout)
+{
+    Control control = { .id = ++message_id,
+          .code = CONTROL_NEXT_ACTIVITY_TIME, .from_node = config.node_id, .data = timeout };
+    memcpy(control.nodes, known_nodes, MAX_NODES);
+    Serial.println("Broadcasting next request time");
+    if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
+        Serial.print("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to nodes:");
+        for (int i=0; i<MAX_NODES && control.nodes[i] > 0; i++) {
+            p(F(" %d"), control.nodes[i]);
+        }
+        Serial.println("");
+    } else {
+        Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
+    }
+} /* send_next_aggregate_data_request */
+
+
 void _collector_handle_data_message()
 {
     uint8_t record_count;
@@ -608,10 +659,44 @@ void _collector_handle_flexible_data_message()
     uint8_t* data = ((Message*)recv_buf)->flexdata;
     uint8_t len = ((Message*)recv_buf)->len;
     p(F("Received FLEXIBLE data message from ID: %d; len: %d\n"), from_id, len);
-    for (int i=0; i<len; i++) {
-        p("%d ", data[i]);
+
+    uint8_t node_id;
+    uint8_t msg_id;
+    uint8_t record_count;
+    uint8_t data_type;
+    uint8_t val8;
+    uint16_t val16;
+    uint32_t val32;
+    for (int i=0; i+4<len;) {
+        node_id = data[i++];
+        msg_id = data[i++];
+        record_count = data[i++];
+        printf("NODE ID: %d; MSG ID: %d; MSG COUNT: %d; MESSAGES:\n",
+            node_id, msg_id, record_count);
+        for (int j=0; j<record_count; j++) {
+            data_type = data[i++];
+            switch (data_type) {    
+                case DATA_TYPE_NODE_COLLECTION_LIST :
+                    p(F("UNCOLLECTED NODES: "));
+                    uint8_t node_count;
+                    if (!next_8_bit(data, len, &i, &node_count)) break;
+                    for (int k=0; k<node_count; k++) {
+                        if (!next_8_bit(data, len, &i, &val8)) break;
+                        p(F("%d "), val8);
+                    }
+                    Serial.println("");
+                    break;
+                case DATA_TYPE_SHARP_GP2Y1010AU0F :
+                    if (!next_16_bit(data, len, &i, &val16)) break;
+                    p(F("DUST: %d "), val16);
+                    break;
+            }
+        }
+        Serial.println("");
     }
     Serial.println("");
+    
+        // TODO: post the data to the API and determine if there are more nodes to collect
 
     /*
     uint8_t record_count;
@@ -652,7 +737,6 @@ void _collector_handle_flexible_data_message()
             latest_collected_records[data[i].node_id] = data[i].id;
         }
     }
-    // TODO: post the data to the API and determine if there are more nodes to collect
     if (WiFiPresent) {
         if (WiFi.status() == WL_CONNECTED) {
             while (!client.connected()) {
@@ -828,16 +912,7 @@ void _node_handle_data_message()
     }
 }
 
-bool next_8_bit(uint8_t* data, int len, int* index, uint8_t* val)
-{
-    *val = data[*index];
-    *index += 1;
-    if (*index > len) {
-        Serial.println("BAD BYTE SEQUENCE");
-        return false;
-    }
-    return true;
-}
+
 
 void _node_handle_flexible_data_message()
 {
@@ -857,6 +932,7 @@ void _node_handle_flexible_data_message()
     uint32_t val32;
     uint8_t new_data[240];
     uint8_t new_data_index = 0;
+    uint8_t new_data_len = 0;
     uint8_t next_nodes[100];
     uint8_t next_nodes_index = 0;
     for (int i=0; i+4<len;) {
@@ -877,7 +953,7 @@ void _node_handle_flexible_data_message()
                     new_data[new_data_index++] = record_count;
                     new_data[new_data_index++] = DATA_TYPE_NODE_COLLECTION_LIST;
                     uint8_t node_count_index = new_data_index++;
-                    new_data[node_count_index] = 0;  
+                    new_data[node_count_index] = 0;                 
                     for (int k=0; k<node_count; k++) {
                         uint8_t list_node_id;
                         if (!next_8_bit(data, len, &i, &list_node_id)) break;
@@ -887,6 +963,7 @@ void _node_handle_flexible_data_message()
                         } else {
                             new_data[node_count_index]++;
                             new_data[new_data_index++] = list_node_id;
+                            new_data_len++;
                             next_nodes[next_nodes_index++] = list_node_id;
                         }
                     }
@@ -898,15 +975,22 @@ void _node_handle_flexible_data_message()
     Serial.println("Adding self data to new data\n");
 
     new_data[new_data_index++] = config.node_id;
+    new_data_len++;
     new_data[new_data_index++] = 1; // TODO: proper message id
+    new_data_len++;
     uint8_t self_data_record_count_index = new_data_index++;
     new_data[self_data_record_count_index] = 0;
-    for (int i=0; i<historical_data_index; i++) {
+    new_data_len++;
+    for (int i=0; i<historical_data_index*sizeof(Data); i++) {
         p("Adding new data record: %d\n", historical_data[i].id);
         new_data[new_data_index++] = historical_data[i].type;
+        new_data_len++;
         new_data[new_data_index++] = historical_data[i].value >> 8;
+        new_data_len++;
         new_data[new_data_index++] = historical_data[i].value & 0xff;
+        new_data_len++;
         new_data[self_data_record_count_index]++;
+        new_data_len++;
     }
     /*
     p(F("Received data array of length: %d from ID: %d containing data: {"), record_count, ((Message*)recv_buf)->from_node);
@@ -935,7 +1019,7 @@ void _node_handle_flexible_data_message()
     // TODO: get preferred order
     //get_preferred_routing_order(data, record_count, order);
     p("Routing data to nodes based on this data msg: ");
-    for (int i=0; i<new_data_index; i++) p("%d ", new_data[i]);
+    for (int i=0; i<new_data_len; i++) p("%d ", new_data[i]);
     p("\nRouting to these nodes: ");
     for (int i=0; i<next_nodes_index; i++) p("%d ", next_nodes[i]);
     p("\n-\n");
@@ -948,7 +1032,7 @@ void _node_handle_flexible_data_message()
     */
     /* TODO: not the right max here */
     for (int idx=0; (idx<MAX_DATA_RECORDS) && (next_nodes[idx] > 0) && (!success); idx++) {
-        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, next_nodes[idx], from_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_len, next_nodes[idx], from_id)) {
             p(F("Forwarded data to node: %d\n"), order[idx]);
             success = true;
         } else {
@@ -956,7 +1040,7 @@ void _node_handle_flexible_data_message()
         }
     }
     if (!success) { // send to the collector
-        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, from_id, from_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_len, from_id, from_id)) {
             p(F("Forwarded data to collector node: %d\n"), from_id);
         }
     }
@@ -1079,22 +1163,8 @@ bool send_aggregate_flexible_data_init() {
     }
     return true;
 } /* send_aggregate_flexible_data_init */
-void send_control_next_activity_time(int16_t timeout)
-{
-    Control control = { .id = ++message_id,
-          .code = CONTROL_NEXT_ACTIVITY_TIME, .from_node = config.node_id, .data = timeout };
-    memcpy(control.nodes, known_nodes, MAX_NODES);
-    Serial.println("Broadcasting next request time");
-    if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
-        Serial.print("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to nodes:");
-        for (int i=0; i<MAX_NODES && control.nodes[i] > 0; i++) {
-            p(F(" %d"), control.nodes[i]);
-        }
-        Serial.println("");
-    } else {
-        Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
-    }
-} /* send_next_aggregate_data_request */
+
+
 
 void handle_collector_loop()
 {
