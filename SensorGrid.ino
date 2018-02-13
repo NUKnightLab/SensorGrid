@@ -112,10 +112,15 @@ void remove_known_node_id(uint8_t id) {
 }
 
 void remove_uncollected_node_id(uint8_t id) {
+    p(F("Removing uncollected node: %d\n"), id);
     int dest = 0;
     for (int i=0; i<MAX_NODES; i++) {
         if (uncollected_nodes[i] != id)
             uncollected_nodes[dest++] = uncollected_nodes[i];
+    }
+    p(F("Resulting uncollected nodes: "));
+    for (int i=0; i<MAX_NODES; i++) {
+        p("%d ", uncollected_nodes[i]);
     }
 }
 
@@ -734,11 +739,13 @@ void _collector_handle_flexible_data_message()
     uint8_t val8;
     uint16_t val16;
     uint32_t val32;
-    for (int i=0; i+4<len;) {
+    for (int i=0; i+3<len;) {
         node_id = data[i++];
         msg_id = data[i++];
         record_count = data[i++];
-        remove_uncollected_node_id(node_id);
+        if (node_id != config.node_id) {
+            remove_uncollected_node_id(node_id);
+        }
         for (int j=0; j<record_count; j++) {
             data_type = data[i++];
             switch (data_type) {    
