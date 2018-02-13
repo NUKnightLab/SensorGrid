@@ -458,7 +458,20 @@ void _handle_control_next_activity_time(Control _control, unsigned long receive_
 
 void _handle_control_message(Message* _msg, uint8_t len, uint8_t from, uint8_t dest, unsigned long receive_time)
 {
-    if (_msg->control.from_node == config.node_id) return; // ignore controls originating from self
+    if (_msg->control.from_node == config.node_id) { // don't rebroadcast but do add node IDs from bounced messages
+    
+        if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
+            p(F("Received broadcast control code. Adding known ID: %d\n"), from);
+            add_known_node(from);
+        } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
+            p(F("Received broadcast control code. Adding pending ID: %d\n"), from);
+            add_pending_node(from);
+        }
+        return;
+    }
+
+    /* If control did not originate from self */
+    
     _rebroadcast_control_message(_msg, len, dest);
     Control _control = get_control_from_buffer();
     p(F("Received control message from: %d; Message ID: %d\n"), from, _control.id);
@@ -632,7 +645,7 @@ void print_flex_data(uint8_t* data, uint8_t len)
                     p("DUST: %d; ", val8);
                     //if (!next_16_bit(data, len, &i, &val16)) break;
                     //p("TIMESTAMP: %d; ", val16);
-                    //break;
+                    break;
             }
         }
         Serial.println("\n");
@@ -645,11 +658,7 @@ void send_control_next_activity_time(int16_t timeout)
     memcpy(control.nodes, known_nodes, MAX_NODES);
     Serial.println("Broadcasting next request time");
     if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
-        Serial.print("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to nodes:");
-        for (int i=0; i<MAX_NODES && control.nodes[i] > 0; i++) {
-            p(F(" %d"), control.nodes[i]);
-        }
-        Serial.println("");
+        Serial.println("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to RH_BROADCAST_ADDRESS:");
     } else {
         Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
     }
