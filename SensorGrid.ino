@@ -55,6 +55,7 @@ bool pending_nodes_waiting_broadcast = false;
 static long next_collection_time = 0;
 int16_t last_rssi[MAX_NODES];
 static uint8_t latest_collected_records[MAX_NODES+1] = {0};
+static uint8_t last_battery_level;
 
 /* **** UTILS **** */
 
@@ -1045,6 +1046,14 @@ void _node_handle_flexible_data_message()
     new_data[new_data_index++] = 1; // TODO: proper message id
     uint8_t self_data_record_count_index = new_data_index++;
     new_data[self_data_record_count_index] = 0;
+
+    uint8_t bat = round(batteryLevel() * 10.0);
+    if (bat != last_battery_level) {
+        new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
+        new_data[new_data_index++] = bat;
+        last_battery_level = bat;
+    }
+    
     for (int i=0; i<historical_data_index; i++) {
         p("Adding new data record: %d\n", historical_data[i].id);
         new_data[new_data_index++] = historical_data[i].type;
