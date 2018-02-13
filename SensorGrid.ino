@@ -201,7 +201,7 @@ bool send_data(Data *data, uint8_t array_size, uint8_t dest)
 uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t from_id)
 {
     if (!from_id) from_id = config.node_id;
-    Serial.println("SENDING FLEXIBLE DATA ........");
+    p(F("SENDING FLEXIBLE DATA to ID: %d ........\n"), dest);
     Message msg = {
         .sensorgrid_version = config.sensorgrid_version,
         .network_id = config.network_id,
@@ -262,6 +262,8 @@ void validate_recv_buffer(uint8_t len)
             if (len != sizeof(Control) + MESSAGE_OVERHEAD) {
                 p(F("WARNING: Received message of type CONTROL with incorrect size: %d\n"), len);
             }
+            break;
+        case MESSAGE_TYPE_FLEXIBLE_DATA:
             break;
         default:
             p(F("WARNING: Received message of unknown type: %s\n"), get_message_type(message_type));
@@ -1069,7 +1071,7 @@ void _node_handle_flexible_data_message()
     Serial.println("");
     */
     /* TODO: not the right max here */
-    for (int idx=0; (idx<MAX_DATA_RECORDS) && (next_nodes[idx] > 0) && (!success); idx++) {
+    for (int idx=0; idx<next_nodes_index && !success; idx++) {
         if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, next_nodes[idx], from_id)) {
             p(F("Forwarded data to node: %d\n"), order[idx]);
             success = true;
@@ -1078,6 +1080,7 @@ void _node_handle_flexible_data_message()
         }
     }
     if (!success) { // send to the collector
+        p(F("NOT successful send to next node. Sending to collector: %d\n"), from_id);
         if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, from_id, from_id)) {
             p(F("Forwarded data to collector node: %d\n"), from_id);
         }
