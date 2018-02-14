@@ -119,6 +119,7 @@ typedef struct Message {
     uint8_t sensorgrid_version;
     uint8_t network_id;
     uint8_t from_node;
+    uint32_t timestamp;
     uint8_t message_type;
     uint8_t len;
     union {

@@ -147,6 +147,7 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     p(F("Sending message type: %d"), ((Message*)msg)->message_type);
     p(F("; length: %d\n"), len);
     unsigned long start = millis();
+    ((Message*)msg)->timestamp = rtc.now().unixtime();
     uint8_t err = router->sendtoWait(msg, len, toID);
     if (millis() < next_listen) {
         Serial.println("Listen timeout not expired. Sleeping.");
@@ -182,6 +183,7 @@ uint8_t send_control(Control *control, uint8_t dest)
         .sensorgrid_version = config.sensorgrid_version,
         .network_id = config.network_id,
         .from_node = config.node_id,
+        .timestamp = 0,
         .message_type = MESSAGE_TYPE_CONTROL,
         .len = 1
     };
@@ -222,6 +224,7 @@ uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t fro
         .sensorgrid_version = config.sensorgrid_version,
         .network_id = config.network_id,
         .from_node = from_id,
+        .timestamp = 0,
         .message_type = MESSAGE_TYPE_FLEXIBLE_DATA,
         .len = len,
     };
@@ -303,7 +306,15 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, len, timeout, source, dest, id, flags)) {
             _msg = (Message*)recv_buf;
-             if ( _msg->sensorgrid_version != config.sensorgrid_version ) {
+            if ( _msg->sensorgrid_version == config.sensorgrid_version 
+                    && _msg->network_id == config.network_id && _msg->timestamp > 0) {
+                uint32_t msg_time = DateTime(_msg->timestamp).unixtime();
+                uint32_t rtc_time = rtc.now().unixtime();
+                if (rtc_time - msg_time > 1 || msg_time - rtc_time > 1) { 
+                    rtc.adjust(msg_time);
+                }
+            }
+            if ( _msg->sensorgrid_version != config.sensorgrid_version ) {
                 p(F("WARNING: Received message with wrong firmware version: %d\n"), _msg->sensorgrid_version);
                 return MESSAGE_TYPE_WRONG_VERSION;
             }           
@@ -322,6 +333,14 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
     } else {
         if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
             _msg = (Message*)recv_buf;
+            if ( _msg->sensorgrid_version == config.sensorgrid_version 
+                    && _msg->network_id == config.network_id && _msg->timestamp > 0) {
+                uint32_t msg_time = DateTime(_msg->timestamp).unixtime();
+                uint32_t rtc_time = rtc.now().unixtime();
+                if (rtc_time - msg_time > 1 || msg_time - rtc_time > 1) { 
+                    rtc.adjust(msg_time);
+                }
+            }
             if ( _msg->sensorgrid_version != config.sensorgrid_version ) {
                 p(F("IGNORING: Received message with wrong firmware version: %d\n"), _msg->sensorgrid_version);
                 return MESSAGE_TYPE_WRONG_VERSION;
