@@ -1529,7 +1529,8 @@ static uint32_t getDataByTypeName(char* type)
 
 void setup()
 {
-    //while (!Serial);
+    rtc.begin();
+    while (!Serial);
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);
@@ -1552,7 +1553,6 @@ void setup()
         attachInterrupt(BUTTON_C, cButton_ISR, FALLING);
     }
     
-    rtc.begin();
     radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
     router = new RHMesh(*radio, config.node_id);
     //rf95.setModemConfig(RH_RF95::Bw125Cr48Sf4096);
