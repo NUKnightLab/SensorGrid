@@ -441,7 +441,7 @@ void _rebroadcast_control_message(Message* _msg, uint8_t len, uint8_t dest)
 void _handle_control_add_node(Control _control)
 {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-        Serial.print("Received control code: ADD_NODES. Adding known IDs: ");
+        p(F("Received control code: ADD_NODES. Adding known IDs: "));
         for (int i=0; i<MAX_NODES && _control.nodes[i] != 0; i++) {
             Serial.print(_control.nodes[i]);
             Serial.print(" ");
@@ -449,7 +449,7 @@ void _handle_control_add_node(Control _control)
         }
         Serial.println("");
     } else {
-        Serial.print("Received control code: ADD_NODES. Adding pending IDs: ");
+        p(F("Received control code: ADD_NODES. Adding pending IDs: "));
         for (int i=0; i<MAX_NODES && _control.nodes[i] != 0; i++) {
             Serial.print(_control.nodes[i]);
             Serial.print(" ");
@@ -506,7 +506,7 @@ void _handle_control_message(Message* _msg, uint8_t len, uint8_t from, uint8_t d
     Control _control = get_control_from_buffer();
     p(F("Received control message from: %d; Message ID: %d\n"), from, _control.id);
     if (_control.code == CONTROL_NONE) {
-      Serial.println("Received control code: NONE. Doing nothing");
+      p(F("Received control code: NONE. Doing nothing\n"));
     } else if (_control.code == CONTROL_ADD_NODE) {
         _handle_control_add_node(_control);
     } else if (_control.code == CONTROL_NEXT_ACTIVITY_TIME) {
@@ -636,7 +636,7 @@ void print_flex_data(uint8_t* data, uint8_t len)
     uint8_t val8;
     uint16_t val16;
     uint32_t val32;
-    p(F("Printing message of len: %d\n"), len);
+    p(F("Message len: %d --->>\n"), len);
     for (int i=0; i+2<len;) { // min node msg is 3 bytes: node_id msg_id 0
         node_id = data[i++];
         msg_id = data[i++];
@@ -676,6 +676,7 @@ void print_flex_data(uint8_t* data, uint8_t len)
             }
         }
     }
+    p(F("<<---"));
 }
 void send_control_next_activity_time(int16_t timeout)
 {
