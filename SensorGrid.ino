@@ -772,7 +772,7 @@ void _collector_handle_flexible_data_message()
                     p(F("Uncollected nodes: "));
                     uint8_t node_count;
                     if (!next_8_bit(data, len, &i, &node_count)) break;
-                    if (node_count == 0) Serial.println("NONE");
+                    if (node_count == 0) Serial.print("NONE");
                     for (int k=0; k<node_count; k++) {
                         if (!next_8_bit(data, len, &i, &val8)) break;
                         Serial.print(val8); Serial.print(" ");
