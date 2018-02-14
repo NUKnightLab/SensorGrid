@@ -685,9 +685,9 @@ void send_control_next_activity_time(int16_t timeout)
     memcpy(control.nodes, known_nodes, MAX_NODES);
     p(F("Broadcasting next activity time: %d\n"), timeout);
     if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
-        Serial.println("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to RH_BROADCAST_ADDRESS:");
+        p(F("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to RH_BROADCAST_ADDRESS\n"));
     } else {
-        Serial.println("ERROR: did not successfully broadcast aggregate data collection request");
+        p(F("ERROR: did not successfully broadcast aggregate data collection request\n"));
     }
 } /* send_next_aggregate_data_request */
 
