@@ -25,7 +25,7 @@
  * 
  */
 #define MAX_DATA_RECORDS 39
-#define MAX_NODES 230
+#define MAX_NODES 100
 
 
 
