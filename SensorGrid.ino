@@ -81,6 +81,7 @@ void add_pending_node(uint8_t id)
             return;
         }
     }
+    p(F("Discovered node ID: %d. Adding to pending nodes\n"), id);
     pending_nodes[i] = id;
     pending_nodes_waiting_broadcast = true;
 }
@@ -101,6 +102,7 @@ void add_known_node(uint8_t id)
             return;
         }
     }
+    p(F("Discovered node ID: %d. Adding to known nodes\n"), id);
     known_nodes[i] = id;
 }
 
@@ -473,10 +475,8 @@ void _handle_control_message(Message* _msg, uint8_t len, uint8_t from, uint8_t d
     if (_msg->control.from_node == config.node_id) { // don't rebroadcast but do add node IDs from bounced messages
     
         if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-            p(F("Received broadcast control code. Adding known ID: %d\n"), from);
             add_known_node(from);
         } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
-            p(F("Received broadcast control code. Adding pending ID: %d\n"), from);
             add_pending_node(from);
         }
         return;
