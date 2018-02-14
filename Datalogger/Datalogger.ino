@@ -20,13 +20,15 @@
 
 #include <SPI.h>
 #include <SD.h>
+#include "RTClib.h"
+#include <Wire.h>
 
 #define DEFAULT_SD_CHIP_SELECT_PIN 4//10
 #define ALTERNATE_RFM95_CS 10 //19
 
 /* sensor configs */
 //log out clock time -> use GPS
-uint8_t SHARP_GP2Y1010AU0F_DUST_PIN = A5;
+uint8_t SHARP_GP2Y1010AU0F_DUST_PIN = A3;
 
 /* real time clock */
 RTC_PCF8523 rtc;
@@ -67,7 +69,6 @@ void setup() {
   }
 
   /* RTC Clock */
-  /*
     if (!rtc.begin()) {
     Serial.println("Error: Failed to initialize RTC");
     }
@@ -78,8 +79,7 @@ void setup() {
       Serial.print(F(__DATE__));
       Serial.print('/');
       Serial.println(F(__TIME__));
-    } */
-
+    }  
 }
 
 void loop() {
@@ -94,9 +94,8 @@ void loop() {
     Serial.println("error opening datalog.txt");
   }
 
-  /* RTC currently not supported */
-  //DateTime now = rtc.now();
-  /*
+
+  DateTime now = rtc.now();
     Serial.print(now.year(), DEC);
     Serial.print('/');
     Serial.print(now.month(), DEC);
@@ -110,7 +109,7 @@ void loop() {
     Serial.print(now.minute(), DEC);
     Serial.print(':');
     Serial.print(now.second(), DEC);
-    Serial.println();
+    Serial.println(); 
 
 
     dataFile.print(now.year(), DEC);
@@ -126,14 +125,8 @@ void loop() {
     dataFile.print(now.minute(), DEC);
     dataFile.print(':');
     dataFile.print(now.second(), DEC);
-    dataFile.println(); */
+    dataFile.println();  
 
-
-  // make a string for assembling the data to log:
-  //SHARP_GP2Y1010AU0F::read;
-  //String dataString = "";
-  //int sensor = analogRead(SHARP_GP2Y1010AU0F_DUST_PIN);
-  //dataString += String(sensor);
   static int dust_sense_vo_measured = 0;
   static float dust_sense_calc_voltage = 0;
   static float dust_density = 0;
