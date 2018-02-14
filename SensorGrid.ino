@@ -676,7 +676,7 @@ void print_flex_data(uint8_t* data, uint8_t len)
             }
         }
     }
-    p(F("<<---"));
+    p(F("<<---\n"));
 }
 void send_control_next_activity_time(int16_t timeout)
 {
