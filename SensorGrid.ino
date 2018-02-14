@@ -56,6 +56,8 @@ static long next_collection_time = 0;
 int16_t last_rssi[MAX_NODES];
 static uint8_t latest_collected_records[MAX_NODES+1] = {0};
 static uint8_t last_battery_level;
+int COLLECTION_DELAY = 2000;
+
 
 /* **** UTILS **** */
 
@@ -115,16 +117,16 @@ void remove_known_node_id(uint8_t id) {
 }
 
 void remove_uncollected_node_id(uint8_t id) {
-    p(F("Removing uncollected node: %d\n"), id);
+    //p(F("Removing uncollected node: %d\n"), id);
     int dest = 0;
     for (int i=0; i<MAX_NODES; i++) {
         if (uncollected_nodes[i] != id)
             uncollected_nodes[dest++] = uncollected_nodes[i];
     }
-    p(F("Resulting uncollected nodes: "));
-    for (int i=0; i<MAX_NODES; i++) {
-        p("%d ", uncollected_nodes[i]);
-    }
+    //p(F("Resulting uncollected nodes: "));
+    //for (int i=0; i<MAX_NODES; i++) {
+    //    p("%d ", uncollected_nodes[i]);
+    //}
 }
 
 bool is_pending_nodes()
@@ -627,14 +629,11 @@ void print_flex_data(uint8_t* data, uint8_t len)
             node_id, msg_id, record_count);
         for (int j=0; j<record_count; j++) {
             data_type = data[i++];
-            p(F("DATA TYPE: %d\n"), data_type);
             switch(data_type) {
                 case DATA_TYPE_NODE_COLLECTION_LIST :
                     uint8_t node_count;
-                    p("i: %d\n", i);
                     if (!next_8_bit(data, len, &i, &node_count)) break;
                     p(F("COLLECTION_LIST (%d IDs): "), node_count);
-                    p("\nnode_count: %d; i: %d\n", node_count, i);
                     for (int k=0; k<node_count; k++) {
                         if (!next_8_bit(data, len, &i, &val8)) break;
                         p(F("%d "), val8);
@@ -702,7 +701,6 @@ void _collector_handle_data_message()
     if (uncollected_nodes[0] > 0) {
         next_collection_time = 0;
     } else {
-        int COLLECTION_DELAY = 2000;
         int16_t COLLECTION_PERIOD = 30000;
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
@@ -766,25 +764,21 @@ void _collector_handle_flexible_data_message()
                     break;
                 case DATA_TYPE_BATTERY_LEVEL :
                     if (!next_8_bit(data, len, &i, &val8)) break;
-                    p("BAT: %2.1f; ", val8 / 10.0);
+                    //p("BAT: %2.1f; ", val8 / 10.0);
                     break;
                 case DATA_TYPE_SHARP_GP2Y1010AU0F :
                     if (!next_16_bit(data, len, &i, &val16)) break;
-                    p(F("DUST: %d "), val16);
+                    //p(F("DUST: %d "), val16);
                     break;
                 default :
                     Serial.println("UNKNOWN DATA TYPE IN FLEX DATA STREAM");
             }
         }
-        Serial.println("");
     }
-    Serial.println("");
-
     if (uncollected_nodes[0] > 0) {
         p(F("uncollected_nodes[0] is %d. Collecting immediately\n"), uncollected_nodes[0]);
         next_collection_time = 0;
     } else {
-        int COLLECTION_DELAY = 2000;
         int16_t COLLECTION_PERIOD = 30000;
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
@@ -1245,7 +1239,7 @@ void handle_collector_loop()
             if (known_nodes[0] == 0) {
                 Serial.println("No known nodes. Sending next activity signal for 10 sec");
                 send_control_next_activity_time(10000);
-                next_collection_time = millis() + 10000;
+                next_collection_time = millis() + 10000 + COLLECTION_DELAY;
                 return;
             }
             if (!collector_waiting_for_data) {
