@@ -144,8 +144,7 @@ void clear_pending_nodes() {
 
 uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
-    p(F("Sending message type: %d"), ((Message*)msg)->message_type);
-    p(F("; length: %d\n"), len);
+    p(F("Sending message type: %d; length: %d\n"), ((Message*)msg)->message_type, len);
     unsigned long start = millis();
     ((Message*)msg)->timestamp = rtc.now().unixtime();
     uint8_t err = router->sendtoWait(msg, len, toID);
