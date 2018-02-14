@@ -1268,7 +1268,7 @@ void handle_collector_loop()
             }
             //if (send_aggregate_data_init()) {
             if (send_aggregate_flexible_data_init()) {
-                p(F("Cycle: %d\n"), cycle++);
+                p(F("\n-------\nCycle: %d\n"), cycle++);
                 next_collection_time = millis() + DATA_COLLECTION_TIMEOUT; // this is a timeout in case data does not come back from the network
             }
     }
