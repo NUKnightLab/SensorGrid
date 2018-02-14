@@ -18,9 +18,8 @@ static int _freeRam()
 
 
 #include <stdarg.h>
-void p(char *fmt, ... ){
-        Serial.print(rtc.now().unixtime());
-        Serial.print(": ");
+
+void output(char *fmt, ... ){
         char buf[128]; // resulting string limited to 128 chars
         va_list args;
         va_start (args, fmt );
@@ -29,19 +28,43 @@ void p(char *fmt, ... ){
         Serial.print(buf);
 }
 
-void p(const __FlashStringHelper *fmt, ... ){
-  Serial.print(rtc.now().unixtime());
-  Serial.print(": ");
-  char buf[128]; // resulting string limited to 128 chars
-  va_list args;
-  va_start (args, fmt);
+void p(char *fmt, ... ){
+    Serial.print(rtc.now().unixtime());
+    Serial.print(": ");
+    char buf[128]; // resulting string limited to 128 chars
+    va_list args;
+    va_start (args, fmt );
+    vsnprintf(buf, 128, fmt, args);
+    va_end (args);
+    Serial.print(buf);
+}
+
+void output(const __FlashStringHelper *fmt, ... ){
+    char buf[128]; // resulting string limited to 128 chars
+    va_list args;
+    va_start (args, fmt);
 #ifdef __AVR__
-  vsnprintf_P(buf, sizeof(buf), (const char *)fmt, args); // progmem for AVR
+    vsnprintf_P(buf, sizeof(buf), (const char *)fmt, args); // progmem for AVR
 #else
-  vsnprintf(buf, sizeof(buf), (const char *)fmt, args); // for the rest of the world
+    vsnprintf(buf, sizeof(buf), (const char *)fmt, args); // for the rest of the world
 #endif
-  va_end(args);
-  Serial.print(buf);
+    va_end(args);
+    Serial.print(buf);
+}
+
+void p(const __FlashStringHelper *fmt, ... ){
+    Serial.print(rtc.now().unixtime());
+    Serial.print(": ");
+    char buf[128]; // resulting string limited to 128 chars
+    va_list args;
+    va_start (args, fmt);
+#ifdef __AVR__
+    vsnprintf_P(buf, sizeof(buf), (const char *)fmt, args); // progmem for AVR
+#else
+    vsnprintf(buf, sizeof(buf), (const char *)fmt, args); // for the rest of the world
+#endif
+    va_end(args);
+    Serial.print(buf);
 }
 
 void fail(enum ERRORS err)

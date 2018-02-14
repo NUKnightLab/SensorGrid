@@ -228,9 +228,6 @@ uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t fro
         .len = len,
     };
     memcpy(msg.flexdata, data, len);
-    Serial.print("memcopied flexdata into message: ");
-    for (int i=0; i<len; i++) p("%d ", msg.flexdata[i]);
-    Serial.println("");
     uint8_t msg_len = len + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, msg_len, dest);
 }
@@ -443,8 +440,7 @@ void _handle_control_add_node(Control _control)
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         p(F("Received control code: ADD_NODES. Adding known IDs: "));
         for (int i=0; i<MAX_NODES && _control.nodes[i] != 0; i++) {
-            Serial.print(_control.nodes[i]);
-            Serial.print(" ");
+            output(F("%d "), _control.nodes[i]);
             add_known_node(_control.nodes[i]);
         }
         Serial.println("");
@@ -641,23 +637,24 @@ void print_flex_data(uint8_t* data, uint8_t len)
         node_id = data[i++];
         msg_id = data[i++];
         record_count = data[i++];
-        p("NODE ID: %d; MSG ID: %d; MSG COUNT: %d; MESSAGES:\n",
+        p("NODE_ID: %d; MSG_ID: %d; MSG_COUNT: %d;",
             node_id, msg_id, record_count);
         for (int j=0; j<record_count; j++) {
             data_type = data[i++];
+            output(F(" ["));
             switch(data_type) {
                 case DATA_TYPE_NODE_COLLECTION_LIST :
                     uint8_t node_count;
                     if (!next_8_bit(data, len, &i, &node_count)) break;
-                    p(F("COLLECTION_LIST (%d IDs): "), node_count);
+                    output(F("COLLECTION_LIST (%d IDs): "), node_count);
                     for (int k=0; k<node_count; k++) {
                         if (!next_8_bit(data, len, &i, &val8)) break;
-                        p(F("%d "), val8);
+                        output(F("%d "), val8);
                     }
                     break;
                 case DATA_TYPE_BATTERY_LEVEL :
                     if (!next_8_bit(data, len, &i, &val8)) break;
-                    p("BAT: %2.1f; ", val8 / 10.0);
+                    output("BAT: %2.1f; ", val8 / 10.0);
                     break;
                 //case GPS :
                 //    if (!next_8_bit(data, len, &i, &val8)) break;
@@ -665,16 +662,17 @@ void print_flex_data(uint8_t* data, uint8_t len)
                 //    if (!next_32_bit(data, len, &i, &val32)) break;
                 //    p("LAT: %8.5f; ", (int32_t)val32 / 100000.0);
                 //    if (!next_32_bit(example, len, &i, &val32)) break;
-                //    p("LON: %8.5f; ", (int32_t)val32 / 100000.0);
+                //    p("LON: %8.5f; ", (int32_t)val32 / 10`0000.0);
                 //    break;
                 case DATA_TYPE_SHARP_GP2Y1010AU0F :
                     if (!next_16_bit(data, len, &i, &val16)) break;
-                    p("DUST: %d; ", val16);
-                    //if (!next_16_bit(data, len, &i, &val16)) break;
-                    //p("TIMESTAMP: %d; ", val16);
+                    output("DUST: %d; ", val16);
+                    //output("TIMESTAMP: %d; ", val16);
                     break;
             }
+            output(F("] "));
         }
+        Serial.println("");
     }
     p(F("<<---\n"));
 }
@@ -1105,10 +1103,10 @@ void _node_handle_flexible_data_message()
     // TODO: get preferred order
     //get_preferred_routing_order(data, record_count, order);
     p("Routing data to nodes based on this data msg: ");
-    for (int i=0; i<new_data_index; i++) p("%d ", new_data[i]);
+    for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     p("\nRouting to these nodes: ");
-    for (int i=0; i<next_nodes_index; i++) p("%d ", next_nodes[i]);
-    p("\n-\n");
+    for (int i=0; i<next_nodes_index; i++) output(F("%d "), next_nodes[i]);
+    p(F("\n-\n"));
     /*
     Serial.print("SANITY CHECK on node routing order: ");
     for (int i=0; i<5; i++) {

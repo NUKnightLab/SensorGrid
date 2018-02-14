@@ -155,5 +155,7 @@ int freeRam();
 void aButton_ISR();
 void p(char *fmt, ...);
 void p(const __FlashStringHelper *fmt, ... );
+void output(char *fmt, ...);
+void output(const __FlashStringHelper *fmt, ... );
 
 #endif
