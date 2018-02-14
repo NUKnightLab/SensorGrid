@@ -57,6 +57,8 @@ int16_t last_rssi[MAX_NODES];
 static uint8_t latest_collected_records[MAX_NODES+1] = {0};
 static uint8_t last_battery_level;
 int COLLECTION_DELAY = 2000;
+int16_t COLLECTION_PERIOD = 30000;
+
 
 
 /* **** UTILS **** */
@@ -662,7 +664,7 @@ void print_flex_data(uint8_t* data, uint8_t len)
                 //    if (!next_32_bit(data, len, &i, &val32)) break;
                 //    p("LAT: %8.5f; ", (int32_t)val32 / 100000.0);
                 //    if (!next_32_bit(example, len, &i, &val32)) break;
-                //    p("LON: %8.5f; ", (int32_t)val32 / 10`0000.0);
+                //    p("LON: %8.5f; ", (int32_t)val32 / 100000.0);
                 //    break;
                 case DATA_TYPE_SHARP_GP2Y1010AU0F :
                     if (!next_16_bit(data, len, &i, &val16)) break;
@@ -683,7 +685,8 @@ void send_control_next_activity_time(int16_t timeout)
     memcpy(control.nodes, known_nodes, MAX_NODES);
     p(F("Broadcasting next activity time: %d\n"), timeout);
     if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
-        p(F("Sent control: CONTROL_NEXT_ACTIVITY_TIME to RH_BROADCAST_ADDRESS\n"));
+        p(F("Sent control: CONTROL_NEXT_ACTIVITY_TIME to RH_BROADCAST_ADDRESS (NEXT COLLECTION: "));
+        Serial.print(rtc.now().unixtime() + timeout/1000); Serial.println(")");
     } else {
         p(F("ERROR: did not successfully broadcast aggregate data collection request\n"));
     }
@@ -715,7 +718,6 @@ void _collector_handle_data_message()
     if (uncollected_nodes[0] > 0) {
         next_collection_time = 0;
     } else {
-        int16_t COLLECTION_PERIOD = 30000;
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
     }
@@ -794,10 +796,8 @@ void _collector_handle_flexible_data_message()
         p(F("uncollected_nodes[0] is %d. Collecting immediately\n"), uncollected_nodes[0]);
         next_collection_time = 0;
     } else {
-        int16_t COLLECTION_PERIOD = 30000;
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
-        p(F("NEXT COLLECTION TIME: %d; CURRENT TIME: %d\n"), next_collection_time, millis());
     }
     
         // TODO: post the data to the API and determine if there are more nodes to collect
@@ -1219,21 +1219,21 @@ bool send_aggregate_flexible_data_init() {
     data[2] = 1; // num records
     data[3] = DATA_TYPE_NODE_COLLECTION_LIST;
     data[4] = 0; // count the number of nodes into here
-    Serial.print("UNCOLLECTED NODES TO BE COLLECTED: ");
+    p(F("Uncollected nodes: "));
     uint8_t MAX_COLLECT_NODES = 100; // TODO: what is best number here?
     for (int i=5; i<MAX_COLLECT_NODES && uncollected_nodes[i-5] != 0; i++) {
         data[i] = uncollected_nodes[i-5];
-        p(F("%d "), uncollected_nodes[i-5]);
+        output(F("%d "), uncollected_nodes[i-5]);
         data[4]++;
     }
     Serial.println("");
     uint8_t dest = get_best_next_node(data+5, data[4]);
     if (!dest) {
-        Serial.println("No remaining nodes in current data record");
+        p(F("No remaining nodes in current data record\n"));
     } if (RH_ROUTER_ERROR_NONE == send_flexible_data(data, data[4] + 5, dest, config.node_id)) {
         p(F("-- Sent data: AGGREGATE_DATA_INIT to ID: %d\n"), dest);
     } else {
-        Serial.println("ERROR: did not successfully send aggregate data collection request");
+        p(F("ERROR: did not successfully send aggregate data collection request\n"));
         p(F("Removing node ID: %d from known_nodes\n"), dest);
         remove_known_node_id(dest);
         remove_uncollected_node_id(dest); // TODO: should there be some fallback or retry?
@@ -1259,9 +1259,9 @@ void handle_collector_loop()
             }
             if (!collector_waiting_for_data) {
                 memcpy(uncollected_nodes, known_nodes, MAX_NODES);
-                Serial.print("Starting collection of known nodes: ");
+                p(F("Starting collection of known nodes: "));
                 for (int i=0; i<MAX_NODES && known_nodes[i]>0; i++) {
-                    p(F(" %d"), known_nodes[i]);
+                    output(F(" %d"), known_nodes[i]);
                 }
                 Serial.println("");
             }
