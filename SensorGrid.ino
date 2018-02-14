@@ -668,7 +668,7 @@ void send_control_next_activity_time(int16_t timeout)
     Control control = { .id = ++message_id,
           .code = CONTROL_NEXT_ACTIVITY_TIME, .from_node = config.node_id, .data = timeout };
     memcpy(control.nodes, known_nodes, MAX_NODES);
-    Serial.println("Broadcasting next request time");
+    p(F("Broadcasting next activity time: %d\n"), timeout);
     if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
         Serial.println("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to RH_BROADCAST_ADDRESS:");
     } else {
