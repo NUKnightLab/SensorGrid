@@ -1106,6 +1106,7 @@ void _node_handle_flexible_data_message()
     */
     /* TODO: not the right max here */
     for (int idx=0; idx<next_nodes_index && !success; idx++) {
+        p(F("Forwarding data to node: %d\n"), next_nodes[idx]);
         if (RH_ROUTER_ERROR_NONE == send_flexible_data(new_data, new_data_index, next_nodes[idx], from_id)) {
             p(F("Forwarded data to node: %d\n"), order[idx]);
             success = true;
