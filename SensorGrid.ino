@@ -323,7 +323,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
                 return MESSAGE_TYPE_WRONG_NETWORK;
             }
             validate_recv_buffer(*len);
-            p(F("Received buffered message. len: %d; type: %s"), *len, get_message_type(_msg->message_type));
+            p(F("Received buffered message. len: %d; type: %s\n"), *len, get_message_type(_msg->message_type));
             p(F("; from: %d; rssi: %d\n"), *source, radio->lastRssi());
             last_rssi[*source] = radio->lastRssi();
             return _msg->message_type;
@@ -350,7 +350,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
                 return MESSAGE_TYPE_WRONG_NETWORK;
             }
             validate_recv_buffer(*len);
-            p(F("Received buffered message. len: %d; type: %s"), *len, get_message_type(_msg->message_type));
+            p(F("Received buffered message. len: %d; type: %s\n"), *len, get_message_type(_msg->message_type));
             p(F("; from: %d; rssi: %d\n"), *source, radio->lastRssi());
             last_rssi[*source] = radio->lastRssi();
             return _msg->message_type;
