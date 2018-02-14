@@ -769,12 +769,13 @@ void _collector_handle_flexible_data_message()
             data_type = data[i++];
             switch (data_type) {    
                 case DATA_TYPE_NODE_COLLECTION_LIST :
-                    p(F("UNCOLLECTED NODES: "));
+                    p(F("Uncollected nodes: "));
                     uint8_t node_count;
                     if (!next_8_bit(data, len, &i, &node_count)) break;
+                    if (node_count == 0) Serial.println("NONE");
                     for (int k=0; k<node_count; k++) {
                         if (!next_8_bit(data, len, &i, &val8)) break;
-                        p(F("%d "), val8);
+                        Serial.print(val8); Serial.print(" ");
                     }
                     Serial.println("");
                     break;
