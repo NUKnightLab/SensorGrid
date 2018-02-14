@@ -1254,7 +1254,7 @@ void handle_collector_loop()
     static int cycle = 0;
     if (millis() > next_collection_time) {
             if (known_nodes[0] == 0) {
-                Serial.println("No known nodes. Sending next activity signal for 10 sec");
+                p(F("No known nodes. Sending next activity signal for 10 sec\n"));
                 send_control_next_activity_time(10000);
                 next_collection_time = millis() + 10000 + COLLECTION_DELAY;
                 return;
