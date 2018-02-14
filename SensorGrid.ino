@@ -685,7 +685,7 @@ void send_control_next_activity_time(int16_t timeout)
     memcpy(control.nodes, known_nodes, MAX_NODES);
     p(F("Broadcasting next activity time: %d\n"), timeout);
     if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
-        p(F("-- Sent control: CONTROL_NEXT_ACTIVITY_TIME to RH_BROADCAST_ADDRESS\n"));
+        p(F("Sent control: CONTROL_NEXT_ACTIVITY_TIME to RH_BROADCAST_ADDRESS\n"));
     } else {
         p(F("ERROR: did not successfully broadcast aggregate data collection request\n"));
     }
@@ -798,7 +798,7 @@ void _collector_handle_flexible_data_message()
         int16_t COLLECTION_PERIOD = 30000;
         send_control_next_activity_time(COLLECTION_PERIOD);
         next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
-        p(F("--- NEXT COLLECTION TIME: %d; CURRENT TIME: %d\n"), next_collection_time, millis());
+        p(F("NEXT COLLECTION TIME: %d; CURRENT TIME: %d\n"), next_collection_time, millis());
     }
     
         // TODO: post the data to the API and determine if there are more nodes to collect
