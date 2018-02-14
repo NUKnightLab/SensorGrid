@@ -1529,7 +1529,7 @@ static uint32_t getDataByTypeName(char* type)
 
 void setup()
 {
-    while (!Serial);
+    //while (!Serial);
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);
