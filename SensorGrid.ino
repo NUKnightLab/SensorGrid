@@ -186,6 +186,7 @@ uint8_t send_control(Control *control, uint8_t dest)
     return send_message((uint8_t*)&msg, len, dest);
 }
 
+/*
 uint8_t send_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)
 {
     if (!from_id) from_id = config.node_id;
@@ -200,11 +201,14 @@ uint8_t send_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)
     uint8_t len = sizeof(Data)*array_size + MESSAGE_OVERHEAD;
     return send_message((uint8_t*)&msg, len, dest);
 }
+*/
 
+/*
 bool send_data(Data *data, uint8_t array_size, uint8_t dest)
 {
     return send_data(data, array_size, dest, 0);
 }
+*/
 
 uint8_t send_flexible_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t from_id)
 {
@@ -914,6 +918,7 @@ void get_preferred_routing_order(Data* data, uint8_t num_data_records, uint8_t* 
     memcpy(order, first_pref, MAX_DATA_RECORDS);
 }
 
+/*
 void _node_handle_data_message()
 {
     uint8_t from_id = ((Message*)recv_buf)->from_node;
@@ -939,7 +944,7 @@ void _node_handle_data_message()
         Serial.println("");
     }
     set_node_data(data, &record_count);
-    /* TODO: set a flag in outgoing message to indicate if there are more records to collect from this node */
+    // TODO: set a flag in outgoing message to indicate if there are more records to collect from this node
     bool success = false;
     uint8_t order[MAX_DATA_RECORDS] = {0};
     get_preferred_routing_order(data, record_count, order);
@@ -962,6 +967,7 @@ void _node_handle_data_message()
         }
     }
 }
+*/
 
 void _node_handle_flexible_data_message()
 {
@@ -1050,7 +1056,6 @@ void _node_handle_flexible_data_message()
     if (bat != last_battery_level) {
         new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
         new_data[new_data_index++] = bat;
-        new_data[self_data_record_count_index]++;
         last_battery_level = bat;
     }
     
@@ -1132,9 +1137,14 @@ void check_incoming_message()
         _handle_control_message(_msg, len, from, dest, receive_time);
     } else if (msg_type == MESSAGE_TYPE_DATA) {
         if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-            _collector_handle_data_message();
+            //_collector_handle_data_message();
+            Serial.println("WARNING: got old data type");
+            while(1);
         } else {
-            _node_handle_data_message();
+            //_node_handle_data_message();
+            Serial.println("WARNING: got old data type");
+            while(1);
+
         }
     } else if (msg_type == MESSAGE_TYPE_FLEXIBLE_DATA) {
         if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
@@ -1156,6 +1166,7 @@ void check_incoming_message()
 
 /* **** TEST SPECIFIC FUNCTIONS **** */
 
+/*
 bool send_aggregate_data_init() {
 
     if (uncollected_nodes[0] == 0) return false;
@@ -1185,7 +1196,7 @@ bool send_aggregate_data_init() {
         return send_aggregate_data_init();
     }
     return true;
-} /* send_aggregate_data_init */
+} */ /* send_aggregate_data_init */
 
 
 bool send_aggregate_flexible_data_init() {
@@ -1217,7 +1228,7 @@ bool send_aggregate_flexible_data_init() {
         remove_known_node_id(dest);
         remove_uncollected_node_id(dest); // TODO: should there be some fallback or retry?
         p(F("** WARNING:: Node appears to be offline: %d\n"), dest);
-        return send_aggregate_data_init();
+        return send_aggregate_flexible_data_init();
     }
     return true;
 } /* send_aggregate_flexible_data_init */
@@ -1504,7 +1515,7 @@ static uint32_t getDataByTypeName(char* type)
 
 void setup()
 {
-    //while (!Serial);
+    while (!Serial);
     check_radiohead_version();
     loadConfig();
     p(F("Node ID: %d\n"), config.node_id);
