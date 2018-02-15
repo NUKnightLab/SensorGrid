@@ -48,7 +48,8 @@ uint8_t received_broadcast_control_messages[MAX_NODES];
 
 /* Collection state */
 uint8_t collector_id = 0;
-uint8_t known_nodes[MAX_NODES];
+//uint8_t known_nodes[MAX_NODES];
+uint8_t known_nodes[] = { 2, 4 };
 uint8_t uncollected_nodes[MAX_NODES];
 uint8_t pending_nodes[MAX_NODES];
 bool pending_nodes_waiting_broadcast = false;
@@ -1235,8 +1236,11 @@ bool send_aggregate_flexible_data_init() {
     } else {
         p(F("ERROR: did not successfully send aggregate data collection request\n"));
         p(F("Removing node ID: %d from known_nodes\n"), dest);
+        /** TODO: RH's reliable data message does not seem so reliable. Thus we cannot remove nodes
+         *  when message delivery "fails". Should we even be doing auto-discovery at all?
         remove_known_node_id(dest);
         remove_uncollected_node_id(dest); // TODO: should there be some fallback or retry?
+        */
         p(F("** WARNING:: Node appears to be offline: %d\n"), dest);
         return send_aggregate_flexible_data_init();
     }
