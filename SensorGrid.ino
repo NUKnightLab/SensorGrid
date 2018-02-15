@@ -476,13 +476,16 @@ void _handle_control_next_activity_time(Control _control, unsigned long receive_
                 self_in_list = true;
             }
         }
+
+        /*
         p(F("Self in control list: %d\n"), self_in_list);
 
         if (!self_in_list) {
             add_pending_node(config.node_id);
             pending_nodes_waiting_broadcast = true; // we only broadcast when self is not in list. Otherwise simply add to the list when data comes in
         }
- 
+        */
+        
         /*
         if (self_in_list) {
             if (collector_id) {
@@ -506,12 +509,14 @@ void _handle_control_next_activity_time(Control _control, unsigned long receive_
 void _handle_control_message(Message* _msg, uint8_t len, uint8_t from, uint8_t dest, unsigned long receive_time)
 {
     if (_msg->control.from_node == config.node_id) { // don't rebroadcast but do add node IDs from bounced messages
-    
+
+        /*
         if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
             add_known_node(from);
         } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
             add_pending_node(from);
         }
+        */
         return;
     }
 
@@ -1036,18 +1041,20 @@ void _node_handle_flexible_data_message()
                     for (int k=0; k<node_count; k++) {
                         uint8_t list_node_id;
                         if (!next_8_bit(data, len, &i, &list_node_id)) break;
-                        remove_pending_node(list_node_id);
+                        //remove_pending_node(list_node_id);
                         if (list_node_id != config.node_id) {
                             new_data[node_count_index]++;
                             new_data[new_data_index++] = list_node_id;
                             next_nodes[next_nodes_index++] = list_node_id;
                         }
+                        /*
                         p(F("Adding missing pending nodes: "));
                         for (int pnode=0; pnode<MAX_NODES && pending_nodes[pnode]>0; pnode++) {
                             output(F("%d "), pending_nodes[pnode]);
                             next_nodes[next_nodes_index++] = pending_nodes[pnode];
                         }
                         clear_pending_nodes();
+                        */
                     }
                     break;
                 }
@@ -1258,7 +1265,7 @@ bool send_aggregate_flexible_data_init() {
         p(F("-- Sent data: AGGREGATE_DATA_INIT to ID: %d\n"), dest);
     } else {
         p(F("ERROR: did not successfully send aggregate data collection request\n"));
-        p(F("Removing node ID: %d from known_nodes\n"), dest);
+        //p(F("Removing node ID: %d from known_nodes\n"), dest);
         /** TODO: RH's reliable data message does not seem so reliable. Thus we cannot remove nodes
          *  when message delivery "fails". Should we even be doing auto-discovery at all?
         remove_known_node_id(dest);
@@ -1278,12 +1285,13 @@ void handle_collector_loop()
     bool collector_waiting_for_data = uncollected_nodes[0] > 0;
     static int cycle = 0;
     if (millis() > next_collection_time) {
+            /*
             if (known_nodes[0] == 0) {
                 p(F("No known nodes. Sending next activity signal for 10 sec\n"));
                 send_control_next_activity_time(10000);
                 next_collection_time = millis() + 10000 + COLLECTION_DELAY;
                 return;
-            }
+            } */
             if (!collector_waiting_for_data) {
                 memcpy(uncollected_nodes, known_nodes, MAX_NODES);
                 p(F("Starting collection of known nodes: "));
@@ -1620,7 +1628,7 @@ void loop()
         check_incoming_message();
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         if (millis() >= next_listen) {
-            check_collection_state();
+            //check_collection_state();
             check_incoming_message();
         }
         if (config.SHARP_GP2Y1010AU0F_DUST_PIN && config.SHARP_GP2Y1010AU0F_DUST_PERIOD) {
