@@ -58,6 +58,7 @@ static uint8_t latest_collected_records[MAX_NODES+1] = {0};
 static uint8_t last_battery_level;
 int COLLECTION_DELAY = 2000;
 int16_t COLLECTION_PERIOD = 30000;
+bool listening = false;
 
 
 
@@ -301,8 +302,10 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
     }
     Message* _msg;
     lock_recv_buffer(); // lock to be released by calling client
+    analogWrite(LED, HIGH);
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, len, timeout, source, dest, id, flags)) {
+            analogWrite(LED, LOW);
             _msg = (Message*)recv_buf;
             if ( _msg->sensorgrid_version == config.sensorgrid_version 
                     && _msg->network_id == config.network_id && _msg->timestamp > 0) {
@@ -325,10 +328,12 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             last_rssi[*source] = radio->lastRssi();
             return _msg->message_type;
         } else {
+            analogWrite(LED, LOW);
             return MESSAGE_TYPE_NO_MESSAGE;
         }
     } else {
         if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
+            analogWrite(LED, LOW);
             _msg = (Message*)recv_buf;
             if ( _msg->sensorgrid_version == config.sensorgrid_version 
                     && _msg->network_id == config.network_id && _msg->timestamp > 0) {
@@ -351,6 +356,7 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             last_rssi[*source] = radio->lastRssi();
             return _msg->message_type;
         } else {
+            analogWrite(LED, LOW);
             return MESSAGE_TYPE_NO_MESSAGE;
         }
     }
@@ -492,6 +498,7 @@ void _handle_control_next_activity_time(Control _control, unsigned long receive_
         } */
         p(F("Received control code: NEXT_ACTIVITY_TIME. Sleeping for: %d\n"), _control.data - (millis() - receive_time));
         next_listen = receive_time + _control.data;
+        listening = false;
     }
 }
 
@@ -1083,7 +1090,6 @@ void _node_handle_flexible_data_message()
     }
     
     for (int i=0; i<historical_data_index; i++) {
-        p("Adding new data record: %d\n", historical_data[i].id);
         new_data[new_data_index++] = historical_data[i].type;
         new_data[new_data_index++] = historical_data[i].value >> 8;
         new_data[new_data_index++] = historical_data[i].value & 0xff;
@@ -1147,6 +1153,10 @@ void _node_handle_flexible_data_message()
 
 void check_incoming_message()
 {
+    if (!listening) {
+        listening = true;
+        p(F("*** Radio active listen ....\n"));
+    }
     uint8_t from;
     uint8_t dest;
     uint8_t msg_id;
