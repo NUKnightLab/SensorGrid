@@ -49,7 +49,8 @@ uint8_t received_broadcast_control_messages[MAX_NODES];
 /* Collection state */
 uint8_t collector_id = 0;
 //uint8_t known_nodes[MAX_NODES];
-uint8_t known_nodes[] = { 2, 4 };
+uint8_t known_nodes[MAX_NODES] = { 0 };
+
 uint8_t uncollected_nodes[MAX_NODES];
 uint8_t pending_nodes[MAX_NODES];
 bool pending_nodes_waiting_broadcast = false;
@@ -1269,9 +1270,17 @@ bool send_aggregate_flexible_data_init() {
         /** TODO: RH's reliable data message does not seem so reliable. Thus we cannot remove nodes
          *  when message delivery "fails". Should we even be doing auto-discovery at all?
         remove_known_node_id(dest);
-        remove_uncollected_node_id(dest); // TODO: should there be some fallback or retry?
         */
+        remove_uncollected_node_id(dest); // TODO: should there be some fallback or retry?
+                                          // we should do a double-check against known nodes at the
+                                          // end of the cycle since some of these will actually get
+                                          // collected even after delivery failures
         p(F("** WARNING:: Node appears to be offline: %d\n"), dest);
+        p(F("Remaining uncollected nodes: "));
+        for (int i=0; i<MAX_NODES && uncollected_nodes[i]>0; i++) {
+            output("%d ", uncollected_nodes[i]);
+        }
+        Serial.println("");
         return send_aggregate_flexible_data_init();
     }
     return true;
@@ -1303,6 +1312,7 @@ void handle_collector_loop()
             //if (send_aggregate_data_init()) {
             if (send_aggregate_flexible_data_init()) {
                 p(F("\n-------\nCycle: %d\n"), cycle++);
+                send_aggregate_flexible_data_init();
                 next_collection_time = millis() + DATA_COLLECTION_TIMEOUT; // this is a timeout in case data does not come back from the network
             }
     }
@@ -1619,6 +1629,11 @@ void setup()
         PT_INIT(&update_display_battery_protothread);
         PT_INIT(&display_timeout_protothread);
     }
+
+    if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
+        known_nodes[0] = 2;
+        known_nodes[1] = 4;
+    }
 }
 
 void loop()
@@ -1630,9 +1645,10 @@ void loop()
         if (millis() >= next_listen) {
             //check_collection_state();
             check_incoming_message();
-        }
-        if (config.SHARP_GP2Y1010AU0F_DUST_PIN && config.SHARP_GP2Y1010AU0F_DUST_PERIOD) {
-            sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
+        } else {
+            if (config.SHARP_GP2Y1010AU0F_DUST_PIN && config.SHARP_GP2Y1010AU0F_DUST_PERIOD) {
+                sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
+            }
         }
     } else if (config.node_type == NODE_TYPE_SENSOR_LOGGER) {
         //stand-alone sensor that will log data
