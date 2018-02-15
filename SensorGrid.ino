@@ -87,7 +87,7 @@ void add_pending_node(uint8_t id)
     }
     p(F("Discovered node ID: %d. Adding to pending nodes\n"), id);
     pending_nodes[i] = id;
-    pending_nodes_waiting_broadcast = true;
+    //pending_nodes_waiting_broadcast = true;
 }
 
 void remove_pending_node(uint8_t id) {
@@ -400,19 +400,21 @@ Data* get_data_from_buffer(uint8_t* len)
 }
 
 void check_collection_state() {
-    if (!collector_id) add_pending_node(config.node_id);
-    static long next_add_nodes_broadcast = 0;
-    if(pending_nodes[0] > 0 && millis() > next_add_nodes_broadcast) {
+    //if (!collector_id) add_pending_node(config.node_id); 
+    //static long next_add_nodes_broadcast = 0;
+    //if(pending_nodes[0] > 0 && millis() > next_add_nodes_broadcast) {
+    if (pending_nodes_waiting_broadcast) {
         Serial.println("Pending nodes are waiting broadcast");
         Control control = { .id = ++message_id,
           .code = CONTROL_ADD_NODE, .from_node = config.node_id, .data = 0 }; //, .nodes = pending_nodes };
         memcpy(control.nodes, pending_nodes, MAX_NODES);
         if (RH_ROUTER_ERROR_NONE == send_control(&control, RH_BROADCAST_ADDRESS)) {
             Serial.println("-- Sent ADD_NODE control");
+            pending_nodes_waiting_broadcast = false;
         } else {
             Serial.println("ERROR: did not successfully broadcast ADD NODE control");
         }
-        next_add_nodes_broadcast = millis() + 20000;
+        //next_add_nodes_broadcast = millis() + 20000;
     }
 } /* check_collection_state */
 
@@ -446,7 +448,7 @@ void _handle_control_add_node(Control _control)
             add_known_node(_control.nodes[i]);
         }
         Serial.println("");
-    } else {
+    } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         p(F("Received control code: ADD_NODES. Adding pending IDs: "));
         for (int i=0; i<MAX_NODES && _control.nodes[i] != 0; i++) {
             Serial.print(_control.nodes[i]);
@@ -468,6 +470,13 @@ void _handle_control_next_activity_time(Control _control, unsigned long receive_
             }
         }
         p(F("Self in control list: %d\n"), self_in_list);
+
+        if (!self_in_list) {
+            add_pending_node(config.node_id);
+            pending_nodes_waiting_broadcast = true; // we only broadcast when self is not in list. Otherwise simply add to the list when data comes in
+        }
+ 
+        /*
         if (self_in_list) {
             if (collector_id) {
                 if (collector_id == _control.from_node) {
@@ -480,7 +489,7 @@ void _handle_control_next_activity_time(Control _control, unsigned long receive_
             if (!collector_id || collector_id == _control.from_node) {
                 add_pending_node(config.node_id);
             }
-        }
+        } */
         p(F("Received control code: NEXT_ACTIVITY_TIME. Sleeping for: %d\n"), _control.data - (millis() - receive_time));
         next_listen = receive_time + _control.data;
     }
@@ -1019,14 +1028,18 @@ void _node_handle_flexible_data_message()
                     for (int k=0; k<node_count; k++) {
                         uint8_t list_node_id;
                         if (!next_8_bit(data, len, &i, &list_node_id)) break;
-                        p(F("LIST NODE: %d\n"), list_node_id); 
-                        if (list_node_id == config.node_id) {
-                            p(F("REMOVING self ID from uncollected node list: %d\n"), list_node_id);
-                        } else {
+                        remove_pending_node(list_node_id);
+                        if (list_node_id != config.node_id) {
                             new_data[node_count_index]++;
                             new_data[new_data_index++] = list_node_id;
                             next_nodes[next_nodes_index++] = list_node_id;
                         }
+                        p(F("Adding missing pending nodes: "));
+                        for (int pnode=0; pnode<MAX_NODES && pending_nodes[pnode]>0; pnode++) {
+                            output(F("%d "), pending_nodes[pnode]);
+                            next_nodes[next_nodes_index++] = pending_nodes[pnode];
+                        }
+                        clear_pending_nodes();
                     }
                     break;
                 }
