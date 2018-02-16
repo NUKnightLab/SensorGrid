@@ -151,7 +151,7 @@ void clear_pending_nodes() {
 
 uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
-    p(F("Sending message type: %d; length: %d\n"), ((Message*)msg)->message_type, len);
+    p(F("Sending message type: %d; length: %d .. "), ((Message*)msg)->message_type, len);
     unsigned long start = millis();
     ((Message*)msg)->timestamp = rtc.now().unixtime();
     uint8_t err = router->sendtoWait(msg, len, toID);
@@ -161,6 +161,7 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     }
     p(F("Time to send: %d\n"), millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
+        output(F("sent\n"));
         return err;
     } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
         p(F("ERROR sending message to Node ID: %d. INVALID LENGTH\n"), toID);
@@ -199,7 +200,7 @@ uint8_t send_control(Control *control, uint8_t dest)
 }
 
 /*
-uint8_t send_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)
+uint8_t send_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)`
 {
     if (!from_id) from_id = config.node_id;
     Message msg = {
