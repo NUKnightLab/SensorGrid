@@ -1285,7 +1285,7 @@ bool send_aggregate_flexible_data_init(uint8_t dest) {
         if (uncollected_nodes[0] > 0) {
             return send_aggregate_flexible_data_init(uncollected_nodes[0]);
         } else {
-            send_control_next_activity_time(COLLECTION_PERIOD);
+            // send_control_next_activity_time(COLLECTION_PERIOD);
             next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
         }
     }
@@ -1630,7 +1630,7 @@ void setup()
         Serial.println("Radio frequency set failed");
     } 
     radio->setTxPower(config.tx_power, false);
-    //radio->setCADTimeout(CAD_TIMEOUT);
+    radio->setCADTimeout(CAD_TIMEOUT);
     router->setTimeout(TIMEOUT);
     Serial.println("");
     delay(100);
