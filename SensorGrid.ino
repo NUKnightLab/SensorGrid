@@ -58,9 +58,11 @@ static long next_collection_time = 0;
 int16_t last_rssi[MAX_NODES];
 static uint8_t latest_collected_records[MAX_NODES+1] = {0};
 static uint8_t last_battery_level;
-int COLLECTION_DELAY = 2000;
+int COLLECTION_DELAY = 3000;
 int16_t COLLECTION_PERIOD = 30000;
+int16_t DATA_COLLECTION_TIMEOUT = 20000;
 bool listening = false;
+uint8_t collector_waiting_for_data_from = 0;
 
 
 
@@ -1241,10 +1243,12 @@ bool send_aggregate_data_init() {
 } */ /* send_aggregate_data_init */
 
 
-bool send_aggregate_flexible_data_init() {
+bool send_aggregate_flexible_data_init(uint8_t dest) {
 
-    if (uncollected_nodes[0] == 0) return false;
-
+    //if (uncollected_nodes[0] == 0) {
+    //    Serial.println("NO MORE nodes to collect");
+    //    return false;
+    //}
     uint8_t data[MAX_MESSAGE_DATA_BYTES];
     data[0] = config.node_id;
     data[1] = 0; // msg ID
@@ -1259,11 +1263,13 @@ bool send_aggregate_flexible_data_init() {
         data[4]++;
     }
     Serial.println("");
-    uint8_t dest = get_best_next_node(data+5, data[4]);
     if (!dest) {
         p(F("No remaining nodes in current data record\n"));
     } if (RH_ROUTER_ERROR_NONE == send_flexible_data(data, data[4] + 5, dest, config.node_id)) {
         p(F("-- Sent data: AGGREGATE_DATA_INIT to ID: %d\n"), dest);
+        next_collection_time = millis() + DATA_COLLECTION_TIMEOUT;
+        p(F("Next collection time: %d (timeout in %d)\n"), next_collection_time, DATA_COLLECTION_TIMEOUT);
+        //collector_waiting_for_data_from = dest;
     } else {
         p(F("ERROR: did not successfully send aggregate data collection request\n"));
         //p(F("Removing node ID: %d from known_nodes\n"), dest);
@@ -1281,42 +1287,67 @@ bool send_aggregate_flexible_data_init() {
             output("%d ", uncollected_nodes[i]);
         }
         Serial.println("");
-        return send_aggregate_flexible_data_init();
+        if (uncollected_nodes[0] > 0) {
+            return send_aggregate_flexible_data_init(uncollected_nodes[0]);
+        } else {
+            send_control_next_activity_time(COLLECTION_PERIOD);
+            next_collection_time = millis() + COLLECTION_PERIOD + COLLECTION_DELAY;
+        }
     }
     return true;
 } /* send_aggregate_flexible_data_init */
 
 
 
-void handle_collector_loop()
+/*
+void _handle_collector_loop()
 {
-    int16_t DATA_COLLECTION_TIMEOUT = 20000;
-    bool collector_waiting_for_data = uncollected_nodes[0] > 0;
+    //bool collector_waiting_for_data = uncollected_nodes[0] > 0;
     static int cycle = 0;
     if (millis() > next_collection_time) {
-            /*
-            if (known_nodes[0] == 0) {
-                p(F("No known nodes. Sending next activity signal for 10 sec\n"));
-                send_control_next_activity_time(10000);
-                next_collection_time = millis() + 10000 + COLLECTION_DELAY;
-                return;
-            } */
-            if (!collector_waiting_for_data) {
+            
+            //if (known_nodes[0] == 0) {
+            //    p(F("No known nodes. Sending next activity signal for 10 sec\n"));
+            //    send_control_next_activity_time(10000);
+            //    next_collection_time = millis() + 10000 + COLLECTION_DELAY;
+            //    return;
+            //} 
+            if (collector_waiting_for_data_from > 0) {
+                p(F("No data returned from init to %d. Re-sending"), collector_waiting_for_data_from);
+                send_aggregate_flexible_data_init();
+            }
+            else {
                 memcpy(uncollected_nodes, known_nodes, MAX_NODES);
                 p(F("Starting collection of known nodes: "));
                 for (int i=0; i<MAX_NODES && known_nodes[i]>0; i++) {
                     output(F(" %d"), known_nodes[i]);
                 }
                 Serial.println("");
+                send_aggregate_flexible_data_init();
             }
             //if (send_aggregate_data_init()) {
-            if (send_aggregate_flexible_data_init()) {
-                p(F("\n-------\nCycle: %d\n"), cycle++);
-                send_aggregate_flexible_data_init();
-                next_collection_time = millis() + DATA_COLLECTION_TIMEOUT; // this is a timeout in case data does not come back from the network
-            }
+            //if (send_aggregate_flexible_data_init()) {
+            //else {
+            //    p(F("\n-------\nCycle: %d\n"), cycle++);
+            //    send_aggregate_flexible_data_init();
+            //    //next_collection_time = millis() + DATA_COLLECTION_TIMEOUT; // this is a timeout in case data does not come back from the network
+            //    //p("Next collection time %(for timeout): %d", next_collection_time);
+            //}
+            //}
     }
-}; /* test_aggregate_data_collection */
+}; */ /* test_aggregate_data_collection */
+
+void handle_collector_loop() {
+     if (millis() > next_collection_time) {
+         if (uncollected_nodes[0] == 0) {
+            memcpy(uncollected_nodes, known_nodes, MAX_NODES);
+         }
+        //uint8_t dest = get_best_next_node(known_nodes, data[4]);
+        send_aggregate_flexible_data_init(uncollected_nodes[0]);
+        //next_collection_time = millis() + DATA_COLLECTION_TIMEOUT;
+        //p(F("Next collection time: %d (period: %d)\n"), next_collection_time, COLLECTION_PERIOD);
+     }
+}
 
 /* END OF TEST FUNCTIONS */
 
@@ -1631,8 +1662,8 @@ void setup()
     }
 
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-        known_nodes[0] = 2;
-        known_nodes[1] = 4;
+        known_nodes[0] = 4;
+        known_nodes[1] = 2;
     }
 }
 
@@ -1645,7 +1676,7 @@ void loop()
         if (millis() >= next_listen) {
             //check_collection_state();
             check_incoming_message();
-        } else {
+        } else if (millis() + 2000 < next_listen) {
             if (config.SHARP_GP2Y1010AU0F_DUST_PIN && config.SHARP_GP2Y1010AU0F_DUST_PERIOD) {
                 sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
             }
