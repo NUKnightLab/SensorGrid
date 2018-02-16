@@ -25,7 +25,7 @@ void _displayCurrentRTCDateTime()
 {
     displayCurrentRTCDate();
     displayCurrentRTCTime();
-    lastMinute = rtc.now().minute();   
+    lastMinute = rtc.now().minute();
 }
 
 uint32_t displayCurrentRTCDateTime()
@@ -36,7 +36,7 @@ uint32_t displayCurrentRTCDateTime()
     display.print(now.hour(), DEC); display.print(':');
     if (now.minute() < 10)
         display.print(0, DEC);
-    display.print(now.minute(), DEC);  
+    display.print(now.minute(), DEC);
     display.setCursor(38,8);
     display.print(now.month(), DEC); display.print('/');
     display.print(now.day(), DEC); display.print('/');
@@ -144,34 +144,9 @@ void _setDate()
     displayCurrentRTCDate();
 }
 
-/*
-void setDate() {
-    display.clearDisplay();
-    _setDate();
-    display.setCursor(0, 8);
-    display.print("OK? (A=Yes / C=No)");
-    display.display();
-    int startTime = millis();
-    while (true) {
-        if (! digitalRead(BUTTON_A)) {
-            displayCurrentRTCDateTime();
-            return;
-        }
-        if (! digitalRead(BUTTON_C)) return setDate();
-        delay(100);
-        if (millis() - startTime > 10*1000) break;
-        yield();
-    }
-    display.clearDisplay();
-    displayCurrentRTCDateTime();
-    display.display();
-}
-*/
-
 void displayBatteryLevel()
 {
     display.setBattery(batteryLevel());
-    //display.renderBattery();
     display.display();
 }
 
@@ -226,7 +201,7 @@ void setupDisplay()
 
 float bat = 0.0;
 
-void updateDisplayBattery()
+void updateDisplayBattery(bool refresh_display)
 {
      if (batteryLevel() != bat) {
         display.setCursor(45,0);
@@ -234,8 +209,13 @@ void updateDisplayBattery()
         bat = batteryLevel();
         display.setBattery(bat);
         display.renderBattery();
-        display.display();         
-    }    
+        if (refresh_display)
+            display.display();
+    }
+}
+void updateDisplayBattery()
+{
+    return updateDisplayBattery(false);
 }
 
 void updateDisplay()
@@ -247,6 +227,6 @@ void updateDisplay()
         display_clock_time = displayCurrentRTCDateTime();
         updateGPSDisplay();
         display.display();
-    }     
+    }
 }
 
