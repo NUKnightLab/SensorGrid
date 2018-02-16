@@ -26,6 +26,10 @@ int16_t last_rssi[MAX_NODES];
 
 RTC_PCF8523 rtc;
 
+/* collection state */
+static uint8_t known_nodes[] = { 2, 3, 4 };
+static uint8_t last_record_ids[MAX_NODES] = {0};
+
 /*
  * interrupts
  */
@@ -143,8 +147,6 @@ static int send_collection_request_thread(struct pt *pt, int interval)
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
     output("\n");
     p(F("Sending collection request\n"));
-    uint8_t data[] = { 1,2,3,4};
-    uint8_t len = sizeof(data);
     send_data_collection_request();
     timestamp = millis();
   }
@@ -288,18 +290,24 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
     }
 } /* send_data */
 
-
-void send_data_collection_request() {
-    static uint8_t known_nodes[] = { 2, 3, 4 };
+void send_data_collection_request()
+{
+    static uint8_t msg_id = 0;
     const uint8_t node_count = sizeof(known_nodes);
     uint8_t data[5 + node_count*2] = {
-        config.node_id, 0, 1, DATA_TYPE_NODE_COLLECTION_LIST, node_count };
+        config.node_id,                 // Byte 0
+        ++msg_id,                       // 1
+        1,                              // 2
+        DATA_TYPE_NODE_COLLECTION_LIST, // 3
+        node_count                      // 4
+    };                                  // --> 5 preliminary bytes total
     uint8_t data_index = 5;
     for (int i=0; i<node_count; i++) {
         data[data_index++] = known_nodes[i];
-        data[data_index++] = 0;
+        data[data_index++] = last_record_ids[known_nodes[i]];
     }
-    send_data(data, sizeof(data), data[5]);
+    uint8_t dest = known_nodes[0];
+    send_data(data, sizeof(data), dest);
 } /* send_data_collection_request */
 
 /*
