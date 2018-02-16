@@ -141,7 +141,8 @@ static int send_collection_request_thread(struct pt *pt, int interval)
   PT_BEGIN(pt);
   while(1) {
     PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    Serial.println("Sending collection request");
+    output("\n");
+    p(F("Sending collection request\n"));
     uint8_t data[] = { 1,2,3,4};
     uint8_t len = sizeof(data);
     send_message(data, len, 2);
@@ -191,6 +192,7 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
     Message* _msg;
     lock_recv_buffer(); // lock to be released by calling client
     if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
+        output("\n");
         _msg = (Message*)recv_buf;
         if ( _msg->sensorgrid_version == config.sensorgrid_version
                 && _msg->network_id == config.network_id && _msg->timestamp > 0) {
@@ -212,8 +214,10 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
             _msg->network_id);
             return MESSAGE_TYPE_WRONG_NETWORK;
         }
-        p(F("Received buffered message. len: %d; from: %d; rssi: %d\n"),
+        p(F("Received buffered message. LEN: %d; FROM: %d; RSSI: %d; DATA "),
             *len, *source, radio->lastRssi());
+        for (int i=0; i<*len; i++) output(F("%d "), _msg->data[i]);
+        output(F("\n"));
         last_rssi[*source] = radio->lastRssi();
         return true;
     } else {
@@ -246,7 +250,9 @@ void check_message()
 
 uint8_t send_message(uint8_t* data, uint8_t len, uint8_t dest)
 {
-    p(F("Sending message"));
+    p(F("Sending message LEN: %d; DATA: "), len);
+    for (int i=0; i<len; i++) output(F("%d "), data[i]);
+    output(F("\n"));
     Message msg = {
         .sensorgrid_version=config.sensorgrid_version,
         .network_id=config.network_id,
@@ -330,7 +336,7 @@ void setup()
     if (USE_LOW_SLOW_RADIO_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init()) p(F("Router init failed\n"));
-    p(F("FREQ: %d\n"), config.rf95_freq);
+    p(F("FREQ: %.2f\n"), config.rf95_freq);
     if (!radio->setFrequency(config.rf95_freq)) {
         p(F("Radio frequency set failed\n\n"));
     }

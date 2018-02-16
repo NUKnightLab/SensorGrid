@@ -21,7 +21,7 @@ void loadConfig() {
         digitalWrite(alt_rfm_cs, LOW);
         config.network_id = (uint32_t)(atoi(getConfig("NETWORK_ID")));
         config.node_id = (uint32_t)(atoi(getConfig("NODE_ID")));
-        config.rf95_freq = (float)(atof(getConfig("RF95_FREQ")));
+        config.rf95_freq = (float)(atof(getConfig("RF95_FREQ", DEFAULT_RF95_FREQ)));
         config.tx_power = (uint8_t)(atoi(getConfig("TX_POWER")));
         config.sensorgrid_version = (uint8_t)atoi(getConfig("SENSORGRID_VERSION", DEFAULT_SENSORGRID_VERSION));
         config.log_file = getConfig("LOGFILE", DEFAULT_LOG_FILE);
