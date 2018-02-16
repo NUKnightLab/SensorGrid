@@ -145,7 +145,7 @@ static int send_collection_request_thread(struct pt *pt, int interval)
     p(F("Sending collection request\n"));
     uint8_t data[] = { 1,2,3,4};
     uint8_t len = sizeof(data);
-    send_message(data, len, 2);
+    send_data_collection_request();
     timestamp = millis();
   }
   PT_END(pt);
@@ -236,15 +236,16 @@ void check_message()
     static bool listening = false;
     static uint16_t count = 0;
     uint8_t from, dest, msg_id, len;
-    bool received = receive(&len, &from, &dest, &msg_id);
-    unsigned long receive_time = millis();
     if (!listening) {
         listening = true;
         p(F("*** Radio active listen ....\n"));
     }
     if (!++count) output(F("."));
+    bool received = receive(&len, &from, &dest, &msg_id);
+    unsigned long receive_time = millis();
     Message *_msg = (Message*)recv_buf;
     print_message(_msg);
+    
     release_recv_buffer();
 } /* check_incoming_message */
 
@@ -265,7 +266,6 @@ uint8_t send_message(uint8_t* data, uint8_t len, uint8_t dest)
     uint8_t err = router->sendtoWait((uint8_t*)&msg, len, dest);
     p(F("Time to send: %d\n"), millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
-        output(F("sent\n"));
         return err;
     } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
         p(F("ERROR sending message to Node ID: %d. INVALID LENGTH\n"), dest);
@@ -287,6 +287,16 @@ uint8_t send_message(uint8_t* data, uint8_t len, uint8_t dest)
         return err;
     }
 } /* send_message */
+
+
+void send_data_collection_request() {
+    static uint8_t known_nodes[] = { 2 };
+    uint8_t data[sizeof(known_nodes) + 5] = {
+        config.node_id, 0, 1, DATA_TYPE_NODE_COLLECTION_LIST,
+        sizeof(known_nodes) };
+    memcpy(&data[5], known_nodes, sizeof(known_nodes));
+    send_message(data, sizeof(data), data[5]);
+} /* send_data_collection_request */
 
 /*
  * setup and loop
