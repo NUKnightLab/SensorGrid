@@ -47,7 +47,6 @@ void aButton_ISR()
 
 void bButton_ISR()
 {
-    Serial.println(shutdown_requested);
     static volatile int bButtonState = 0;
     if (shutdown_requested) {
         display.clearDisplay();
@@ -60,7 +59,6 @@ void bButton_ISR()
 
 void cButton_ISR()
 {
-    Serial.println("C Button");
     static volatile int cButtonState = 0;
     if (shutdown_requested) {
         shutdown_requested = false;
