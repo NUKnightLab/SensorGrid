@@ -291,10 +291,14 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
 
 void send_data_collection_request() {
     static uint8_t known_nodes[] = { 2, 3, 4 };
-    uint8_t data[sizeof(known_nodes) + 5] = {
-        config.node_id, 0, 1, DATA_TYPE_NODE_COLLECTION_LIST,
-        sizeof(known_nodes) };
-    memcpy(&data[5], known_nodes, sizeof(known_nodes));
+    const uint8_t node_count = sizeof(known_nodes);
+    uint8_t data[5 + node_count*2] = {
+        config.node_id, 0, 1, DATA_TYPE_NODE_COLLECTION_LIST, node_count };
+    uint8_t data_index = 5;
+    for (int i=0; i<node_count; i++) {
+        data[data_index++] = known_nodes[i];
+        data[data_index++] = 0;
+    }
     send_data(data, sizeof(data), data[5]);
 } /* send_data_collection_request */
 
