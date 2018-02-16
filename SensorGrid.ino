@@ -306,10 +306,8 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
     }
     Message* _msg;
     lock_recv_buffer(); // lock to be released by calling client
-    analogWrite(LED, HIGH);
     if (timeout) {
         if (router->recvfromAckTimeout(recv_buf, len, timeout, source, dest, id, flags)) {
-            analogWrite(LED, LOW);
             _msg = (Message*)recv_buf;
             if ( _msg->sensorgrid_version == config.sensorgrid_version 
                     && _msg->network_id == config.network_id && _msg->timestamp > 0) {
@@ -332,12 +330,10 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             last_rssi[*source] = radio->lastRssi();
             return _msg->message_type;
         } else {
-            analogWrite(LED, LOW);
             return MESSAGE_TYPE_NO_MESSAGE;
         }
     } else {
         if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
-            analogWrite(LED, LOW);
             _msg = (Message*)recv_buf;
             if ( _msg->sensorgrid_version == config.sensorgrid_version 
                     && _msg->network_id == config.network_id && _msg->timestamp > 0) {
@@ -360,7 +356,6 @@ int8_t _receive_message(uint8_t* len=NULL, uint16_t timeout=NULL, uint8_t* sourc
             last_rssi[*source] = radio->lastRssi();
             return _msg->message_type;
         } else {
-            analogWrite(LED, LOW);
             return MESSAGE_TYPE_NO_MESSAGE;
         }
     }
