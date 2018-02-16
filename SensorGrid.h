@@ -118,6 +118,15 @@ typedef struct FlexibleData {
 typedef struct Message {
     uint8_t sensorgrid_version;
     uint8_t network_id;
+    uint32_t timestamp;
+    uint8_t len;
+    uint8_t data[];
+};
+
+/*
+typedef struct Message {
+    uint8_t sensorgrid_version;
+    uint8_t network_id;
     uint8_t from_node;
     uint32_t timestamp;
     uint8_t message_type;
@@ -128,6 +137,7 @@ typedef struct Message {
       uint8_t flexdata[];
     };
 };
+*/
 
 #else
     #error Unsupported architecture
