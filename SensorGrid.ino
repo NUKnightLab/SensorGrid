@@ -254,18 +254,17 @@ void check_message()
 
 uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
 {
-    p(F("Sending message LEN: %d; DATA: "), len);
+    p(F("Sending data LEN: %d; DATA: "), len);
     for (int i=0; i<len; i++) output(F("%d "), data[i]);
     output(F("\n"));
-    Message msg = {
-        .sensorgrid_version=config.sensorgrid_version,
-        .network_id=config.network_id,
-        .timestamp=millis()
-    };
-    memcpy(msg.data, data, len);
+    static struct Message *msg = NULL;
+    if (!msg) msg = (Message*)malloc(MAX_MESSAGE_SIZE);
+    msg->sensorgrid_version = config.sensorgrid_version;
+    msg->network_id = config.network_id;
+    memcpy(msg->data, data, len);
     unsigned long start = millis();
-    msg.timestamp = rtc.now().unixtime();
-    uint8_t err = router->sendtoWait((uint8_t*)&msg, len+sizeof(Message), dest);
+    msg->timestamp = rtc.now().unixtime();
+    uint8_t err = router->sendtoWait((uint8_t*)msg, len+sizeof(Message), dest);
     p(F("Time to send: %d\n"), millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
         return err;
