@@ -247,7 +247,6 @@ void check_message()
     if (receive(&len, &from, &dest, &msg_id)) {
         unsigned long receive_time = millis();
         Message *_msg = (Message*)recv_buf;
-        print_message(_msg, len);
     }
     release_recv_buffer();
 } /* check_incoming_message */
@@ -291,7 +290,7 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
 
 
 void send_data_collection_request() {
-    static uint8_t known_nodes[] = { 2 };
+    static uint8_t known_nodes[] = { 2, 3, 4 };
     uint8_t data[sizeof(known_nodes) + 5] = {
         config.node_id, 0, 1, DATA_TYPE_NODE_COLLECTION_LIST,
         sizeof(known_nodes) };
