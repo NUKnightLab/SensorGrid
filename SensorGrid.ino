@@ -156,8 +156,9 @@ static int send_collection_request_thread(struct pt *pt, int interval)
 void print_message(Message *msg)
 {
     for (int i=0; i<msg->len; i++) {
-        p(F("%d "), msg->data[i]);
+        output(F("%d "), msg->data[i]);
     }
+    output(F("\n"));
 }
 
 /*
@@ -214,7 +215,7 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
             _msg->network_id);
             return MESSAGE_TYPE_WRONG_NETWORK;
         }
-        p(F("Received buffered message. LEN: %d; FROM: %d; RSSI: %d; DATA "),
+        p(F("Received message. LEN: %d; FROM: %d; RSSI: %d; DATA "),
             *len, *source, radio->lastRssi());
         for (int i=0; i<*len; i++) output(F("%d "), _msg->data[i]);
         output(F("\n"));
@@ -245,11 +246,10 @@ void check_message()
     unsigned long receive_time = millis();
     Message *_msg = (Message*)recv_buf;
     print_message(_msg);
-    
     release_recv_buffer();
 } /* check_incoming_message */
 
-uint8_t send_message(uint8_t* data, uint8_t len, uint8_t dest)
+uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
 {
     p(F("Sending message LEN: %d; DATA: "), len);
     for (int i=0; i<len; i++) output(F("%d "), data[i]);
@@ -263,7 +263,7 @@ uint8_t send_message(uint8_t* data, uint8_t len, uint8_t dest)
     memcpy(msg.data, data, len);
     unsigned long start = millis();
     msg.timestamp = rtc.now().unixtime();
-    uint8_t err = router->sendtoWait((uint8_t*)&msg, len, dest);
+    uint8_t err = router->sendtoWait((uint8_t*)&msg, len+sizeof(Message), dest);
     p(F("Time to send: %d\n"), millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
         return err;
@@ -286,7 +286,7 @@ uint8_t send_message(uint8_t* data, uint8_t len, uint8_t dest)
         p(F("ERROR sending message to Node ID: %d. UNKOWN ERROR CODE: %d\n"), dest, err);
         return err;
     }
-} /* send_message */
+} /* send_data */
 
 
 void send_data_collection_request() {
@@ -295,7 +295,7 @@ void send_data_collection_request() {
         config.node_id, 0, 1, DATA_TYPE_NODE_COLLECTION_LIST,
         sizeof(known_nodes) };
     memcpy(&data[5], known_nodes, sizeof(known_nodes));
-    send_message(data, sizeof(data), data[5]);
+    send_data(data, sizeof(data), data[5]);
 } /* send_data_collection_request */
 
 /*
