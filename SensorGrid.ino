@@ -3,7 +3,7 @@
 #include "display.h"
 #include <RHMesh.h>
 #include <RHRouter.h>
-#include <RH_RF95.h>
+#include <RH_RF95.h>`
 #include <SPI.h>
 #include <pt.h>
 
@@ -151,7 +151,7 @@ void clear_pending_nodes() {
 
 uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
-    p(F("Sending message type: %d; length: %d\n"), ((Message*)msg)->message_type, len);
+    p(F("Sending message type: %d; length: %d .. "), ((Message*)msg)->message_type, len);
     unsigned long start = millis();
     ((Message*)msg)->timestamp = rtc.now().unixtime();
     uint8_t err = router->sendtoWait(msg, len, toID);
@@ -161,6 +161,7 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     }
     p(F("Time to send: %d\n"), millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
+        output(F("sent\n"));
         return err;
     } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
         p(F("ERROR sending message to Node ID: %d. INVALID LENGTH\n"), toID);
@@ -199,7 +200,7 @@ uint8_t send_control(Control *control, uint8_t dest)
 }
 
 /*
-uint8_t send_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)
+uint8_t send_data(Data *data, uint8_t array_size, uint8_t dest, uint8_t from_id)`
 {
     if (!from_id) from_id = config.node_id;
     Message msg = {
@@ -1146,7 +1147,7 @@ void _node_handle_flexible_data_message()
             p(F("Forwarded data to node: %d\n"), order[idx]);
             success = true;
         } else {
-            p(F("Failed to forward data to node: %d. Trying next node if available\n"), order[idx]);
+            p(F("Failed to forward data to node: %d. Trying next node if available\n"), next_nodes[idx]);
         }
     }
     if (!success) { // send to the collector
@@ -1163,6 +1164,7 @@ void check_incoming_message()
         listening = true;
         p(F("*** Radio active listen ....\n"));
     }
+    static uint16_t counter = 0;
     uint8_t from;
     uint8_t dest;
     uint8_t msg_id;
@@ -1172,6 +1174,8 @@ void check_incoming_message()
     Message *_msg = (Message*)recv_buf;
     if (msg_type == MESSAGE_TYPE_NO_MESSAGE) {
         // Do nothing
+        counter++;
+        if (!counter) output(".");
     } else if (msg_type == MESSAGE_TYPE_CONTROL) {
         _handle_control_message(_msg, len, from, dest, receive_time);
     } else if (msg_type == MESSAGE_TYPE_DATA) {
@@ -1672,9 +1676,11 @@ void loop()
             //check_collection_state();
             check_incoming_message();
         } else if (millis() + 2000 < next_listen) {
+          /*
             if (config.SHARP_GP2Y1010AU0F_DUST_PIN && config.SHARP_GP2Y1010AU0F_DUST_PERIOD) {
                 sharpDustDataSampleThread(&sharp_dust_data_sample_protothread, config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000);
             }
+           */
         }
     } else if (config.node_type == NODE_TYPE_SENSOR_LOGGER) {
         //stand-alone sensor that will log data
@@ -1704,9 +1710,11 @@ void loop()
         while(1);
     }
 
+/*
     if (config.has_oled) {
         updateDisplayThread(&update_display_protothread, 1000);
         updateDisplayBatteryThread(&update_display_battery_protothread, 10 * 1000);
         displayTimeoutThread(&display_timeout_protothread, 1000);
     }
+ */
 }
