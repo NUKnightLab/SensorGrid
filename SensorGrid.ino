@@ -101,21 +101,6 @@ static int updateClockThread(struct pt *pt, int interval)
   PT_END(pt);
 }
 
-/*
-static int updateDisplayBatteryThread(struct pt *pt, int interval)
-{
-  static unsigned long timestamp = 0;
-  PT_BEGIN(pt);
-  while(1) { // never stop
-    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    if (oled_is_on)
-        updateDisplayBattery();
-    timestamp = millis();
-  }
-  PT_END(pt);
-}
-*/
-
 static int updateDisplayThread(struct pt *pt, int interval)
 {
   static unsigned long timestamp = 0;
