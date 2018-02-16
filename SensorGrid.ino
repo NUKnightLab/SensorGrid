@@ -153,9 +153,10 @@ static int send_collection_request_thread(struct pt *pt, int interval)
 
 /* Message utils */
 
-void print_message(Message *msg)
+void print_message(Message *msg, uint8_t len)
 {
-    for (int i=0; i<msg->len; i++) {
+    uint8_t datalen = len - sizeof(Message);
+    for (int i=0; i<datalen; i++) {
         output(F("%d "), msg->data[i]);
     }
     output(F("\n"));
@@ -217,7 +218,8 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
         }
         p(F("Received message. LEN: %d; FROM: %d; RSSI: %d; DATA "),
             *len, *source, radio->lastRssi());
-        for (int i=0; i<*len; i++) output(F("%d "), _msg->data[i]);
+        uint8_t datalen = *len - sizeof(Message);
+        for (int i=0; i<datalen; i++) output(F("%d "), _msg->data[i]);
         output(F("\n"));
         last_rssi[*source] = radio->lastRssi();
         return true;
@@ -242,10 +244,11 @@ void check_message()
         p(F("*** Radio active listen ....\n"));
     }
     if (!++count) output(F("."));
-    bool received = receive(&len, &from, &dest, &msg_id);
-    unsigned long receive_time = millis();
-    Message *_msg = (Message*)recv_buf;
-    print_message(_msg);
+    if (receive(&len, &from, &dest, &msg_id)) {
+        unsigned long receive_time = millis();
+        Message *_msg = (Message*)recv_buf;
+        print_message(_msg, len);
+    }
     release_recv_buffer();
 } /* check_incoming_message */
 
@@ -257,8 +260,7 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
     Message msg = {
         .sensorgrid_version=config.sensorgrid_version,
         .network_id=config.network_id,
-        .timestamp=millis(),
-        .len=len,
+        .timestamp=millis()
     };
     memcpy(msg.data, data, len);
     unsigned long start = millis();

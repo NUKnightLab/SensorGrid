@@ -19,10 +19,10 @@
 
 /**
  * Overall max message size is somewhere between 244 and 247 bytes. 247 will cause invalid length error
- * 
+ *
  * Note that these max sizes on the message structs are system specific due to struct padding. The values
  * here are specific to the Cortex M0
- * 
+ *
  */
 #define MAX_DATA_RECORDS 39
 #define MAX_NODES 100
@@ -119,7 +119,6 @@ typedef struct Message {
     uint8_t sensorgrid_version;
     uint8_t network_id;
     uint32_t timestamp;
-    uint8_t len;
     uint8_t data[];
 };
 
