@@ -3,7 +3,7 @@
 #include "display.h"
 #include <RHMesh.h>
 #include <RHRouter.h>
-#include <RH_RF95.h>
+#include <RH_RF95.h>`
 #include <SPI.h>
 #include <pt.h>
 
@@ -1149,7 +1149,7 @@ void _node_handle_flexible_data_message()
             p(F("Forwarded data to node: %d\n"), order[idx]);
             success = true;
         } else {
-            p(F("Failed to forward data to node: %d. Trying next node if available\n"), order[idx]);
+            p(F("Failed to forward data to node: %d. Trying next node if available\n"), next_nodes[idx]);
         }
     }
     if (!success) { // send to the collector
@@ -1604,7 +1604,7 @@ void setup()
         Serial.println("Radio frequency set failed");
     } 
     radio->setTxPower(config.tx_power, false);
-    radio->setCADTimeout(CAD_TIMEOUT);
+    //radio->setCADTimeout(CAD_TIMEOUT);
     router->setTimeout(TIMEOUT);
     Serial.println("");
     delay(100);
