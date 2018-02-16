@@ -164,6 +164,57 @@ void print_message(Message *msg, uint8_t len)
     output(F("\n"));
 }
 
+void process_data_collection(Message* msg, uint8_t datalen)
+{
+}
+
+struct Record {
+    uint8_t record_type;
+    uint8_t data[];
+};
+
+struct NodeMessage {
+    uint8_t node_id;
+    uint8_t max_record_id;
+    uint8_t record_count;
+    Record records[];
+};
+
+const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
+
+void process_message(Message* msg, uint8_t len)
+{
+    uint8_t datalen = len - sizeof(Message);
+    if (datalen < 3) return;
+    uint8_t* data = msg->data;
+    uint8_t new_data[MAX_MESSAGE_SIZE - sizeof(Message)];
+    static uint8_t node_id;
+    static uint8_t max_record_id;
+    static uint8_t data_type;
+    for (int i=0; i<datalen; i++) {
+        if (!node_id) {
+            node_id = data[i];
+        } else if (!max_record_id) {
+            max_record_id = data[i];
+        } else if (!data_type) {
+            data_type = data[i];
+        } else {
+            if (data_type == DATA_TYPE_NODE_COLLECTION_LIST) {
+                uint8_t node_count = data[i];
+                if (i + node_count * 2 >= datalen) {
+                    p(F("BAD COLLECTION LIST\n"));
+                    return;
+                }
+                p(F("COLLECTION LIST: "));
+                for (int j=i+1; j<i+node_count*2; j+=2) {
+                    output(F("NODE: %d; MAX_RECORD_ID: %d"), data[j], data[j+1]);
+                }
+                output(F("\n"));
+            }
+        }
+    }
+}
+
 /*
  * Radio I/O
  */
@@ -249,6 +300,7 @@ void check_message()
     if (receive(&len, &from, &dest, &msg_id)) {
         unsigned long receive_time = millis();
         Message *_msg = (Message*)recv_buf;
+        process_message(_msg, len);
     }
     release_recv_buffer();
 } /* check_incoming_message */
