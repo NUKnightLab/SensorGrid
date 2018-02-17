@@ -566,6 +566,10 @@ void setup()
 #else
     router = new RHRouter(*radio, config.node_id);
     router->clearRoutingTable();
+    router->addRouteTo(1, 1);
+    router->addRouteTo(2, 2);
+    router->addRouteTo(3, 3);
+    router->addRouteTo(4, 4);
 #endif
     if (USE_LOW_SLOW_RADIO_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
