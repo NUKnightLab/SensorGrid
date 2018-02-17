@@ -182,7 +182,7 @@ struct NodeMessage {
 
 const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
-void process_message(Message* msg, uint8_t len)
+void node_process_message(Message* msg, uint8_t len)
 {
     uint8_t datalen = len - sizeof(Message);
     if (datalen < 3) return;
@@ -235,9 +235,18 @@ void process_message(Message* msg, uint8_t len)
             record_count = 0;
         }
     }
-    p(F("New data: ["));
+    p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     output(F("]\n"));
+    send_data(new_data, new_data_index, 1);
+}
+
+void process_message(Message* msg, uint8_t len) {
+    if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
+        p("COLLECTOR DATA RECD");
+    } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
+        node_process_message(msg, len);
+    }
 }
 
 /*
