@@ -323,7 +323,6 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
 #endif
     }
-
     /* send to the collector if all other nodes fail */
     if (collector) {
         if (router->getRouteTo(collector)->state != RHRouter::Valid) {
@@ -332,14 +331,81 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
         send_data(new_data, new_data_index, collector);
     }
-
     router->printRoutingTable();
 }
 
+void collector_process_message(Message* msg, uint8_t len, uint8_t from)
+{
+    uint8_t datalen = len - sizeof(Message);
+    if (datalen < 3) return;
+    uint8_t* data = msg->data;
+    uint8_t new_data[MAX_MESSAGE_SIZE - sizeof(Message)];
+    static uint8_t node_id;
+    static uint8_t max_record_id;
+    static uint8_t record_count;
+    static uint8_t data_type;
+    uint8_t index = 0;
+    uint8_t new_data_index = 0;
+    uint8_t next_nodes[MAX_NODES] = {0};
+    uint8_t next_nodes_index = 0;
+    uint8_t collector;
+    while (index < datalen) {
+        if (!node_id) {
+            node_id = data[index++];
+            new_data[new_data_index++] = node_id;
+        } else if (!max_record_id) {
+            max_record_id = data[index++];
+            new_data[new_data_index++] = max_record_id;
+        } else if (!record_count) {
+            record_count = data[index++];
+            new_data[new_data_index++] = record_count;
+        } else {
+            p(F("Message from NODE_ID: %d; MAX_RECORD_ID: %d; RECORD_COUNT: %d\n"),
+                node_id, max_record_id, record_count);
+            for (int record=0; record<record_count; record++) {
+                data_type = data[index++];
+                new_data[new_data_index++] = data_type;
+                switch (data_type) {
+                    case DATA_TYPE_NODE_COLLECTION_LIST :
+                        p(F("COLLECTION LIST: "));
+                        collector = node_id; // expecting this to match self id
+                        uint8_t node_count_index = new_data_index++;
+                        new_data[node_count_index] = 0;
+                        uint8_t node_count = data[index++];
+                        for (int i=0; i<node_count; i++) {
+                            uint8_t node = data[index++];
+                            uint8_t max_record = data[index++];
+                            output(F("NODE_ID: %d; MAX_RECORD_ID: %d; "),
+                            node, max_record);
+                            new_data[new_data_index++] = node;
+                            new_data[new_data_index++] = max_record;
+                            new_data[node_count_index]++;
+                            next_nodes[next_nodes_index++] = node;
+                        }
+                        output(F("\n"));
+                }
+            }
+            node_id = 0;
+            max_record_id = 0;
+            record_count = 0;
+        }
+    }
+    p(F("New data: [ "));
+    for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
+    output(F("]\n"));
+    uint8_t ordered_nodes[next_nodes_index];
+    get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
+    for (int i=0; i<next_nodes_index; i++) {
+        uint8_t node_id = ordered_nodes[i];
+        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, node_id))
+            return;
+    }
+    router->printRoutingTable();
+}
 void process_message(Message* msg, uint8_t len, uint8_t from) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         p("COLLECTOR DATA RECEIVED\n");
-        //delay(2000); // do something with received data
+        collector_process_message(msg, len, from);
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         node_process_message(msg, len, from);
     }
