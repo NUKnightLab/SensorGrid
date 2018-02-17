@@ -242,6 +242,7 @@ const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
 void node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
+    p(F("Node process message with from: %d\n"), from);
     uint8_t datalen = len - sizeof(Message);
     if (datalen < 3) return;
     uint8_t* data = msg->data;
@@ -563,6 +564,7 @@ void setup()
     router = new RHMesh(*radio, config.node_id);
 #else
     router = new RHRouter(*radio, config.node_id);
+    router.clearRoutingTable();
 #endif
     if (USE_LOW_SLOW_RADIO_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
