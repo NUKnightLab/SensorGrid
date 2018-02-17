@@ -21,7 +21,11 @@ uint32_t display_clock_time = 0;
 
 /* LoRa */
 RH_RF95 *radio;
+#if defined(USE_MESH_ROUTER)
 static RHMesh* router;
+#else
+static RHRouter* router;
+#endif
 int16_t last_rssi[MAX_NODES];
 
 RTC_PCF8523 rtc;
@@ -180,6 +184,60 @@ struct NodeMessage {
     Record records[];
 };
 
+void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
+{
+    uint8_t first_pref[MAX_DATA_RECORDS] = {0};
+    uint8_t first_pref_index = 0;
+    uint8_t second_pref[MAX_DATA_RECORDS] = {0};
+    uint8_t second_pref_index = 0;
+    uint8_t third_pref[MAX_DATA_RECORDS] = {0};
+    uint8_t third_pref_index = 0;
+    for (int i=0; i<len; i++) {
+        uint8_t node_id = nodes[i];
+        p(F("Checking node ID: %d\n"), node_id);
+        if (node_id == config.node_id) {
+            p(F("Skipping self ID for preferred routing\n"));
+        } else {
+            RHRouter::RoutingTableEntry* route = router->getRouteTo(node_id);
+            if (route->state == RHRouter::Valid) {
+                if (route->next_hop == node_id) {
+                    first_pref[first_pref_index++] = node_id;
+                    p(F("Node is single hop to ID: %d\n"), node_id);
+                } else {
+                    second_pref[second_pref_index++] = node_id;
+                    p(F("Node is multihop to: %d\n"), node_id);
+                }
+            } else {
+                third_pref[third_pref_index++] = node_id;
+                p(F("No known route to ID: %d\n"), node_id);
+            }
+        }
+    }
+    p(F("First pref: "));
+    for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
+        output(F("%d "), first_pref[i]);
+    }
+    output("\n");
+    p(F("Second pref: "));
+    for (int i=0; i<MAX_DATA_RECORDS && second_pref[i] > 0; i++) {
+        output(F("%d "), second_pref[i]);
+    }
+    output("\n");
+    p(F("Third pref:"));
+    for (int i=0; i<MAX_DATA_RECORDS && third_pref[i] > 0; i++) {
+        output(F(" %d"), third_pref[i]);
+    }
+    output("\n");
+    memcpy(first_pref+first_pref_index, second_pref, second_pref_index);
+    memcpy(first_pref+first_pref_index+second_pref_index, third_pref, third_pref_index);
+    p(F("Determined preferred routing: [ "));
+    for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
+        output(F("%d "), first_pref[i]);
+    }
+    output(F("]"));
+    memcpy(order, first_pref, MAX_DATA_RECORDS);
+}
+
 const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
 void node_process_message(Message* msg, uint8_t len)
@@ -243,10 +301,31 @@ void node_process_message(Message* msg, uint8_t len)
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     output(F("]\n"));
+    uint8_t ordered_nodes[next_nodes_index];
+    get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
     for (int i=0; i<next_nodes_index; i++) {
-        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, next_nodes[i]))
+#if defined(USE_MESH_ROUTER)
+        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, ordered_nodes[i]))
             return;
+#else
+        bool trial = false;
+        if (router->getRouteTo(ordered_nodes[i])->state != RHRouter::Valid) {
+            router->addRouteTo(ordered_nodes[i], ordered_nodes[i]);
+            trial = true;
+        }
+        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, ordered_nodes[i])) {
+            return;
+        } else {
+            if (trial) {
+                router->deleteRouteTo(ordered_nodes[i]);
+            }
+        }
     }
+#endif
+
+    /* send to the collector if all other nodes fail */
+    /* TODO: if we don't have a route to the collector, add route via node that
+             sent us the data message */
     if (collector) {
         send_data(new_data, new_data_index, collector);
     }
@@ -302,14 +381,12 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
                 rtc.adjust(msg_time);
             }
         }
-        if ( VERBOSE
-             && _msg->sensorgrid_version != config.sensorgrid_version ) {
+        if (_msg->sensorgrid_version != config.sensorgrid_version ) {
             p(F("IGNORING: Received message with wrong firmware version: %d\n"),
             _msg->sensorgrid_version);
             return false;
         }
-        if ( VERBOSE
-            && _msg->network_id != config.network_id ) {
+        if (_msg->network_id != config.network_id ) {
             p(F("IGNORING: Received message from wrong network: %d\n"),
             _msg->network_id);
             return false;
@@ -451,7 +528,11 @@ void setup()
         attachInterrupt(BUTTON_C, cButton_ISR, FALLING);
     }
     radio = new RH_RF95(config.RFM95_CS, config.RFM95_INT);
+#if defined(USE_MESH_ROUTER)
     router = new RHMesh(*radio, config.node_id);
+#else
+    router = new RHRouter(*radio, config.node_id);
+#endif
     if (USE_LOW_SLOW_RADIO_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init()) p(F("Router init failed\n"));
