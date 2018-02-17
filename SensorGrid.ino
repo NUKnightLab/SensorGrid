@@ -339,6 +339,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
 void process_message(Message* msg, uint8_t len, uint8_t from) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         p("COLLECTOR DATA RECEIVED\n");
+        //delay(2000); // do something with received data
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         node_process_message(msg, len, from);
     }
@@ -375,6 +376,7 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
     }
     Message* _msg;
     lock_recv_buffer(); // lock to be released by calling client
+    memset(recv_buf, 0, RECV_BUFFER_SIZE);
     if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
         output("\n");
         _msg = (Message*)recv_buf;
