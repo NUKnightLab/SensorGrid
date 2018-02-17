@@ -3,7 +3,7 @@
 #include <pt.h>
 
 #define VERBOSE 1
-#define USE_LOW_SLOW_RADIO_MODE 1
+#define USE_LOW_SLOW_RADIO_MODE 0
 #define WAIT_SERIAL 1
 #define DISPLAY_UPDATE_PERIOD 1000
 #define MAX_NODES 20
