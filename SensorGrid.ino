@@ -425,6 +425,7 @@ void check_message()
     if (receive(&len, &from, &dest, &msg_id)) {
         unsigned long receive_time = millis();
         Message *_msg = (Message*)recv_buf;
+        p(F("Calling process_message with from: %d"), from);
         process_message(_msg, len, from);
     }
     release_recv_buffer();
