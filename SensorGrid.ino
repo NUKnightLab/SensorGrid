@@ -327,6 +327,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     /* send to the collector if all other nodes fail */
     if (collector) {
         if (router->getRouteTo(collector)->state != RHRouter::Valid) {
+            p(F("Adding route to %d via %d\n"), collector, from);
             router->addRouteTo(collector, from);
         }
         send_data(new_data, new_data_index, collector);
