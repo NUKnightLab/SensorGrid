@@ -564,7 +564,7 @@ void setup()
     router = new RHMesh(*radio, config.node_id);
 #else
     router = new RHRouter(*radio, config.node_id);
-    router.clearRoutingTable();
+    router->clearRoutingTable();
 #endif
     if (USE_LOW_SLOW_RADIO_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
