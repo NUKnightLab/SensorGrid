@@ -213,21 +213,21 @@ void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
             }
         }
     }
-    p(F("First pref: "));
-    for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
-        output(F("%d "), first_pref[i]);
-    }
-    output("\n");
-    p(F("Second pref: "));
-    for (int i=0; i<MAX_DATA_RECORDS && second_pref[i] > 0; i++) {
-        output(F("%d "), second_pref[i]);
-    }
-    output("\n");
-    p(F("Third pref:"));
-    for (int i=0; i<MAX_DATA_RECORDS && third_pref[i] > 0; i++) {
-        output(F(" %d"), third_pref[i]);
-    }
-    output("\n");
+    //p(F("First pref: "));
+    //for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
+    //    output(F("%d "), first_pref[i]);
+    //}
+    //output("\n");
+    //p(F("Second pref: "));
+    //for (int i=0; i<MAX_DATA_RECORDS && second_pref[i] > 0; i++) {
+    //    output(F("%d "), second_pref[i]);
+    //}
+    //output("\n");
+    //p(F("Third pref:"));
+    //for (int i=0; i<MAX_DATA_RECORDS && third_pref[i] > 0; i++) {
+    //    output(F(" %d"), third_pref[i]);
+    //}
+    //output("\n");
     memcpy(first_pref+first_pref_index, second_pref, second_pref_index);
     memcpy(first_pref+first_pref_index+second_pref_index, third_pref, third_pref_index);
     p(F("Determined preferred routing: [ "));
@@ -331,7 +331,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
         send_data(new_data, new_data_index, collector);
     }
-    router->printRoutingTable();
+    //router->printRoutingTable();
 }
 
 void collector_process_message(Message* msg, uint8_t len, uint8_t from)
@@ -406,7 +406,7 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
             if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, node_id))
                 return;
         }
-        router->printRoutingTable();
+        //router->printRoutingTable();
     }
 }
 void process_message(Message* msg, uint8_t len, uint8_t from) {
@@ -432,6 +432,7 @@ void lock_recv_buffer()
 
 void release_recv_buffer()
 {
+    //memset(recv_buf, 0, RECV_BUFFER_SIZE);
     recv_buffer_avail = true;
 }
 
@@ -439,6 +440,7 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
         uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
     static uint8_t last_message[RECV_BUFFER_SIZE] = {0};
+    static uint8_t last_message_len = 0;
     if (len == NULL) {
         uint8_t _len;
         len = &_len;
@@ -450,21 +452,24 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
     }
     Message* _msg;
     lock_recv_buffer(); // lock to be released by calling client
-    memset(recv_buf, 0, RECV_BUFFER_SIZE);
     if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
-        output("\n");
-        bool same_message = true;
-        for (int i=0; i<*len; i++) {
-            if (last_message[i] != recv_buf[i]) {
-                same_message = false;
-                break;
+        if (*len == last_message_len) {
+            /* why are we getting repeated messages? */
+            bool same_message = true;
+            for (int i=0; i<*len; i++) {
+                if (last_message[i] != recv_buf[i]) {
+                    same_message = false;
+                    i = *len;
+                }
+            }
+            if (same_message) {
+                output(F("*"));
+                return false;
             }
         }
-        if (same_message) {
-            p(F("Ignoring repeated message.\n"));
-            return false;
-        }
+        output("\n");
         memcpy(last_message, recv_buf, *len);
+        last_message_len = *len;
         _msg = (Message*)recv_buf;
         if ( _msg->sensorgrid_version == config.sensorgrid_version
                 && _msg->network_id == config.network_id && _msg->timestamp > 0) {
@@ -496,26 +501,21 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
     }
 } /* receive_message */
 
+/*
 bool receive(uint8_t* len=NULL, uint8_t* source=NULL,
         uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
     return receive_message(recv_buf, len, source, dest, id, flags);
-} /* receive */
+} */ /* receive */
 
 void check_message()
 {
     static bool listening = false;
     static uint16_t count = 0;
     uint8_t from, dest, msg_id, len;
-    //if (!listening) {
-    //    listening = true;
-    //    p(F("*** Radio active listen ....\n"));
-    //}
     if (!++count) output(F("."));
-    if (receive(&len, &from, &dest, &msg_id)) {
-        unsigned long receive_time = millis();
+    if (receive_message(recv_buf, &len, &from, &dest, &msg_id)) {
         Message *_msg = (Message*)recv_buf;
-        p(F("Calling process_message with from: %d\n"), from);
         process_message(_msg, len, from);
     }
     release_recv_buffer();
@@ -587,6 +587,7 @@ void send_data_collection_request()
 #else
         p(F("Sending DATA: "));
         for (int j=0; j<data_index; j++) output(F("%d "), data[j]);
+        output(F("\n"));
         bool trial = false;
         if (router->getRouteTo(node_id)->state != RHRouter::Valid) {
             router->addRouteTo(node_id, node_id);
