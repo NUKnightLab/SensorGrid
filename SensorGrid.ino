@@ -234,7 +234,7 @@ void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
     for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
         output(F("%d "), first_pref[i]);
     }
-    output(F("]"));
+    output(F("]\n"));
     memcpy(order, first_pref, MAX_DATA_RECORDS);
 }
 
@@ -320,8 +320,8 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                 router->deleteRouteTo(ordered_nodes[i]);
             }
         }
-    }
 #endif
+    }
 
     /* send to the collector if all other nodes fail */
     if (collector) {
@@ -330,6 +330,8 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
         send_data(new_data, new_data_index, collector);
     }
+
+    router->printRoutingTable();
 }
 
 void process_message(Message* msg, uint8_t len, uint8_t from) {
@@ -482,7 +484,34 @@ void send_data_collection_request()
         data[data_index++] = last_record_ids[known_nodes[i]];
     }
     uint8_t dest = known_nodes[0];
-    send_data(data, sizeof(data), dest);
+    uint8_t ordered_nodes[node_count];
+    /* get_prefered_routing_order is clobbering data! Why?!!!
+       using known_nodes for now instead */
+    //get_preferred_routing_order(known_nodes, node_count, ordered_nodes);
+    for (int i=0; i<node_count; i++) {
+        uint8_t node_id = known_nodes[i]; // until get_preferred is working
+#if defined(USE_MESH_ROUTER)
+        if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id))
+            return;
+#else
+        p(F("Sending DATA: "));
+        for (int j=0; j<data_index; j++) output(F("%d "), data[j]);
+        bool trial = false;
+        if (router->getRouteTo(node_id)->state != RHRouter::Valid) {
+            router->addRouteTo(node_id, node_id);
+            trial = true;
+        }
+        if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id)) {
+            return;
+        } else {
+            if (trial) {
+                p(F("Removing unsuccessful trial route to: %d\n"), node_id);
+                router->deleteRouteTo(node_id);
+            }
+        }
+    }
+#endif
+
 } /* send_data_collection_request */
 
 /*
