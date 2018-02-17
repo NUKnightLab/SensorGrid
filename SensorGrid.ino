@@ -336,6 +336,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
 
 void collector_process_message(Message* msg, uint8_t len, uint8_t from)
 {
+    static uint8_t previous_uncollected_nodes_count = 0;
     uint8_t datalen = len - sizeof(Message);
     if (datalen < 3) return;
     uint8_t* data = msg->data;
@@ -390,17 +391,23 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
             record_count = 0;
         }
     }
-    p(F("New data: [ "));
-    for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
-    output(F("]\n"));
-    uint8_t ordered_nodes[next_nodes_index];
-    get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
-    for (int i=0; i<next_nodes_index; i++) {
-        uint8_t node_id = ordered_nodes[i];
-        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, node_id))
-            return;
+    if (next_nodes_index == previous_uncollected_nodes_count) {
+        p(F("Unabled to collect nodes: "));
+        for (int i=0; i<next_nodes_index; i++) output(F("%d "), next_nodes[i]);
+    } else {
+        previous_uncollected_nodes_count = next_nodes_index;
+        p(F("New data: [ "));
+        for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
+        output(F("]\n"));
+        uint8_t ordered_nodes[next_nodes_index];
+        get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
+        for (int i=0; i<next_nodes_index; i++) {
+            uint8_t node_id = ordered_nodes[i];
+            if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, node_id))
+                return;
+        }
+        router->printRoutingTable();
     }
-    router->printRoutingTable();
 }
 void process_message(Message* msg, uint8_t len, uint8_t from) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
@@ -431,6 +438,7 @@ void release_recv_buffer()
 bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
         uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
 {
+    static uint8_t last_message[RECV_BUFFER_SIZE] = {0};
     if (len == NULL) {
         uint8_t _len;
         len = &_len;
@@ -445,6 +453,18 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
     memset(recv_buf, 0, RECV_BUFFER_SIZE);
     if (router->recvfromAck(recv_buf, len, source, dest, id, flags)) {
         output("\n");
+        bool same_message = true;
+        for (int i=0; i<*len; i++) {
+            if (last_message[i] != recv_buf[i]) {
+                same_message = false;
+                break;
+            }
+        }
+        if (same_message) {
+            p(F("Ignoring repeated message.\n"));
+            return false;
+        }
+        memcpy(last_message, recv_buf, *len);
         _msg = (Message*)recv_buf;
         if ( _msg->sensorgrid_version == config.sensorgrid_version
                 && _msg->network_id == config.network_id && _msg->timestamp > 0) {
@@ -487,10 +507,10 @@ void check_message()
     static bool listening = false;
     static uint16_t count = 0;
     uint8_t from, dest, msg_id, len;
-    if (!listening) {
-        listening = true;
-        p(F("*** Radio active listen ....\n"));
-    }
+    //if (!listening) {
+    //    listening = true;
+    //    p(F("*** Radio active listen ....\n"));
+    //}
     if (!++count) output(F("."));
     if (receive(&len, &from, &dest, &msg_id)) {
         unsigned long receive_time = millis();
@@ -647,7 +667,7 @@ void setup()
         p(F("Radio frequency set failed\n\n"));
     }
     radio->setTxPower(config.tx_power, false);
-    //radio->setCADTimeout(CAD_TIMEOUT);
+    radio->setCADTimeout(CAD_TIMEOUT);
     router->setTimeout(TIMEOUT);
     p(F("Setup complete\n"));
     delay(100);
