@@ -243,9 +243,11 @@ void node_process_message(Message* msg, uint8_t len)
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     output(F("]\n"));
-    if (next_nodes[0] > 0) {
-        send_data(new_data, new_data_index, next_nodes[0]);
-    } else if (collector) {
+    for (int i=0; i<next_nodes_index; i++) {
+        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, next_nodes[i]))
+            return;
+    }
+    if (collector) {
         send_data(new_data, new_data_index, collector);
     }
 }
