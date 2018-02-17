@@ -192,36 +192,28 @@ void process_message(Message* msg, uint8_t len)
     static uint8_t max_record_id;
     static uint8_t record_count;
     static uint8_t data_type;
-    for (int i=0; i<datalen; i++) {
+    uint8_t index = 0;
+    while (index < datalen) {
         if (!node_id) {
-            node_id = data[i];
+            node_id = data[index++];
         } else if (!max_record_id) {
-            max_record_id = data[i];
+            max_record_id = data[index++];
         } else if (!record_count) {
-            record_count = data[i];
+            record_count = data[index++];
         } else {
-            static uint8_t data_type;
-            for (int j=0; j<record_count; j++) {
-                if (!data_type) {
-                    data_type = data[i+j];
-                } else {
-                    switch (data_type) {
-                        case DATA_TYPE_NODE_COLLECTION_LIST :
-                            uint8_t node_count = data[i+j];
-                            if (i + j + node_count * 2 >= datalen) {
-                                p(F("BAD COLLECTION LIST\n"));
-                                return;
-                            }
-                            p(F("COLLECTION LIST: "));
-                            for (int k=i+j+1; k<i+j+node_count*2; k+=2) {
-                                output(F("NODE: %d; MAX_RECORD_ID: %d"), data[k], data[k+1]);
-                            }
-                            output(F("\n"));
-                    }
+            for (int record=0; record<record_count; record++) {
+                data_type = data[index++];
+                switch (data_type) {
+                    case DATA_TYPE_NODE_COLLECTION_LIST :
+                        p(F("COLLECTION LIST: "));
+                        uint8_t node_count = data[index++];
+                        for (int i=0; i<node_count; i++) {
+                            output(F("NODE: %d; MAX_RECORD_ID: %d; "),
+                            data[index++], data[index++]);
+                        }
+                        output(F("\n"));
                 }
             }
-
-
         }
     }
 }
