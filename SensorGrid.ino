@@ -3,7 +3,7 @@
 #include <pt.h>
 
 #define VERBOSE 1
-#define USE_LOW_SLOW_RADIO_MODE 0
+#define USE_SLOW_RELIABLE_MODE 0
 #define WAIT_SERIAL 1
 #define DISPLAY_UPDATE_PERIOD 1000
 #define MAX_NODES 20
@@ -573,7 +573,7 @@ void setup()
     router->addRouteTo(3, 3);
     router->addRouteTo(4, 4);
 #endif
-    if (USE_LOW_SLOW_RADIO_MODE)
+    if (USE_SLOW_RELIABLE_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     if (!router->init()) p(F("Router init failed\n"));
     p(F("FREQ: %.2f\n"), config.rf95_freq);
@@ -581,7 +581,7 @@ void setup()
         p(F("Radio frequency set failed\n\n"));
     }
     radio->setTxPower(config.tx_power, false);
-    radio->setCADTimeout(CAD_TIMEOUT);
+    //radio->setCADTimeout(CAD_TIMEOUT);
     router->setTimeout(TIMEOUT);
     p(F("Setup complete\n"));
     delay(100);
