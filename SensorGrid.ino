@@ -254,7 +254,7 @@ void node_process_message(Message* msg, uint8_t len)
 
 void process_message(Message* msg, uint8_t len) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-        p("COLLECTOR DATA RECD");
+        p("COLLECTOR DATA RECEIVED\n");
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         node_process_message(msg, len);
     }
@@ -306,13 +306,13 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
              && _msg->sensorgrid_version != config.sensorgrid_version ) {
             p(F("IGNORING: Received message with wrong firmware version: %d\n"),
             _msg->sensorgrid_version);
-            return MESSAGE_TYPE_WRONG_VERSION;
+            return false;
         }
         if ( VERBOSE
             && _msg->network_id != config.network_id ) {
             p(F("IGNORING: Received message from wrong network: %d\n"),
             _msg->network_id);
-            return MESSAGE_TYPE_WRONG_NETWORK;
+            return false;
         }
         p(F("Received message. LEN: %d; FROM: %d; RSSI: %d; DATA "),
             *len, *source, radio->lastRssi());
