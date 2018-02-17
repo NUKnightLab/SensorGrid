@@ -194,6 +194,9 @@ void node_process_message(Message* msg, uint8_t len)
     static uint8_t data_type;
     uint8_t index = 0;
     uint8_t new_data_index = 0;
+    uint8_t next_nodes[MAX_NODES] = {0};
+    uint8_t next_nodes_index = 0;
+    uint8_t collector;
     while (index < datalen) {
         if (!node_id) {
             node_id = data[index++];
@@ -213,6 +216,7 @@ void node_process_message(Message* msg, uint8_t len)
                 switch (data_type) {
                     case DATA_TYPE_NODE_COLLECTION_LIST :
                         p(F("COLLECTION LIST: "));
+                        collector = node_id;
                         uint8_t node_count_index = new_data_index++;
                         new_data[node_count_index] = 0;
                         uint8_t node_count = data[index++];
@@ -225,6 +229,7 @@ void node_process_message(Message* msg, uint8_t len)
                                 new_data[new_data_index++] = node;
                                 new_data[new_data_index++] = max_record;
                                 new_data[node_count_index]++;
+                                next_nodes[next_nodes_index++] = node;
                             }
                         }
                         output(F("\n"));
@@ -238,7 +243,11 @@ void node_process_message(Message* msg, uint8_t len)
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     output(F("]\n"));
-    send_data(new_data, new_data_index, 1);
+    if (next_nodes[0] > 0) {
+        send_data(new_data, new_data_index, next_nodes[0]);
+    } else if (collector) {
+        send_data(new_data, new_data_index, collector);
+    }
 }
 
 void process_message(Message* msg, uint8_t len) {
