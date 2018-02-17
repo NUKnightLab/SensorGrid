@@ -240,7 +240,7 @@ void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
 
 const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
-void node_process_message(Message* msg, uint8_t len)
+void node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
     uint8_t datalen = len - sizeof(Message);
     if (datalen < 3) return;
@@ -324,18 +324,19 @@ void node_process_message(Message* msg, uint8_t len)
 #endif
 
     /* send to the collector if all other nodes fail */
-    /* TODO: if we don't have a route to the collector, add route via node that
-             sent us the data message */
     if (collector) {
+        if (router->getRouteTo(collector)->state != RHRouter::Valid) {
+            router->addRouteTo(collector, from);
+        }
         send_data(new_data, new_data_index, collector);
     }
 }
 
-void process_message(Message* msg, uint8_t len) {
+void process_message(Message* msg, uint8_t len, uint8_t from) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         p("COLLECTOR DATA RECEIVED\n");
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
-        node_process_message(msg, len);
+        node_process_message(msg, len, from);
     }
 }
 
@@ -422,7 +423,7 @@ void check_message()
     if (receive(&len, &from, &dest, &msg_id)) {
         unsigned long receive_time = millis();
         Message *_msg = (Message*)recv_buf;
-        process_message(_msg, len);
+        process_message(_msg, len, from);
     }
     release_recv_buffer();
 } /* check_incoming_message */
