@@ -236,10 +236,10 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     if (datalen < 3) return;
     uint8_t* data = msg->data;
     uint8_t new_data[MAX_MESSAGE_SIZE - sizeof(Message)];
-    static uint8_t node_id;
-    static uint8_t max_record_id;
-    static uint8_t record_count;
-    static uint8_t data_type;
+    //static uint8_t node_id;
+    //static uint8_t max_record_id;
+    //static uint8_t record_count;
+    //static uint8_t data_type;
     uint8_t index = 0;
     uint8_t new_data_index = 0;
     uint8_t next_nodes[MAX_NODES] = {0};
@@ -250,16 +250,16 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     new_data[new_data_index++] = from_node_id;
     uint8_t message_id = data[index++];
     new_data[new_data_index++] = message_id;
-    record_count = data[index++];
+    uint8_t record_count = data[index++];
     new_data[new_data_index++] = record_count;
-    data_type = data[index++];
+    uint8_t data_type = data[index++];
     new_data[new_data_index++] = data_type;
 
     switch (data_type) {
         case DATA_TYPE_NODE_COLLECTION_LIST :
         {
             p(F("COLLECTION_LIST: "));
-            collector = node_id;
+            collector = from_node_id;
             uint8_t node_count_index = new_data_index++;
             new_data[node_count_index] = 0;
             uint8_t node_count = data[index++];
