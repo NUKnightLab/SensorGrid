@@ -556,7 +556,6 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
     uint8_t err = router->sendtoWait((uint8_t*)msg, len+sizeof(Message), dest);
     p(F("Time to send: %d\n"), millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
-        router->sendtoWait((uint8_t*)msg, len+sizeof(Message), 255); // testing
         return err;
     } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
         p(F("ERROR sending message to Node ID: %d. INVALID LENGTH\n"), dest);
@@ -675,6 +674,7 @@ void setup()
     router = new RHMesh(*radio, config.node_id);
 #else
     router = new RHRouter(*radio, config.node_id);
+    router->setRetries(0);
     router->clearRoutingTable();
     router->addRouteTo(1, 1);
     router->addRouteTo(2, 2);
