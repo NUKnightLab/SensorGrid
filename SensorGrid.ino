@@ -370,7 +370,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     output(F("]\n"));
-    uint8_t ordered_nodes[next_nodes_index];
+    uint8_t ordered_nodes[MAX_NODES];
     get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
     for (int i=0; i<next_nodes_index; i++) {
         uint8_t to_node_id = ordered_nodes[i];
