@@ -273,7 +273,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         new_data[new_data_index++] = data[index++];
     }
     /* add self data to new data */
-    static uint8_t recent_maxt_record_id = 0;
+    static uint8_t recent_max_record_id = 0;
     new_data[new_data_index++] = config.node_id;
     new_data[new_data_index++] = ++recent_max_record_id;
     new_data[new_data_index++] = 1; // record count
