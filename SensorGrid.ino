@@ -267,7 +267,8 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                 new_data[new_data_index++] = data_type;
                 switch (data_type) {
                     case DATA_TYPE_NODE_COLLECTION_LIST :
-                        p(F("COLLECTION LIST: "));
+                    {
+                        p(F("COLLECTION_LIST: "));
                         collector = node_id;
                         uint8_t node_count_index = new_data_index++;
                         new_data[node_count_index] = 0;
@@ -285,6 +286,17 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                             }
                         }
                         output(F("\n"));
+                        break;
+                    }
+                    case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
+                    {
+                        uint16_t seconds = (data[index++] << 8);
+                        seconds = seconds | (data[index++] & 0xff);
+                        p(F("NEXT_ACTIVITY_SECONDS: %d"), seconds);
+                        radio->sleep();
+                        next_activity_time = millis() + seconds * 1000;
+                        break;
+                    }
                 }
             }
             node_id = 0;
@@ -608,7 +620,7 @@ void send_next_activity_seconds(uint16_t seconds)
         config.node_id,                 // Byte 0
         ++msg_id,                       // 1
         1,                              // 2
-        DATA_TYPE_NEXT_ACTIVITY_TIME,   // 3
+        DATA_TYPE_NEXT_ACTIVITY_SECONDS,// 3
     };                                  // --> 4 preliminary bytes total
     uint8_t data_index = 4;
     data[data_index++] = seconds >> 8;
@@ -695,7 +707,10 @@ void setup()
 void loop()
 {
     static unsigned long last_display_update = 0;
-    check_message();
+    if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR
+            || millis() > next_activity_time) {
+        check_message();
+    }
     if (config.has_oled && millis() - last_display_update > DISPLAY_UPDATE_PERIOD) {
         update_display();
         last_display_update = millis();
