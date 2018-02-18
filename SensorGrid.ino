@@ -202,21 +202,6 @@ void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
             }
         }
     }
-    //p(F("First pref: "));
-    //for (int i=0; i<MAX_DATA_RECORDS && first_pref[i] > 0; i++) {
-    //    output(F("%d "), first_pref[i]);
-    //}
-    //output("\n");
-    //p(F("Second pref: "));
-    //for (int i=0; i<MAX_DATA_RECORDS && second_pref[i] > 0; i++) {
-    //    output(F("%d "), second_pref[i]);
-    //}
-    //output("\n");
-    //p(F("Third pref:"));
-    //for (int i=0; i<MAX_DATA_RECORDS && third_pref[i] > 0; i++) {
-    //    output(F(" %d"), third_pref[i]);
-    //}
-    //output("\n");
     memcpy(first_pref+first_pref_index, second_pref, second_pref_index);
     memcpy(first_pref+first_pref_index+second_pref_index, third_pref, third_pref_index);
     p(F("Determined preferred routing: [ "));
@@ -288,7 +273,9 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         new_data[new_data_index++] = data[index++];
     }
     /* add self data to new data */
+    static uint8_t recent_maxt_record_id = 0;
     new_data[new_data_index++] = config.node_id;
+    new_data[new_data_index++] = ++recent_max_record_id;
     new_data[new_data_index++] = 1; // record count
     new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
     new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
@@ -329,6 +316,13 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         send_data(new_data, new_data_index, collector);
     }
     //router->printRoutingTable();
+}
+
+void next_record_set(uint8_t* data)
+{
+    uint8_t index = 0;
+    uint8_t node_id = data[index++];
+    uint8_t max_record_id = data[index++];
 }
 
 void collector_process_message(Message* msg, uint8_t len, uint8_t from)
@@ -392,6 +386,7 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
                     case DATA_TYPE_BATTERY_LEVEL :
                     {
                         p(F("BATTERY_LEVEL: %d\n"), data[index++]);
+                        uint8_t bat = data[index++];
                         break;
                     }
                 }
