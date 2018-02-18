@@ -235,8 +235,8 @@ const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
 void node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
-    p(F("Node process message with from: %d\n"), from);
     uint8_t datalen = len - sizeof(Message);
+    p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
     if (datalen < 3) return;
     uint8_t* data = msg->data;
     uint8_t new_data[MAX_MESSAGE_SIZE - sizeof(Message)];
@@ -264,7 +264,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             record_count = data[index++];
             new_data[new_data_index++] = record_count;
         } else {
-            p(F("Message from NODE_ID: %d; MAX_RECORD_ID: %d; RECORD_COUNT: %d\n"),
+            p(F("Record set from NODE_ID: %d; MAX_RECORD_ID: %d; RECORD_COUNT: %d\n"),
                 node_id, max_record_id, record_count);
             for (int record=0; record<record_count; record++) {
                 data_type = data[index++];
@@ -303,9 +303,9 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                     }
                     case DATA_TYPE_BATTERY_LEVEL :
                     {
-                        p(F("BATTERY_LEVEL: "));
                         new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
                         new_data[new_data_index++] = data[index++];
+                        p(F("Adding BATTERY_LEVEL: %d"), new_data[new_data_index]);
                         break;
                     }
                 }
@@ -389,6 +389,7 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
                 new_data[new_data_index++] = data_type;
                 switch (data_type) {
                     case DATA_TYPE_NODE_COLLECTION_LIST :
+                    {
                         p(F("COLLECTION LIST: "));
                         collector = node_id; // expecting this to match self id
                         uint8_t node_count_index = new_data_index++;
@@ -405,6 +406,13 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
                             next_nodes[next_nodes_index++] = node;
                         }
                         output(F("\n"));
+                        break;
+                    }
+                    case DATA_TYPE_BATTERY_LEVEL :
+                    {
+                        p(F("BATTERY_LEVEL: %d\n"), data[index++]);
+                        break;
+                    }
                 }
             }
             node_id = 0;
