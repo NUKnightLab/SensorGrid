@@ -20,7 +20,10 @@ bool oled_is_on;
 uint32_t display_clock_time = 0;
 
 /* Collection state */
+static uint8_t known_nodes[] = { 2, 3, 4 };
 static unsigned long next_activity_time = 0;
+static uint8_t received_record_ids[MAX_NODES];
+
 
 /* LoRa */
 RH_RF95 *radio;
@@ -43,10 +46,6 @@ static RHRouter* router;
 int16_t last_rssi[MAX_NODES];
 
 RTC_PCF8523 rtc;
-
-/* collection state */
-static uint8_t known_nodes[] = { 2, 3, 4 };
-static uint8_t last_record_ids[MAX_NODES] = {0};
 
 /*
  * interrupts
@@ -318,99 +317,110 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     //router->printRoutingTable();
 }
 
-void next_record_set(uint8_t* data)
+/* returns current index of data */
+/*
+uint8_t next_record_set(uint8_t* data, uint8_t* collection_data)
 {
     uint8_t index = 0;
+    uint8_t collection_data_index = 0;
     uint8_t node_id = data[index++];
     uint8_t max_record_id = data[index++];
+    uint8_t record_count = data[index++];
+    for (int i=0; i<record_count; i++) {
+        uint8_t data_type = data[index++];
+        switch (data_type) {
+            case DATA_TYPE_NODE_COLLECTION_LIST :
+            {
+                p(F("COLLECTION LIST: "));
+                collector = node_id; // expecting this to match self id
+                uint8_t node_count_index = new_data_index++;
+                new_data[node_count_index] = 0;
+                uint8_t node_count = data[index++];
+                for (int i=0; i<node_count; i++) {
+                    uint8_t node = data[index++];
+                    uint8_t max_record = data[index++];
+                    output(F("NODE_ID: %d; MAX_RECORD_ID: %d; "),
+                    node, max_record);
+                    new_data[new_data_index++] = node;
+                    new_data[new_data_index++] = max_record;
+                    new_data[node_count_index]++;
+                    next_nodes[next_nodes_index++] = node;
+                }
+                output(F("\n"));
+                break;
+            }
+            case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
+            {
+                uint16_t seconds = (data[index++] << 8);
+                seconds = seconds | (data[index++] & 0xff);
+                break;
+            }
+            case DATA_TYPE_BATTERY_LEVEL :
+            {
+                p(F("BATTERY_LEVEL: %d\n"), data[index++]);
+                uint8_t bat = data[index++];
+                break;
+            }
+        }
+    }
 }
+*/
 
 void collector_process_message(Message* msg, uint8_t len, uint8_t from)
 {
     uint8_t datalen = len - sizeof(Message);
+    p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
     if (datalen < 3) return;
     uint8_t* data = msg->data;
-    uint8_t new_data[MAX_MESSAGE_SIZE - sizeof(Message)];
-    static uint8_t node_id;
-    static uint8_t max_record_id;
-    static uint8_t record_count;
-    static uint8_t data_type;
     uint8_t index = 0;
-    uint8_t new_data_index = 0;
-    uint8_t next_nodes[MAX_NODES] = {0};
-    uint8_t next_nodes_index = 0;
-    uint8_t collector;
-    while (index < datalen) {
-        if (!node_id) {
-            node_id = data[index++];
-            new_data[new_data_index++] = node_id;
-        } else if (!max_record_id) {
-            max_record_id = data[index++];
-            new_data[new_data_index++] = max_record_id;
-        } else if (!record_count) {
-            record_count = data[index++];
-            new_data[new_data_index++] = record_count;
-        } else {
-            p(F("Message from NODE_ID: %d; MAX_RECORD_ID: %d; RECORD_COUNT: %d\n"),
-                node_id, max_record_id, record_count);
-            for (int record=0; record<record_count; record++) {
-                data_type = data[index++];
-                new_data[new_data_index++] = data_type;
-                switch (data_type) {
-                    case DATA_TYPE_NODE_COLLECTION_LIST :
-                    {
-                        p(F("COLLECTION LIST: "));
-                        collector = node_id; // expecting this to match self id
-                        uint8_t node_count_index = new_data_index++;
-                        new_data[node_count_index] = 0;
-                        uint8_t node_count = data[index++];
-                        for (int i=0; i<node_count; i++) {
-                            uint8_t node = data[index++];
-                            uint8_t max_record = data[index++];
-                            output(F("NODE_ID: %d; MAX_RECORD_ID: %d; "),
-                            node, max_record);
-                            new_data[new_data_index++] = node;
-                            new_data[new_data_index++] = max_record;
-                            new_data[node_count_index]++;
-                            next_nodes[next_nodes_index++] = node;
-                        }
-                        output(F("\n"));
-                        break;
-                    }
-                    case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
-                    {
-                        uint16_t seconds = (data[index++] << 8);
-                        seconds = seconds | (data[index++] & 0xff);
-                        break;
-                    }
-                    case DATA_TYPE_BATTERY_LEVEL :
-                    {
-                        p(F("BATTERY_LEVEL: %d\n"), data[index++]);
-                        uint8_t bat = data[index++];
-                        break;
-                    }
-                }
+    uint8_t uncollected_nodes[MAX_NODES];
+    uint8_t uncollected_nodes_index = 0;
+    uint8_t from_node_id = data[index++];
+    uint8_t message_id = data[index++];
+    uint8_t record_count = data[index++];
+    uint8_t data_type = data[index++];
+    switch (data_type) {
+        case DATA_TYPE_NODE_COLLECTION_LIST :
+        {
+            uint8_t collector = from_node_id; // should be this node. TODO: check?
+            uint8_t node_count = data[index++];
+            for (int i=0; i<node_count; i++) {
+                uint8_t node = data[index++];
+                uint8_t max_record = data[index++];
+                received_record_ids[node] = max_record;
+                uncollected_nodes[uncollected_nodes_index++] = node;
             }
-            node_id = 0;
-            max_record_id = 0;
-            record_count = 0;
+            break;
+        }
+        case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
+        {
+            uint16_t seconds = (data[index++] << 8);
+            seconds = seconds | (data[index++] & 0xff);
+            break;
+        }
+        case DATA_TYPE_BATTERY_LEVEL :
+        {
+            p(F("BATTERY_LEVEL: %d\n"), data[index++]);
+            uint8_t bat = data[index++];
+            break;
         }
     }
-    p(F("New data: [ "));
-    for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
-    output(F("]\n"));
-    uint8_t ordered_nodes[next_nodes_index];
-    get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
-    for (int i=0; i<next_nodes_index; i++) {
-        uint8_t node_id = ordered_nodes[i];
-        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, node_id)) {
-            next_activity_time = millis() + 20000; // timeout in case no response from network
-            return;
-        }
+    if (uncollected_nodes_index > 0) {
+        send_data_collection_request(uncollected_nodes, uncollected_nodes_index);
     }
+    //uint8_t ordered_nodes[next_nodes_index];
+    //get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
+    //for (int i=0; i<uncollected_nodes_index; i++) {
+    //    uint8_t node_id = ordered_nodes[i];
+    //    if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, node_id)) {
+    //        next_activity_time = millis() + 20000; // timeout in case no response from network
+    //        return;
+    //    }
+    //}
     send_next_activity_seconds(30);
     next_activity_time = millis() + 30000 + 2000;
 }
+
 void process_message(Message* msg, uint8_t len, uint8_t from) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         p("COLLECTOR DATA RECEIVED\n");
@@ -560,11 +570,11 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
     }
 } /* send_data */
 
-void send_data_collection_request()
+void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
 {
     static uint8_t msg_id = 0;
-    const uint8_t node_count = sizeof(known_nodes);
-    uint8_t data[5 + node_count*2] = {
+    //const uint8_t node_count = sizeof(known_nodes);
+    uint8_t data[5 + MAX_NODES*2] = {
         config.node_id,                 // Byte 0
         ++msg_id,                       // 1
         1,                              // 2
@@ -573,16 +583,16 @@ void send_data_collection_request()
     };                                  // --> 5 preliminary bytes total
     uint8_t data_index = 5;
     for (int i=0; i<node_count; i++) {
-        data[data_index++] = known_nodes[i];
-        data[data_index++] = last_record_ids[known_nodes[i]];
+        data[data_index++] = nodes[i];
+        data[data_index++] = received_record_ids[nodes[i]];
     }
-    uint8_t dest = known_nodes[0];
+    uint8_t dest = nodes[0];
     uint8_t ordered_nodes[node_count];
     /* get_prefered_routing_order is clobbering data! Why?!!!
        using known_nodes for now instead */
     //get_preferred_routing_order(known_nodes, node_count, ordered_nodes);
     for (int i=0; i<node_count; i++) {
-        uint8_t node_id = known_nodes[i]; // until get_preferred is working
+        uint8_t node_id = nodes[i]; // until get_preferred is working
 #if defined(USE_MESH_ROUTER)
         if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id)) {
             next_activity_time = millis() + 20000; // timeout in case no response from network
@@ -718,7 +728,7 @@ void loop()
     }
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         if (millis() > next_activity_time) {
-            send_data_collection_request();
+            send_data_collection_request(known_nodes, sizeof(known_nodes));
         }
     }
 }
