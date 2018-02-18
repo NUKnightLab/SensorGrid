@@ -676,12 +676,17 @@ void setup()
 
 void loop()
 {
+    static unsigned long last_collection = 0;
     check_message();
     if (config.has_oled) {
         update_display_thread(&update_display_protothread, DISPLAY_UPDATE_PERIOD);
     }
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-        send_collection_request_thread(&send_collection_request_protothread,
-            config.collection_period * 1000);
+        //send_collection_request_thread(&send_collection_request_protothread,
+        //    config.collection_period * 1000);
+        if (millis() - last_collection > 30000) {
+            send_data_collection_request();
+            last_collection = millis();
+        }
     }
 }
