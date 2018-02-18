@@ -711,6 +711,7 @@ void loop()
     } else {
         if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD) {
             sharp_dust_sample();
+            last_dust_sample = millis();
         }
     }
     if (config.has_oled && millis() - last_display_update > DISPLAY_UPDATE_PERIOD) {
