@@ -392,7 +392,7 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
         }
     }
     if (next_nodes_index == previous_uncollected_nodes_count) {
-        p(F("Unabled to collect nodes: "));
+        p(F("Unable to collect nodes: "));
         for (int i=0; i<next_nodes_index; i++) output(F("%d "), next_nodes[i]);
     } else {
         previous_uncollected_nodes_count = next_nodes_index;
