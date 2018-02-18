@@ -24,6 +24,11 @@ static uint8_t known_nodes[] = { 2, 3, 4 };
 static unsigned long next_activity_time = 0;
 static uint8_t received_record_ids[MAX_NODES];
 
+/* Sensor data */
+static Data historical_data[100];
+static uint8_t historical_data_index = 0;
+static uint8_t data_id = 0;
+
 
 /* LoRa */
 RH_RF95 *radio;
@@ -275,9 +280,18 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     static uint8_t recent_max_record_id = 0;
     new_data[new_data_index++] = config.node_id;
     new_data[new_data_index++] = ++recent_max_record_id;
+    uint8_t added_record_count_index = index;
     new_data[new_data_index++] = 1; // record count
     new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
     new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
+
+    for (int i=0; i<historical_data_index; i++) {
+        new_data[new_data_index++] = historical_data[i].type;
+        new_data[new_data_index++] = historical_data[i].value >> 8;
+        new_data[new_data_index++] = historical_data[i].value & 0xff;
+        new_data[added_record_count_index]++;
+    }
+
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     output(F("]\n"));
@@ -354,6 +368,13 @@ uint8_t collector_process_data(uint8_t* data)
         {
             uint8_t bat = data[index++];
             p(F("NODE: %d; BATTERY_LEVEL: %d\n"), from_node_id, bat);
+            break;
+        }
+        case DATA_TYPE_SHARP_GP2Y1010AU0F :
+        {
+            uint16_t dust = (data[index++] << 8);
+            dust = dust | (data[index++] & 0xff);
+            p(F("SHARP_DUST: %d\n"), dust);
             break;
         }
     }
@@ -469,13 +490,6 @@ bool receive_message(uint8_t* buf, uint8_t* len=NULL, uint8_t* source=NULL,
         return false;
     }
 } /* receive_message */
-
-/*
-bool receive(uint8_t* len=NULL, uint8_t* source=NULL,
-        uint8_t* dest=NULL, uint8_t* id=NULL, uint8_t* flags=NULL)
-{
-    return receive_message(recv_buf, len, source, dest, id, flags);
-} */ /* receive */
 
 void check_message()
 {
@@ -597,6 +611,21 @@ void send_next_activity_seconds(uint16_t seconds)
     send_data(data, data_index, RH_BROADCAST_ADDRESS);
 } /* send_next_activity_seconds */
 
+/* sensor data sampling */
+
+void sharp_dust_sample()
+{
+    int32_t val = SHARP_GP2Y1010AU0F::read_average(100);
+    p(F("DUST VAL: %d\n"), val);
+    historical_data[historical_data_index++] = {
+        .id = ++data_id,
+        .node_id = config.node_id,
+        .timestamp = 0,
+        .type = DATA_TYPE_SHARP_GP2Y1010AU0F,
+        .value = (int16_t)(val)
+    };
+}
+
 /*
  * setup and loop
  */
@@ -675,9 +704,14 @@ void setup()
 void loop()
 {
     static unsigned long last_display_update = 0;
+    static unsigned long last_dust_sample = 0;
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR
             || millis() > next_activity_time) {
         check_message();
+    } else {
+        if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD) {
+            sharp_dust_sample();
+        }
     }
     if (config.has_oled && millis() - last_display_update > DISPLAY_UPDATE_PERIOD) {
         update_display();
