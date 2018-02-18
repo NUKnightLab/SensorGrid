@@ -236,16 +236,11 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     if (datalen < 3) return;
     uint8_t* data = msg->data;
     uint8_t new_data[MAX_MESSAGE_SIZE - sizeof(Message)];
-    //static uint8_t node_id;
-    //static uint8_t max_record_id;
-    //static uint8_t record_count;
-    //static uint8_t data_type;
     uint8_t index = 0;
     uint8_t new_data_index = 0;
     uint8_t next_nodes[MAX_NODES] = {0};
     uint8_t next_nodes_index = 0;
     uint8_t collector;
-
     uint8_t from_node_id = data[index++];
     new_data[new_data_index++] = from_node_id;
     uint8_t message_id = data[index++];
@@ -254,7 +249,6 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     new_data[new_data_index++] = record_count;
     uint8_t data_type = data[index++];
     new_data[new_data_index++] = data_type;
-
     switch (data_type) {
         case DATA_TYPE_NODE_COLLECTION_LIST :
         {
@@ -286,87 +280,18 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             radio->sleep();
             next_activity_time = millis() + seconds * 1000;
             return; /* TODO: re-transmit? */
+            break;
         }
     }
-
-
     /* copy in the remaining data */
     while(index < datalen) {
         new_data[new_data_index++] = data[index++];
     }
-/*
-    while (index < datalen) {
-        if (!node_id) {
-            node_id = data[index++];
-            new_data[new_data_index++] = node_id;
-            if (node_id == config.node_id) {
-                self_in_data = true;
-            }
-        } else if (!max_record_id) {
-            max_record_id = data[index++];
-            new_data[new_data_index++] = max_record_id;
-        } else if (!record_count) {
-            record_count = data[index++];
-            new_data[new_data_index++] = record_count;
-        } else {
-            p(F("Record set from NODE_ID: %d; MAX_RECORD_ID: %d; RECORD_COUNT: %d\n"),
-                node_id, max_record_id, record_count);
-            for (int record=0; record<record_count; record++) {
-                data_type = data[index++];
-                new_data[new_data_index++] = data_type;
-                switch (data_type) {
-                    case DATA_TYPE_NODE_COLLECTION_LIST :
-                    {
-                        p(F("COLLECTION_LIST: "));
-                        collector = node_id;
-                        uint8_t node_count_index = new_data_index++;
-                        new_data[node_count_index] = 0;
-                        uint8_t node_count = data[index++];
-                        for (int i=0; i<node_count; i++) {
-                            uint8_t node = data[index++];
-                            uint8_t max_record = data[index++];
-                            output(F("NODE_ID: %d; MAX_RECORD_ID: %d; "),
-                            node, max_record);
-                            if (node != config.node_id) {
-                                new_data[new_data_index++] = node;
-                                new_data[new_data_index++] = max_record;
-                                new_data[node_count_index]++;
-                                next_nodes[next_nodes_index++] = node;
-                            }
-                        }
-                        output(F("\n"));
-                        break;
-                    }
-                    case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
-                    {
-                        uint16_t seconds = (data[index++] << 8);
-                        seconds = seconds | (data[index++] & 0xff);
-                        p(F("NEXT_ACTIVITY_SECONDS: %d"), seconds);
-                        radio->sleep();
-                        next_activity_time = millis() + seconds * 1000;
-                        break;
-                    }
-                    case DATA_TYPE_BATTERY_LEVEL :
-                    {
-                        new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
-                        new_data[new_data_index++] = data[index++];
-                        p(F("Adding BATTERY_LEVEL: %d"), new_data[new_data_index]);
-                        break;
-                    }
-                }
-            }
-            node_id = 0;
-            max_record_id = 0;
-            record_count = 0;
-        }
-    }
-*/
-
     /* add self data to new data */
     new_data[new_data_index++] = config.node_id;
     new_data[new_data_index++] = 1; // record count
+    new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
     new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
-
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     output(F("]\n"));
@@ -456,6 +381,12 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
                             next_nodes[next_nodes_index++] = node;
                         }
                         output(F("\n"));
+                        break;
+                    }
+                    case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
+                    {
+                        uint16_t seconds = (data[index++] << 8);
+                        seconds = seconds | (data[index++] & 0xff);
                         break;
                     }
                     case DATA_TYPE_BATTERY_LEVEL :
