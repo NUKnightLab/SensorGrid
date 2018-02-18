@@ -249,10 +249,14 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     uint8_t next_nodes[MAX_NODES] = {0};
     uint8_t next_nodes_index = 0;
     uint8_t collector;
+    bool self_in_data = false;
     while (index < datalen) {
         if (!node_id) {
             node_id = data[index++];
             new_data[new_data_index++] = node_id;
+            if (node_id == config.node_id) {
+                self_in_data = true;
+            }
         } else if (!max_record_id) {
             max_record_id = data[index++];
             new_data[new_data_index++] = max_record_id;
@@ -297,12 +301,25 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                         next_activity_time = millis() + seconds * 1000;
                         break;
                     }
+                    case DATA_TYPE_BATTERY_LEVEL :
+                    {
+                        p(F("BATTERY_LEVEL: "));
+                        new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
+                        new_data[new_data_index++] = data[index++];
+                        break;
+                    }
                 }
             }
             node_id = 0;
             max_record_id = 0;
             record_count = 0;
         }
+    }
+    /* add self data to new data */
+    if (!self_in_data) {
+        new_data[new_data_index++] = config.node_id;
+        new_data[new_data_index++] = 1; // record count
+        new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
     }
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
