@@ -19,9 +19,23 @@ static uint32_t oled_activated_time = 0;
 bool oled_is_on;
 uint32_t display_clock_time = 0;
 
+/* Collection state */
+static unsigned long next_activity_time = 0;
+
 /* LoRa */
 RH_RF95 *radio;
 #if defined(USE_MESH_ROUTER)
+/* Mesh routing is no longer officially supported. This option is kept here for
+   experimental and development purposes, but support for mesh routing is
+   fully deprecated. We will instead be working to make static routing as
+   straightforward as possible. The arping and route establishment process of
+   RadioHead's mesh router is too heavy, relying too much on repeated
+   beaconization and messaging retries. It also aggressively drops routes on
+   failure, causing persistent thrashing of route definitions. Also, there is a
+   logic error in the route establishment protocol that causes it to always drop
+   packets when first establishing the route and only successfully delivering
+   them in subsequent transmissions, provided the route has not been otherwise
+   dropped in the mean time. */
 static RHMesh* router;
 #else
 static RHRouter* router;
@@ -134,46 +148,6 @@ void update_display()
         }
         updateDisplay();
     }
-}
-
-static int update_display_thread(struct pt *pt, int interval)
-{
-  static unsigned long timestamp = 0;
-  static uint8_t battery_refresh_count = 0;
-  PT_BEGIN(pt);
-  while(1) {
-    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    if ( config.display_timeout > 0
-            && (millis() - oled_activated_time) > config.display_timeout*1000) {
-        oled_is_on = false;
-        shutdown_requested = false;
-        display.clearDisplay();
-        display.display();
-    }
-    if (oled_is_on) {
-        if (++battery_refresh_count > 30) {
-            battery_refresh_count = 0;
-            updateDisplayBattery();
-        }
-        updateDisplay();
-    }
-    timestamp = millis();
-  }
-  PT_END(pt);
-}
-
-static int send_collection_request_thread(struct pt *pt, int interval)
-{
-  static unsigned long timestamp = 0;
-  PT_BEGIN(pt);
-  while(1) {
-    PT_WAIT_UNTIL(pt, millis() - timestamp > interval );
-    output("\n");
-    p(F("Sending collection request\n"));
-    send_data_collection_request();
-    timestamp = millis();
-  }
-  PT_END(pt);
 }
 
 /* Message utils */
@@ -355,7 +329,6 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
 
 void collector_process_message(Message* msg, uint8_t len, uint8_t from)
 {
-    static uint8_t previous_uncollected_nodes_count = 0;
     uint8_t datalen = len - sizeof(Message);
     if (datalen < 3) return;
     uint8_t* data = msg->data;
@@ -410,24 +383,20 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
             record_count = 0;
         }
     }
-    if (next_nodes_index == previous_uncollected_nodes_count) {
-        p(F("Unable to collect nodes: "));
-        for (int i=0; i<next_nodes_index; i++) output(F("%d "), next_nodes[i]);
-        output(F("\n"));
-    } else {
-        previous_uncollected_nodes_count = next_nodes_index;
-        p(F("New data: [ "));
-        for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
-        output(F("]\n"));
-        uint8_t ordered_nodes[next_nodes_index];
-        get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
-        for (int i=0; i<next_nodes_index; i++) {
-            uint8_t node_id = ordered_nodes[i];
-            if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, node_id))
-                return;
+    p(F("New data: [ "));
+    for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
+    output(F("]\n"));
+    uint8_t ordered_nodes[next_nodes_index];
+    get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
+    for (int i=0; i<next_nodes_index; i++) {
+        uint8_t node_id = ordered_nodes[i];
+        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, node_id)) {
+            next_activity_time = millis() + 20000; // timeout in case no response from network
+            return;
         }
-        //router->printRoutingTable();
     }
+    send_next_activity_seconds(30);
+    next_activity_time = millis() + 30000 + 2000;
 }
 void process_message(Message* msg, uint8_t len, uint8_t from) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
@@ -602,10 +571,12 @@ void send_data_collection_request()
     for (int i=0; i<node_count; i++) {
         uint8_t node_id = known_nodes[i]; // until get_preferred is working
 #if defined(USE_MESH_ROUTER)
-        if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id))
+        if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id)) {
+            next_activity_time = millis() + 20000; // timeout in case no response from network
             return;
+        }
 #else
-        p(F("Sending DATA: "));
+        p(F("\nSending DATA: "));
         for (int j=0; j<data_index; j++) output(F("%d "), data[j]);
         output(F("\n"));
         bool trial = false;
@@ -614,6 +585,7 @@ void send_data_collection_request()
             trial = true;
         }
         if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id)) {
+            next_activity_time = millis() + 20000; // timeout in case no response from network
             return;
         } else {
             if (trial) {
@@ -622,9 +594,28 @@ void send_data_collection_request()
             }
         }
     }
+    /* No successful collection requests sent. Wait for next attempt */
+    send_next_activity_seconds(30);
+    next_activity_time = millis() + 30000 + 2000;
 #endif
-
 } /* send_data_collection_request */
+
+void send_next_activity_seconds(uint16_t seconds)
+{
+    static uint8_t msg_id = 0;
+    const uint8_t node_count = sizeof(known_nodes);
+    uint8_t data[5 + node_count*2] = {
+        config.node_id,                 // Byte 0
+        ++msg_id,                       // 1
+        1,                              // 2
+        DATA_TYPE_NEXT_ACTIVITY_TIME,   // 3
+    };                                  // --> 4 preliminary bytes total
+    uint8_t data_index = 4;
+    data[data_index++] = seconds >> 8;
+    data[data_index++] = seconds & 0xff;
+    p(F("Broadcasting next activity seconds: %d\n"), seconds);
+    send_data(data, data_index, RH_BROADCAST_ADDRESS);
+} /* send_next_activity_seconds */
 
 /*
  * setup and loop
@@ -674,6 +665,12 @@ void setup()
     router = new RHMesh(*radio, config.node_id);
 #else
     router = new RHRouter(*radio, config.node_id);
+    /* RadioHead sometimes continues retrying transmissions even after a
+       successful reliable delivery. This seems to persist even when switching
+       to a continually listening mode, effectively flooding the local
+       air space while trying to listen for new messages. As a result, don't
+       do any retries in the router. Instead, we will pick up missed messages
+       in the application layer. */
     router->setRetries(0);
     router->clearRoutingTable();
     router->addRouteTo(1, 1);
@@ -697,22 +694,15 @@ void setup()
 
 void loop()
 {
-    static unsigned long last_collection = 0;
     static unsigned long last_display_update = 0;
     check_message();
-    //if (config.has_oled) {
-    //    update_display_thread(&update_display_protothread, DISPLAY_UPDATE_PERIOD);
-    //}
     if (config.has_oled && millis() - last_display_update > DISPLAY_UPDATE_PERIOD) {
         update_display();
         last_display_update = millis();
     }
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-        //send_collection_request_thread(&send_collection_request_protothread,
-        //    config.collection_period * 1000);
-        if (millis() - last_collection > 30000) {
+        if (millis() > next_activity_time) {
             send_data_collection_request();
-            last_collection = millis();
         }
     }
 }
