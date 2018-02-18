@@ -117,6 +117,25 @@ static int updateClockThread(struct pt *pt, int interval)
   PT_END(pt);
 }
 
+void update_display()
+{
+    static uint8_t battery_refresh_count = 0;
+    if ( config.display_timeout > 0
+            && (millis() - oled_activated_time) > config.display_timeout*1000) {
+        oled_is_on = false;
+        shutdown_requested = false;
+        display.clearDisplay();
+        display.display();
+    }
+    if (oled_is_on) {
+        if (++battery_refresh_count > 30) {
+            battery_refresh_count = 0;
+            updateDisplayBattery();
+        }
+        updateDisplay();
+    }
+}
+
 static int update_display_thread(struct pt *pt, int interval)
 {
   static unsigned long timestamp = 0;
@@ -394,6 +413,7 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
     if (next_nodes_index == previous_uncollected_nodes_count) {
         p(F("Unable to collect nodes: "));
         for (int i=0; i<next_nodes_index; i++) output(F("%d "), next_nodes[i]);
+        output(F("\n"));
     } else {
         previous_uncollected_nodes_count = next_nodes_index;
         p(F("New data: [ "));
@@ -677,9 +697,14 @@ void setup()
 void loop()
 {
     static unsigned long last_collection = 0;
+    static unsigned long last_display_update = 0;
     check_message();
-    if (config.has_oled) {
-        update_display_thread(&update_display_protothread, DISPLAY_UPDATE_PERIOD);
+    //if (config.has_oled) {
+    //    update_display_thread(&update_display_protothread, DISPLAY_UPDATE_PERIOD);
+    //}
+    if (config.has_oled && millis() - last_display_update > DISPLAY_UPDATE_PERIOD) {
+        update_display();
+        last_display_update = millis();
     }
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         //send_collection_request_thread(&send_collection_request_protothread,
