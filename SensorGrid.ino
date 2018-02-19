@@ -344,6 +344,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
 
         /*  add in historical data */
+/*
         if (historical_data_index == 0) {
             has_more_data = false;
         }
@@ -353,7 +354,8 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         } else {
             historical_data_head = previous_max_record_id + 1;
         }
-        for (int i=historical_data_head; i<historical_data_index
+*/
+        for (int i=previous_max_record_id+1; i<historical_data_index
                     && new_data_index < MAX_DATA_LENGTH - 7; i++) {
             new_data[new_data_index++] = historical_data[i].type;
             new_data[new_data_index++] = historical_data[i].value >> 8;
