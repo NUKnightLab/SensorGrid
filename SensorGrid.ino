@@ -348,7 +348,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             has_more_data = false;
         }
         if (previous_max_record_id >= historical_data_index
-                || previous_max_record == 255) {
+                || previous_max_record_id == 255) {
             historical_data_head = 0; // buffer has filled and been reset
         } else {
             historical_data_head = previous_max_record_id + 1;
