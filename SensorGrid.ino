@@ -701,7 +701,8 @@ void send_next_activity_seconds(uint16_t seconds)
 
 void sharp_dust_sample()
 {
-    int32_t val = SHARP_GP2Y1010AU0F::read_average(100);
+    //int32_t val = SHARP_GP2Y1010AU0F::read_average(100);
+    int32_t val = SHARP_GP2Y1010AU0F::read();
     p(F("DUST VAL: %d\n"), val);
     if (historical_data_index >= HISTORICAL_DATA_SIZE) {
         if (historical_data_head == 0) {
@@ -807,12 +808,12 @@ void loop()
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR
             || millis() > next_activity_time) {
         check_message();
-    } /* else {
+    } else {
         if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 500) {
             sharp_dust_sample();
             last_dust_sample = millis();
         }
-    } */
+    }
 /*
     if (config.has_oled && millis() - last_display_update > DISPLAY_UPDATE_PERIOD) {
         update_display();
