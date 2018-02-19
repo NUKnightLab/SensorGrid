@@ -1,34 +1,17 @@
 #include "SHARP_GP2Y1010AU0F.h"
 #include "RTClib.h"
-
-/*
-  SD card datalogger
-  This example shows how to log data from three analog sensors
-  to an SD card using the SD library.
-  The circuit:
-   analog sensors on analog ins 0, 1, and 2
-   SD card attached to SPI bus as follows:
- ** MOSI - pin 11
- ** MISO - pin 12
- ** CLK - pin 13
- ** CS - pin 4 (for MKRZero SD: SDCARD_SS_PIN)
-  created  24 Nov 2010
-  modified 9 Apr 2012
-  by Tom Igoe
-  This example code is in the public domain.
-*/
-
 #include <SPI.h>
 #include <SD.h>
 #include "RTClib.h"
 #include <Wire.h>
 
-#define DEFAULT_SD_CHIP_SELECT_PIN 4//10
-#define ALTERNATE_RFM95_CS 10 //19
+#define DEFAULT_SD_CHIP_SELECT_PIN 10 //4 for Uno
+#define ALTERNATE_RFM95_CS 19 //10 for Uno
+#define DEFAULT_RFM95_CS 8 //not needed for Uno
 
 /* sensor configs */
 //log out clock time -> use GPS
-uint8_t SHARP_GP2Y1010AU0F_DUST_PIN = A3;
+uint8_t SHARP_GP2Y1010AU0F_DUST_PIN = A0; //was A3 for Uno
 
 /* real time clock */
 RTC_PCF8523 rtc;
@@ -38,7 +21,7 @@ int nodeId = 1;
 
 void setup() {
   digitalWrite(DEFAULT_SD_CHIP_SELECT_PIN, HIGH);
-  //digitalWrite(DEFAULT_RFM95_CS, HIGH);
+  digitalWrite(DEFAULT_RFM95_CS, HIGH);
   digitalWrite(ALTERNATE_RFM95_CS, HIGH);
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
