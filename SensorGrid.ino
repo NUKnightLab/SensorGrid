@@ -739,6 +739,7 @@ void setup()
 {
     if (WAIT_SERIAL)
         while (!Serial);
+    Serial.begin(115200);
     rtc.begin();
     check_radiohead_version();
     loadConfig();
