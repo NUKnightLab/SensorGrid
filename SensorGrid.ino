@@ -7,8 +7,10 @@
 #define WAIT_SERIAL 0
 #define DISPLAY_UPDATE_PERIOD 1000
 #define MAX_NODES 20
-#define MAX_MESSAGE_SIZE 255
+#define MAX_MESSAGE_SIZE 200
 #define RECV_BUFFER_SIZE MAX_MESSAGE_SIZE
+
+static const uint8_t MAX_DATA_LENGTH = MAX_MESSAGE_SIZE - sizeof(Message);
 
 /* buttons */
 static bool shutdown_requested = false;
@@ -276,53 +278,77 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     while(index < datalen) {
         new_data[new_data_index++] = data[index++];
     }
-    /* add self data to new data */
-    static uint8_t recent_max_record_id = 0;
-    new_data[new_data_index++] = config.node_id;
-    new_data[new_data_index++] = ++recent_max_record_id;
-    uint8_t added_record_count_index = index;
-    new_data[new_data_index++] = 1; // record count
-    new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
-    new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
+    /* After this point, we need to be sure not to overrun MAX_DATA_LENGTH */
 
-    for (int i=0; i<historical_data_index; i++) {
-        new_data[new_data_index++] = historical_data[i].type;
-        new_data[new_data_index++] = historical_data[i].value >> 8;
-        new_data[new_data_index++] = historical_data[i].value & 0xff;
-        new_data[new_data_index++] = historical_data[i].timestamp >> 24;
-        new_data[new_data_index++] = historical_data[i].timestamp >> 16;
-        new_data[new_data_index++] = historical_data[i].timestamp >> 8;
-        new_data[new_data_index++] = historical_data[i].timestamp & 0xff;
-        new_data[added_record_count_index]++;
+    /* add self data to new data */
+
+    static bool has_more_data = true;
+    uint8_t added_record_count_index;
+    if (new_data_index < MAX_DATA_LENGTH - 3) {
+        static uint8_t recent_max_record_id = 0;
+        new_data[new_data_index++] = config.node_id;
+        new_data[new_data_index++] = ++recent_max_record_id;
+        added_record_count_index = index;
+        new_data[new_data_index++] = 0; // record count
+
+        /* battery */
+        if (new_data_index < MAX_DATA_LENGTH - 2) {
+            new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
+            new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
+            new_data[added_record_count_index]++;
+        }
+
+        /*  add in historical data */
+        if (historical_data_index == 0) {
+            has_more_data = false;
+        }
+        for (int i=0; i<historical_data_index && new_data_index < MAX_DATA_LENGTH - 7; i++) {
+            new_data[new_data_index++] = historical_data[i].type;
+            new_data[new_data_index++] = historical_data[i].value >> 8;
+            new_data[new_data_index++] = historical_data[i].value & 0xff;
+            new_data[new_data_index++] = historical_data[i].timestamp >> 24;
+            new_data[new_data_index++] = historical_data[i].timestamp >> 16;
+            new_data[new_data_index++] = historical_data[i].timestamp >> 8;
+            new_data[new_data_index++] = historical_data[i].timestamp & 0xff;
+            new_data[added_record_count_index]++;
+            if (i == historical_data_index - 1) {
+                has_more_data = false;
+            }
+        }
     }
 
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
     output(F("]\n"));
-    //uint8_t ordered_nodes[MAX_NODES];
-    //get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
-    for (int i=0; i<next_nodes_index; i++) {
-        //uint8_t to_node_id = ordered_nodes[i];
-        uint8_t to_node_id = next_nodes[i];
-        p(F("Attempting forward to: %d\n"), to_node_id);
+
+    if (!has_more_data && new_data_index < MAX_DATA_LENGTH - 10) {
+        // only forward if we can fit at least a record
+        //uint8_t ordered_nodes[MAX_NODES];
+        //get_preferred_routing_order(next_nodes, next_nodes_index, ordered_nodes);
+        for (int i=0; i<next_nodes_index; i++) {
+            //uint8_t to_node_id = ordered_nodes[i];
+            uint8_t to_node_id = next_nodes[i];
+            p(F("Attempting forward to: %d\n"), to_node_id);
 #if defined(USE_MESH_ROUTER)
-        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, to_node_id))
-            return;
+            if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, to_node_id))
+                return;
 #else
-        bool trial = false;
-        if (router->getRouteTo(to_node_id)->state != RHRouter::Valid) {
-            router->addRouteTo(to_node_id, to_node_id);
-            trial = true;
-        }
-        if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, to_node_id)) {
-            return;
-        } else {
-            if (trial) {
-                router->deleteRouteTo(to_node_id);
+            bool trial = false;
+            if (router->getRouteTo(to_node_id)->state != RHRouter::Valid) {
+                router->addRouteTo(to_node_id, to_node_id);
+                trial = true;
             }
-        }
+            if (RH_ROUTER_ERROR_NONE == send_data(new_data, new_data_index, to_node_id)) {
+                return;
+            } else {
+                if (trial) {
+                    router->deleteRouteTo(to_node_id);
+                }
+            }
 #endif
+        }
     }
+
     /* send to the collector if all other nodes fail */
     if (collector) {
         p(F("Delivering to collector: %d\n"), collector);
@@ -331,6 +357,8 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             router->addRouteTo(collector, from);
         }
         send_data(new_data, new_data_index, collector);
+    } else {
+        p("WARNING: Did not forward and no collector!\n");
     }
     //router->printRoutingTable();
 }
