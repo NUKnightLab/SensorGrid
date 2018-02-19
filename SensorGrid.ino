@@ -359,8 +359,11 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
 */
         //for (int i=historical_data_head; i<historical_data_index
+        p(F("Traversing historical data from index %d to %d\n"),
+                previous_max_record_id+1, historical_data_index);
         for (int i=previous_max_record_id+1; i<historical_data_index
                     && new_data_index < MAX_DATA_LENGTH - 7; i++) {
+            p(F("Setting data record from historical index: %d\n"), i);
             new_data[new_data_index++] = historical_data[i].type;
             new_data[new_data_index++] = historical_data[i].value >> 8;
             new_data[new_data_index++] = historical_data[i].value & 0xff;
@@ -371,10 +374,13 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             new_data[added_record_count_index]++;
             new_data[max_record_id_index] = i;
             if (i == historical_data_index - 1) {
+                p(F("No more historical data\n"));
                 has_more_data = false;
             }
         }
     }
+
+    p(F(" -------- There is still more historical data\n"));
 
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
