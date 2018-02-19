@@ -347,13 +347,12 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         if (historical_data_index == 0) {
             has_more_data = false;
         }
-        if (previous_max_record_id >= historical_data_index) {
-            previous_max_record_id = 0; // buffer has filled and been reset
+        if (previous_max_record_id >= historical_data_index
+                || previous_max_record == 255) {
+            historical_data_head = 0; // buffer has filled and been reset
+        } else {
+            historical_data_head = previous_max_record_id + 1;
         }
-        if (previous_max_record_id < historical_data_head) {
-            p(F("WARNING: Acknowledged data record ID is behind historical data head\n"));
-        }
-        historical_data_head = previous_max_record_id;
         for (int i=historical_data_head; i<historical_data_index
                     && new_data_index < MAX_DATA_LENGTH - 7; i++) {
             new_data[new_data_index++] = historical_data[i].type;
