@@ -29,8 +29,9 @@ static unsigned long next_activity_time = 0;
 static uint8_t received_record_ids[MAX_NODES];
 
 /* Sensor data */
+#define HISTORICAL_DATA_SIZE 5
 //static Data historical_data[256];
-static Data historical_data[5];
+static Data historical_data[HISTORICAL_DATA_SIZE];
 static uint8_t historical_data_head = 0;
 static uint8_t historical_data_index = 0;
 static uint8_t data_id = 0;
@@ -444,11 +445,13 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             case DATA_TYPE_NODE_COLLECTION_LIST :
             {
                 uncollected_nodes_index = 0;
+/*
                 if (flags == 1) {
                     p(F("Sender is not fully collected. Will restart collection from %d\n"),
                         from);
                     uncollected_nodes[uncollected_nodes_index++] = from;
                 }
+*/
                 uint8_t collector = from_node_id; // should be this node. TODO: check?
                 uint8_t node_count = data[index++];
                 output(F("NODE_COLLECTION_LIST NODE_COUNT: %d; NODES: "), node_count);
@@ -692,8 +695,13 @@ void sharp_dust_sample()
 {
     int32_t val = SHARP_GP2Y1010AU0F::read_average(100);
     p(F("DUST VAL: %d\n"), val);
-    if (historical_data_index >= 255) {
+    if (historical_data_index >= HISTORICAL_DATA_SIZE) {
+        if (historical_data_head == 0) {
+            p(F("WARNING: Historical data buffer full. Use a faster collection rate."));
+            return;
+        }
         uint8_t len = historical_data_index - historical_data_head;
+        p(F("Shifting historical data and resetting"));
         memcpy(historical_data, historical_data + historical_data_head,
             len * sizeof(Data));
         historical_data_head = 0;
