@@ -10,7 +10,8 @@
 #define MAX_MESSAGE_SIZE 200
 #define RECV_BUFFER_SIZE MAX_MESSAGE_SIZE
 
-static const uint8_t MAX_DATA_LENGTH = MAX_MESSAGE_SIZE - sizeof(Message) - 100;
+/* TODO: this size is reduced for development purposes */
+static const uint8_t MAX_DATA_LENGTH = MAX_MESSAGE_SIZE - sizeof(Message) - 150;
 
 /* buttons */
 static bool shutdown_requested = false;
@@ -27,7 +28,8 @@ static unsigned long next_activity_time = 0;
 static uint8_t received_record_ids[MAX_NODES];
 
 /* Sensor data */
-static Data historical_data[100];
+static Data historical_data[256];
+static uint8_t historical_data_head = 0;
 static uint8_t historical_data_index = 0;
 static uint8_t data_id = 0;
 
@@ -277,6 +279,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     new_data[new_data_index++] = record_count;
     uint8_t data_type = data[index++];
     new_data[new_data_index++] = data_type;
+    static uint8_t previous_max_record_id = 0;
     switch (data_type) {
         case DATA_TYPE_NODE_COLLECTION_LIST :
         {
@@ -290,7 +293,9 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                 uint8_t max_record = data[index++];
                 output(F("NODE_ID: %d; MAX_RECORD_ID: %d; "),
                 node, max_record);
-                if (node != config.node_id) {
+                if (node == config.node_id) {
+                    previous_max_record_id = max_record;
+                } else {
                     new_data[new_data_index++] = node;
                     new_data[new_data_index++] = max_record;
                     new_data[node_count_index]++;
@@ -320,11 +325,14 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     /* add self data to new data */
 
     bool has_more_data = true;
+    uint8_t max_record_id_index = 0;
     uint8_t added_record_count_index;
     if (new_data_index < MAX_DATA_LENGTH - 3) {
-        static uint8_t recent_max_record_id = 0;
+        //static uint8_t recent_max_record_id = 0;
         new_data[new_data_index++] = config.node_id;
-        new_data[new_data_index++] = ++recent_max_record_id;
+        //new_data[new_data_index++] = ++recent_max_record_id;
+        max_record_id_index = new_data_index;
+        new_data[new_data_index++] = 0;
         added_record_count_index = index;
         new_data[new_data_index++] = 0; // record count
 
@@ -339,7 +347,15 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         if (historical_data_index == 0) {
             has_more_data = false;
         }
-        for (int i=0; i<historical_data_index && new_data_index < MAX_DATA_LENGTH - 7; i++) {
+        if (previous_max_record_id >= historical_data_index) {
+            previous_max_record_id = 0; // buffer has filled and been reset
+        }
+        if (previous_max_record_id < historical_data_head) {
+            p(F("WARNING: Acknowledged data record ID is behind historical data head\n"));
+        }
+        historical_data_head = previous_max_record_id;
+        for (int i=historical_data_head; i<historical_data_index
+                    && new_data_index < MAX_DATA_LENGTH - 7; i++) {
             new_data[new_data_index++] = historical_data[i].type;
             new_data[new_data_index++] = historical_data[i].value >> 8;
             new_data[new_data_index++] = historical_data[i].value & 0xff;
@@ -670,6 +686,13 @@ void sharp_dust_sample()
 {
     int32_t val = SHARP_GP2Y1010AU0F::read_average(100);
     p(F("DUST VAL: %d\n"), val);
+    if (historical_data_index >= 255) {
+        uint8_t len = historical_data_index - historical_data_head;
+        memcpy(historical_data, historical_data + historical_data_head,
+            len * sizeof(Data));
+        historical_data_head = 0;
+        historical_data_index = len;
+    }
     historical_data[historical_data_index++] = {
         .id = ++data_id,
         .node_id = config.node_id,
