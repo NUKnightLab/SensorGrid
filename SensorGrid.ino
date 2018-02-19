@@ -220,6 +220,43 @@ void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
 
 const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
+uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
+{
+    p(F("Sending data LEN: %d; DATA: "), len);
+    for (int i=0; i<len; i++) output(F("%d "), data[i]);
+    output(F("\n"));
+    static struct Message *msg = NULL;
+    if (!msg) msg = (Message*)malloc(MAX_MESSAGE_SIZE);
+    msg->sensorgrid_version = config.sensorgrid_version;
+    msg->network_id = config.network_id;
+    memcpy(msg->data, data, len);
+    unsigned long start = millis();
+    msg->timestamp = rtc.now().unixtime();
+    uint8_t err = router->sendtoWait((uint8_t*)msg, len+sizeof(Message), dest, flags);
+    p(F("Time to send: %d\n"), millis() - start);
+    if (err == RH_ROUTER_ERROR_NONE) {
+        return err;
+    } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
+        p(F("ERROR sending message to Node ID: %d. INVALID LENGTH\n"), dest);
+        return err;
+    } else if (err == RH_ROUTER_ERROR_NO_ROUTE) {
+        p(F("ERROR sending message to Node ID: %d. NO ROUTE\n"), dest);
+        return err;
+    } else if (err == RH_ROUTER_ERROR_TIMEOUT) {
+        p(F("ERROR sending message to Node ID: %d. TIMEOUT\n"), dest);
+        return err;
+    } else if (err == RH_ROUTER_ERROR_NO_REPLY) {
+        p(F("ERROR sending message to Node ID: %d. NO REPLY\n"), dest);
+        return err;
+    } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
+        p(F("ERROR sending message to Node ID: %d. UNABLE TO DELIVER\n"), dest);
+        return err;
+    } else {
+        p(F("ERROR sending message to Node ID: %d. UNKOWN ERROR CODE: %d\n"), dest, err);
+        return err;
+    }
+} /* send_data */
+
 void node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
     uint8_t datalen = len - sizeof(Message);
@@ -351,12 +388,14 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
 
     /* send to the collector if all other nodes fail */
     if (collector) {
+        uint8_t flags = 0;
+        if (has_more_data) flags = 1;
         p(F("Delivering to collector: %d\n"), collector);
         if (router->getRouteTo(collector)->state != RHRouter::Valid) {
             p(F("Adding route to %d via %d\n"), collector, from);
             router->addRouteTo(collector, from);
         }
-        send_data(new_data, new_data_index, collector);
+        send_data(new_data, new_data_index, collector, flags);
     } else {
         p("WARNING: Did not forward and no collector!\n");
     }
@@ -366,7 +405,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
 static uint8_t uncollected_nodes[MAX_NODES];
 static uint8_t uncollected_nodes_index = 0;
 
-uint8_t collector_process_data(uint8_t* data)
+uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
 {
     uint8_t index = 0;
     uint8_t from_node_id = data[index++];
@@ -380,6 +419,11 @@ uint8_t collector_process_data(uint8_t* data)
             case DATA_TYPE_NODE_COLLECTION_LIST :
             {
                 uncollected_nodes_index = 0;
+                if (flags == 1) {
+                    p(F("Sender is not fully collected. Will restart collection from %d\n"),
+                        from);
+                    uncollected_nodes[uncollected_nodes_index++] = from;
+                }
                 uint8_t collector = from_node_id; // should be this node. TODO: check?
                 uint8_t node_count = data[index++];
                 output(F("NODE_COLLECTION_LIST NODE_COUNT: %d; NODES: "), node_count);
@@ -423,14 +467,14 @@ uint8_t collector_process_data(uint8_t* data)
     return index;
 }
 
-void collector_process_message(Message* msg, uint8_t len, uint8_t from)
+void collector_process_message(Message* msg, uint8_t len, uint8_t from, uint8_t flags)
 {
     uint8_t datalen = len - sizeof(Message);
     if (datalen < 3) return;
     uint8_t* data = msg->data;
     uint8_t index = 0;
     while (index < datalen) {
-        index += collector_process_data(&data[index]);
+        index += collector_process_data(&data[index], from, flags);
     }
     if (uncollected_nodes_index > 0) {
         send_data_collection_request(uncollected_nodes, uncollected_nodes_index);
@@ -439,11 +483,11 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
     next_activity_time = millis() + 30000 + 2000;
 }
 
-void process_message(Message* msg, uint8_t len, uint8_t from) {
+void process_message(Message* msg, uint8_t len, uint8_t from, uint8_t flags) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-        p(F("Collected data received FROM: %d; MESSAGE_LEN: %d;\n"), from, len);
+        p(F("Collected data received FROM: %d; MESSAGE_LEN: %d; FLAGS: %d\n"), from, len, flags);
         p(F("------->>>>>>>\n"));
-        collector_process_message(msg, len, from);
+        collector_process_message(msg, len, from, flags);
         p(F("<<<<<<<-------\n"));
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         node_process_message(msg, len, from);
@@ -537,51 +581,15 @@ void check_message()
 {
     static bool listening = false;
     static uint16_t count = 0;
-    uint8_t from, dest, msg_id, len;
+    uint8_t from, dest, msg_id, len, flags;
     if (!++count) output(F("."));
-    if (receive_message(recv_buf, &len, &from, &dest, &msg_id)) {
+    if (receive_message(recv_buf, &len, &from, &dest, &msg_id, &flags)) {
         Message *_msg = (Message*)recv_buf;
-        process_message(_msg, len, from);
+        process_message(_msg, len, from, flags);
     }
     release_recv_buffer();
 } /* check_incoming_message */
 
-uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest)
-{
-    p(F("Sending data LEN: %d; DATA: "), len);
-    for (int i=0; i<len; i++) output(F("%d "), data[i]);
-    output(F("\n"));
-    static struct Message *msg = NULL;
-    if (!msg) msg = (Message*)malloc(MAX_MESSAGE_SIZE);
-    msg->sensorgrid_version = config.sensorgrid_version;
-    msg->network_id = config.network_id;
-    memcpy(msg->data, data, len);
-    unsigned long start = millis();
-    msg->timestamp = rtc.now().unixtime();
-    uint8_t err = router->sendtoWait((uint8_t*)msg, len+sizeof(Message), dest);
-    p(F("Time to send: %d\n"), millis() - start);
-    if (err == RH_ROUTER_ERROR_NONE) {
-        return err;
-    } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
-        p(F("ERROR sending message to Node ID: %d. INVALID LENGTH\n"), dest);
-        return err;
-    } else if (err == RH_ROUTER_ERROR_NO_ROUTE) {
-        p(F("ERROR sending message to Node ID: %d. NO ROUTE\n"), dest);
-        return err;
-    } else if (err == RH_ROUTER_ERROR_TIMEOUT) {
-        p(F("ERROR sending message to Node ID: %d. TIMEOUT\n"), dest);
-        return err;
-    } else if (err == RH_ROUTER_ERROR_NO_REPLY) {
-        p(F("ERROR sending message to Node ID: %d. NO REPLY\n"), dest);
-        return err;
-    } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
-        p(F("ERROR sending message to Node ID: %d. UNABLE TO DELIVER\n"), dest);
-        return err;
-    } else {
-        p(F("ERROR sending message to Node ID: %d. UNKOWN ERROR CODE: %d\n"), dest, err);
-        return err;
-    }
-} /* send_data */
 
 void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
 {
