@@ -222,7 +222,7 @@ const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
 uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 {
-    p(F("Sending data LEN: %d; DATA: "), len);
+    p(F("Sending data LEN: %d; FLAGS: %d; DATA: "), len, flags);
     for (int i=0; i<len; i++) output(F("%d "), data[i]);
     output(F("\n"));
     static struct Message *msg = NULL;
@@ -389,7 +389,10 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     /* send to the collector if all other nodes fail */
     if (collector) {
         uint8_t flags = 0;
-        if (has_more_data) flags = 1;
+        if (has_more_data) {
+            flags = 1;
+            p(F("Sending data to collector with FlAG: This node HAS MORE DATA\n"));
+        }
         p(F("Delivering to collector: %d\n"), collector);
         if (router->getRouteTo(collector)->state != RHRouter::Valid) {
             p(F("Adding route to %d via %d\n"), collector, from);
