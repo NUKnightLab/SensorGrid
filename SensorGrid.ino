@@ -343,51 +343,53 @@ uint8_t collector_process_data(uint8_t* data)
     uint8_t index = 0;
     uint8_t from_node_id = data[index++];
     uint8_t max_record_id = data[index++];
-    uint8_t record_count = data[index++];
-    uint8_t data_type = data[index++];
     received_record_ids[from_node_id] = max_record_id;
-    p(F("NODE: %d - "), from_node_id);
-    switch (data_type) {
-        case DATA_TYPE_NODE_COLLECTION_LIST :
-        {
-            uncollected_nodes_index = 0;
-            uint8_t collector = from_node_id; // should be this node. TODO: check?
-            uint8_t node_count = data[index++];
-            output(F("NODE_COLLECTION_LIST NODE_COUNT: %d; NODES: "), node_count);
-            for (int i=0; i<node_count; i++) {
-                uint8_t node = data[index++];
-                index++; // ignore max record id
-                uncollected_nodes[uncollected_nodes_index++] = node;
-                output(F("%d "), node);
+    uint8_t record_count = data[index++];
+    for (int record=0; record<record_count; record++) {
+        uint8_t data_type = data[index++];
+        p(F("NODE: %d - "), from_node_id);
+        switch (data_type) {
+            case DATA_TYPE_NODE_COLLECTION_LIST :
+            {
+                uncollected_nodes_index = 0;
+                uint8_t collector = from_node_id; // should be this node. TODO: check?
+                uint8_t node_count = data[index++];
+                output(F("NODE_COLLECTION_LIST NODE_COUNT: %d; NODES: "), node_count);
+                for (int i=0; i<node_count; i++) {
+                    uint8_t node = data[index++];
+                    index++; // ignore max record id
+                    uncollected_nodes[uncollected_nodes_index++] = node;
+                    output(F("%d "), node);
+                }
+                output(F("\n"));
+                break;
             }
-            output(F("\n"));
-            break;
-        }
-        case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
-        {
-            uint16_t seconds = (data[index++] << 8);
-            seconds = seconds | (data[index++] & 0xff);
-            output(F("NEXT_ACTIVITY_SECONDS SECONDS: %d\n"), seconds);
-            break;
-        }
-        case DATA_TYPE_BATTERY_LEVEL :
-        {
-            uint8_t bat = data[index++];
-            output(F("BATTERY_LEVEL: %d\n"), bat);
-            break;
-        }
-        case DATA_TYPE_SHARP_GP2Y1010AU0F :
-        {
-            uint16_t dust = (data[index++] << 8);
-            dust = dust | (data[index++] & 0xff);
-            uint32_t timestamp = (data[index] << 24)
-                | (data[index+1] << 16)
-                | (data[index+2] << 8)
-                | (data[index+3] & 0xff);
-            index += 4;
-            output(F("SHARP_GP2Y1010AU0F NODE_ID: %d; VAL: %d; TIMESTAMP: %d\n"),
-                from_node_id, dust, timestamp);
-            break;
+            case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
+            {
+                uint16_t seconds = (data[index++] << 8);
+                seconds = seconds | (data[index++] & 0xff);
+                output(F("NEXT_ACTIVITY_SECONDS SECONDS: %d\n"), seconds);
+                break;
+            }
+            case DATA_TYPE_BATTERY_LEVEL :
+            {
+                uint8_t bat = data[index++];
+                output(F("BATTERY_LEVEL: %d\n"), bat);
+                break;
+            }
+            case DATA_TYPE_SHARP_GP2Y1010AU0F :
+            {
+                uint16_t dust = (data[index++] << 8);
+                dust = dust | (data[index++] & 0xff);
+                uint32_t timestamp = (data[index] << 24)
+                    | (data[index+1] << 16)
+                    | (data[index+2] << 8)
+                    | (data[index+3] & 0xff);
+                index += 4;
+                output(F("SHARP_GP2Y1010AU0F NODE_ID: %d; VAL: %d; TIMESTAMP: %d\n"),
+                    from_node_id, dust, timestamp);
+                break;
+            }
         }
     }
     return index;
