@@ -357,7 +357,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             historical_data_head = previous_max_record_id + 1;
         }
         p(F("Traversing historical data from index %d to %d\n"),
-                previous_max_record_id+1, historical_data_index);
+                historical_data_head, historical_data_index);
         for (int i=historical_data_head; i<historical_data_index
         //for (int i=previous_max_record_id+1; i<historical_data_index
                     && new_data_index < MAX_DATA_LENGTH - 7; i++) {
