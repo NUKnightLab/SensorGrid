@@ -378,7 +378,11 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
     }
 
-    p(F(" -------- There is still more historical data\n"));
+    if (has_more_data) {
+        p(F(" -------- There is still more historical data\n"));
+    } else {
+        p(F(" -------- There is NO more historical data\n"));
+    }
 
     p(F("New data: [ "));
     for (int i=0; i<new_data_index; i++) output(F("%d "), new_data[i]);
