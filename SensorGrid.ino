@@ -304,7 +304,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         {
             uint16_t seconds = (data[index++] << 8);
             seconds = seconds | (data[index++] & 0xff);
-            p(F("NEXT_ACTIVITY_SECONDS: %d"), seconds);
+            p(F("NEXT_ACTIVITY_SECONDS: %d\n"), seconds);
             radio->sleep();
             next_activity_time = millis() + seconds * 1000;
             return; /* TODO: re-transmit? */
@@ -319,7 +319,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
 
     /* add self data to new data */
 
-    static bool has_more_data = true;
+    bool has_more_data = true;
     uint8_t added_record_count_index;
     if (new_data_index < MAX_DATA_LENGTH - 3) {
         static uint8_t recent_max_record_id = 0;
