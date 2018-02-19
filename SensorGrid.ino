@@ -10,7 +10,7 @@
 #define MAX_MESSAGE_SIZE 200
 #define RECV_BUFFER_SIZE MAX_MESSAGE_SIZE
 
-static const uint8_t MAX_DATA_LENGTH = MAX_MESSAGE_SIZE - sizeof(Message);
+static const uint8_t MAX_DATA_LENGTH = MAX_MESSAGE_SIZE - sizeof(Message) - 100;
 
 /* buttons */
 static bool shutdown_requested = false;
