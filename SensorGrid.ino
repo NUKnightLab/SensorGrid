@@ -227,7 +227,7 @@ const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
 uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 {
-    p(F("Sending data LEN: %d; FLAGS: %d; DATA: "), len, flags);
+    p(F("Sending data to %d; LEN: %d; FLAGS: %d; DATA: "), dest, len, flags);
     for (int i=0; i<len; i++) output(F("%d "), data[i]);
     output(F("\n"));
     static struct Message *msg = NULL;
