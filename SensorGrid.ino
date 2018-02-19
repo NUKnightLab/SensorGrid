@@ -23,12 +23,14 @@ bool oled_is_on;
 uint32_t display_clock_time = 0;
 
 /* Collection state */
-static uint8_t known_nodes[] = { 2, 3, 4 };
+//static uint8_t known_nodes[] = { 2, 3, 4 };
+static uint8_t known_nodes[] = { 2, 4 };
 static unsigned long next_activity_time = 0;
 static uint8_t received_record_ids[MAX_NODES];
 
 /* Sensor data */
-static Data historical_data[256];
+//static Data historical_data[256];
+static Data historical_data[5];
 static uint8_t historical_data_head = 0;
 static uint8_t historical_data_index = 0;
 static uint8_t data_id = 0;
@@ -355,6 +357,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             historical_data_head = previous_max_record_id + 1;
         }
 */
+        //for (int i=historical_data_head; i<historical_data_index
         for (int i=previous_max_record_id+1; i<historical_data_index
                     && new_data_index < MAX_DATA_LENGTH - 7; i++) {
             new_data[new_data_index++] = historical_data[i].type;
