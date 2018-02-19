@@ -363,6 +363,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             new_data[new_data_index++] = historical_data[i].timestamp >> 8;
             new_data[new_data_index++] = historical_data[i].timestamp & 0xff;
             new_data[added_record_count_index]++;
+            new_data[max_record_id_index] = i;
             if (i == historical_data_index - 1) {
                 has_more_data = false;
             }
@@ -428,6 +429,7 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
     uint8_t index = 0;
     uint8_t from_node_id = data[index++];
     uint8_t max_record_id = data[index++];
+    p(F("****** SETTING received record ID for NODE: %d to %d\n"), from_node_id, max_record_id);
     received_record_ids[from_node_id] = max_record_id;
     uint8_t record_count = data[index++];
     for (int record=0; record<record_count; record++) {
