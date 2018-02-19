@@ -798,17 +798,18 @@ void loop()
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR
             || millis() > next_activity_time) {
         check_message();
-    } else {
-        /* TODO: 1000 not 500 */
+    } /* else {
         if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 500) {
             sharp_dust_sample();
             last_dust_sample = millis();
         }
-    }
+    } */
+/*
     if (config.has_oled && millis() - last_display_update > DISPLAY_UPDATE_PERIOD) {
         update_display();
         last_display_update = millis();
     }
+*/
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         if (millis() > next_activity_time) {
             send_data_collection_request(known_nodes, sizeof(known_nodes));
