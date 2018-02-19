@@ -29,7 +29,7 @@ static unsigned long next_activity_time = 0;
 static uint8_t received_record_ids[MAX_NODES];
 
 /* Sensor data */
-#define HISTORICAL_DATA_SIZE 5
+#define HISTORICAL_DATA_SIZE 20
 //static Data historical_data[256];
 static Data historical_data[HISTORICAL_DATA_SIZE];
 static uint8_t historical_data_head = 0;
