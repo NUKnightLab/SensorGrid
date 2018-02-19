@@ -11,7 +11,7 @@
 #define RECV_BUFFER_SIZE MAX_MESSAGE_SIZE
 
 /* TODO: this size is reduced for development purposes */
-static const uint8_t MAX_DATA_LENGTH = MAX_MESSAGE_SIZE - sizeof(Message) - 150;
+static const uint8_t MAX_DATA_LENGTH = MAX_MESSAGE_SIZE - sizeof(Message) - 100;
 
 /* buttons */
 static bool shutdown_requested = false;
@@ -757,7 +757,7 @@ void setup()
        air space while trying to listen for new messages. As a result, don't
        do any retries in the router. Instead, we will pick up missed messages
        in the application layer. */
-    router->setRetries(0);
+    //router->setRetries(0);
     router->clearRoutingTable();
     router->addRouteTo(1, 1);
     router->addRouteTo(2, 2);
