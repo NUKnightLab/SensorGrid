@@ -380,9 +380,11 @@ uint8_t collector_process_data(uint8_t* data)
         {
             uint16_t dust = (data[index++] << 8);
             dust = dust | (data[index++] & 0xff);
-            uint32_t timestamp = (data[index++] << 24);
-            timestamp = timestamp | (data[index++] << 16);
-            timestamp = timestamp | (data[index++] & 0xff);
+            uint32_t timestamp = (data[index] << 24)
+                | (data[index+1] << 16)
+                | (data[index+2] << 8)
+                | (data[index+3] & 0xff);
+            index += 4;
             output(F("SHARP_GP2Y1010AU0F NODE_ID: %d; VAL: %d; TIMESTAMP: %d\n"),
                 from_node_id, dust, timestamp);
             break;
