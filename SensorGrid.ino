@@ -799,7 +799,8 @@ void loop()
             || millis() > next_activity_time) {
         check_message();
     } else {
-        if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 1000) {
+        /* TODO: 1000 not 500 */
+        if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 500) {
             sharp_dust_sample();
             last_dust_sample = millis();
         }
