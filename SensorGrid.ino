@@ -630,7 +630,7 @@ void sharp_dust_sample()
     historical_data[historical_data_index++] = {
         .id = ++data_id,
         .node_id = config.node_id,
-        .timestamp = millis(),
+        .timestamp = rtc.now().unixtime(),
         .type = DATA_TYPE_SHARP_GP2Y1010AU0F,
         .value = (int16_t)(val)
     };
