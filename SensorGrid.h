@@ -103,7 +103,7 @@ typedef struct Control {
 typedef struct Data {
     uint8_t id; // 1-255 indicates Data
     uint8_t node_id;
-    uint8_t timestamp;
+    uint32_t timestamp;
     int8_t type;
     int16_t value;
 };

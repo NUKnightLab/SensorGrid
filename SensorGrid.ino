@@ -289,6 +289,10 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         new_data[new_data_index++] = historical_data[i].type;
         new_data[new_data_index++] = historical_data[i].value >> 8;
         new_data[new_data_index++] = historical_data[i].value & 0xff;
+        new_data[new_data_index++] = historical_data[i].timestamp >> 24;
+        new_data[new_data_index++] = historical_data[i].timestamp >> 16;
+        new_data[new_data_index++] = historical_data[i].timestamp >> 8;
+        new_data[new_data_index++] = historical_data[i].timestamp & 0xff;
         new_data[added_record_count_index]++;
     }
 
@@ -342,39 +346,45 @@ uint8_t collector_process_data(uint8_t* data)
     uint8_t record_count = data[index++];
     uint8_t data_type = data[index++];
     received_record_ids[from_node_id] = max_record_id;
+    p(F("NODE: %d - "), from_node_id);
     switch (data_type) {
         case DATA_TYPE_NODE_COLLECTION_LIST :
         {
             uncollected_nodes_index = 0;
             uint8_t collector = from_node_id; // should be this node. TODO: check?
             uint8_t node_count = data[index++];
-            p(F("Node collection list FROM: %d; NODE_COUNT: %d\n"),
-                collector, node_count);
+            output(F("NODE_COLLECTION_LIST NODE_COUNT: %d; NODES: "), node_count);
             for (int i=0; i<node_count; i++) {
                 uint8_t node = data[index++];
                 index++; // ignore max record id
-                //uint8_t max_record = data[index++];
                 uncollected_nodes[uncollected_nodes_index++] = node;
+                output(F("%d "), node);
             }
+            output(F("\n"));
             break;
         }
         case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
         {
             uint16_t seconds = (data[index++] << 8);
             seconds = seconds | (data[index++] & 0xff);
+            output(F("NEXT_ACTIVITY_SECONDS SECONDS: %d\n"), seconds);
             break;
         }
         case DATA_TYPE_BATTERY_LEVEL :
         {
             uint8_t bat = data[index++];
-            p(F("NODE: %d; BATTERY_LEVEL: %d\n"), from_node_id, bat);
+            output(F("BATTERY_LEVEL: %d\n"), bat);
             break;
         }
         case DATA_TYPE_SHARP_GP2Y1010AU0F :
         {
             uint16_t dust = (data[index++] << 8);
             dust = dust | (data[index++] & 0xff);
-            p(F("SHARP_DUST: %d\n"), dust);
+            uint32_t timestamp = (data[index++] << 24);
+            timestamp = timestamp | (data[index++] << 16);
+            timestamp = timestamp | (data[index++] & 0xff);
+            output(F("SHARP_GP2Y1010AU0F NODE_ID: %d; VAL: %d; TIMESTAMP: %d\n"),
+                from_node_id, dust, timestamp);
             break;
         }
     }
@@ -384,12 +394,10 @@ uint8_t collector_process_data(uint8_t* data)
 void collector_process_message(Message* msg, uint8_t len, uint8_t from)
 {
     uint8_t datalen = len - sizeof(Message);
-    p(F("Collector process message FROM: %d LEN: %d\n"), from, datalen);
     if (datalen < 3) return;
     uint8_t* data = msg->data;
     uint8_t index = 0;
     while (index < datalen) {
-        p(F("Index: %d; datalen: %d\n"), index, datalen);
         index += collector_process_data(&data[index]);
     }
     if (uncollected_nodes_index > 0) {
@@ -401,8 +409,10 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from)
 
 void process_message(Message* msg, uint8_t len, uint8_t from) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
-        p("COLLECTOR DATA RECEIVED\n");
+        p(F("Collected data received FROM: %d; MESSAGE_LEN: %d;\n"), from, len);
+        p(F("------->>>>>>>\n"));
         collector_process_message(msg, len, from);
+        p(F("<<<<<<<-------\n"));
     } else if (config.node_type == NODE_TYPE_ORDERED_SENSOR_ROUTER) {
         node_process_message(msg, len, from);
     }
@@ -620,7 +630,7 @@ void sharp_dust_sample()
     historical_data[historical_data_index++] = {
         .id = ++data_id,
         .node_id = config.node_id,
-        .timestamp = 0,
+        .timestamp = millis(),
         .type = DATA_TYPE_SHARP_GP2Y1010AU0F,
         .value = (int16_t)(val)
     };
