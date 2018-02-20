@@ -512,7 +512,8 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_WARN_50_PCT_DATA_HISTORY :
             {
-                output(F("WARN: 50%_DATA_HISTORY_UTIL\n"));
+                output(F("WARN: 50_PCT_DATA_HISTORY_UTIL\n"));
+                break;
             }
         }
     }
