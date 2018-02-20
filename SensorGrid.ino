@@ -507,7 +507,7 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
                     | (data[index+3] & 0xff);
                 index += 4;
                 output(F("SHARP_GP2Y1010AU0F VAL: %d; TIMESTAMP: %d\n"),
-                    from_node_id, dust, timestamp);
+                    dust, timestamp);
                 break;
             }
             case DATA_TYPE_WARN_50_PCT_DATA_HISTORY :
