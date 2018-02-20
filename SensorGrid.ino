@@ -42,6 +42,12 @@ static uint8_t data_id = 0;
 
 /* Data type structs */
 
+typedef struct __attribute__((packed)) NEXT_ACTIVITY_SECONDS_STRUCT
+{
+    uint8_t type;
+    uint16_t value;
+};
+
 typedef struct __attribute__((packed)) BATTERY_LEVEL_STRUCT
 {
     uint8_t type;
@@ -384,9 +390,6 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         /* 50% data history warning */
         if ( (historical_data_index - historical_data_head) > HISTORICAL_DATA_SIZE / 2 ) {
             if (new_data_index < MAX_DATA_LENGTH - 1) {
-                //new_data[new_data_index++] = DATA_TYPE_WARN_50_PCT_DATA_HISTORY;
-                //new_data[added_record_count_index]++;
-
                 WARN_50_PCT_DATA_HISTORY_STRUCT* data_struct =
                     (WARN_50_PCT_DATA_HISTORY_STRUCT*)&new_data[new_data_index];
                 *data_struct = {
@@ -525,9 +528,13 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
             {
-                uint16_t seconds = (data[index++] << 8);
-                seconds = seconds | (data[index++] & 0xff);
-                output(F("NEXT_ACTIVITY_SECONDS SECONDS: %d\n"), seconds);
+                //uint16_t seconds = (data[index++] << 8);
+                //seconds = seconds | (data[index++] & 0xff);
+                index--; /* TODO: remove this after struct completion */
+                NEXT_ACTIVITY_SECONDS_STRUCT* data_struct =
+                    (NEXT_ACTIVITY_SECONDS_STRUCT*)&data[index];
+                index += sizeof(NEXT_ACTIVITY_SECONDS_STRUCT);
+                output(F("NEXT_ACTIVITY_SECONDS SECONDS: %d\n"), data_struct->value);
                 break;
             }
             case DATA_TYPE_BATTERY_LEVEL :
@@ -874,6 +881,8 @@ void setup()
     p(F("BATTERY_LEVEL_STRUCT size verified\n"));
     assert(sizeof(WARN_50_PCT_DATA_HISTORY_STRUCT) == 1);
     p(F("BATTERY_LEVEL_STRUCT size verified\n"));
+    assert(sizeof(NEXT_ACTIVITY_SECONDS_STRUCT) == 3);
+    p(F("NEXT_ACTIVITY_SECONDS_STRUCT size verified\n"));
 
     p(F("Setup complete\n"));
     delay(100);
