@@ -513,10 +513,12 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from, uint8_t 
         index += collector_process_data(&data[index], from, flags);
     }
     if (uncollected_nodes_index > 0) {
+        p(F("\nSending data collection request from collector_process_message\n"));
         send_data_collection_request(uncollected_nodes, uncollected_nodes_index);
     }
     send_next_activity_seconds(30);
     next_activity_time = millis() + 30000 + 2000;
+    p(F("Set next activity time: %d\n"), next_activity_time);
 }
 
 void process_message(Message* msg, uint8_t len, uint8_t from, uint8_t flags) {
@@ -666,6 +668,7 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
         }
         if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id)) {
             next_activity_time = millis() + 20000; // timeout in case no response from network
+            p(F("Set next_activity_time for timeout: %d\n"), next_activity_time);
             return;
         } else {
             if (trial) {
@@ -796,7 +799,14 @@ void setup()
     }
     radio->setTxPower(config.tx_power, false);
     radio->setCADTimeout(CAD_TIMEOUT);
-    router->setTimeout(TIMEOUT);
+    /* TODO: what is the correct timeout? From the RH docs:
+    [setTimeout] Sets the minimum retransmit timeout. If sendtoWait is waiting
+    for an ack longer than this time (in milliseconds), it will retransmit the
+    message. Defaults to 200ms. The timeout is measured from the end of
+    transmission of the message. It must be at least longer than the the transmit
+    time of the acknowledgement (preamble+6 octets) plus the latency/poll time of
+    the receiver. */
+    //router->setTimeout(TIMEOUT);
     p(F("Setup complete\n"));
     delay(100);
 }
@@ -805,24 +815,29 @@ void loop()
 {
     static unsigned long last_display_update = 0;
     static unsigned long last_dust_sample = 0;
+    static bool check_this = false;
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR
             || millis() > next_activity_time) {
+        if (check_this) p(F("check this before check message\n"));
         check_message();
+        check_this = false;
     } else {
         if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 500) {
             sharp_dust_sample();
             last_dust_sample = millis();
         }
     }
-/*
     if (config.has_oled && millis() - last_display_update > DISPLAY_UPDATE_PERIOD) {
         update_display();
         last_display_update = millis();
     }
-*/
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         if (millis() > next_activity_time) {
+            p(F("\nSending data collection request from loop\n"));
             send_data_collection_request(known_nodes, sizeof(known_nodes));
+            p(F("Returned from data collection request\n"));
+            check_this = true;
+            return;
         }
     }
 }
