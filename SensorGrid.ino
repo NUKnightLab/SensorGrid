@@ -815,14 +815,11 @@ void loop()
 {
     static unsigned long last_display_update = 0;
     static unsigned long last_dust_sample = 0;
-    static bool check_this = false;
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR
             || millis() > next_activity_time) {
-        if (check_this) p(F("check this before check message\n"));
         check_message();
-        check_this = false;
     } else {
-        if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 500) {
+        if (millis() - last_dust_sample > config.SHARP_GP2Y1010AU0F_DUST_PERIOD * 250) {
             sharp_dust_sample();
             last_dust_sample = millis();
         }
@@ -833,11 +830,7 @@ void loop()
     }
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
         if (millis() > next_activity_time) {
-            p(F("\nSending data collection request from loop\n"));
             send_data_collection_request(known_nodes, sizeof(known_nodes));
-            p(F("Returned from data collection request\n"));
-            check_this = true;
-            return;
         }
     }
 }
