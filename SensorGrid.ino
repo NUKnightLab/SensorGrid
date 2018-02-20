@@ -31,12 +31,21 @@ static uint8_t received_record_ids[MAX_NODES];
 /* Sensor data */
 #define HISTORICAL_DATA_SIZE 20
 //static Data historical_data[256];
+/* TODO: make historical data a struct */
 static Data historical_data[HISTORICAL_DATA_SIZE];
 static uint8_t historical_data_head = 0;
 static uint8_t historical_data_index = 0;
 static uint8_t historical_data_shift_offset = 0;
 static uint8_t data_id = 0;
 
+/* Data type structs */
+
+typedef struct __attribute__((packed)) SHARP_GP2Y1010AU0F_STRUCT
+{
+    uint8_t type;
+    uint16_t value;
+    uint32_t timestamp;
+};
 
 /* LoRa */
 RH_RF95 *radio;
@@ -117,8 +126,8 @@ void cButton_ISR()
  */
 
 static struct pt update_clock_protothread;
-static struct pt update_display_protothread;
-static struct pt update_display_battery_protothread;
+//static struct pt update_display_protothread;
+//static struct pt update_display_battery_protothread;
 static struct pt display_timeout_protothread;
 static struct pt send_collection_request_protothread;
 
@@ -177,6 +186,7 @@ void process_data_collection(Message* msg, uint8_t datalen)
 {
 }
 
+/*
 struct Record {
     uint8_t record_type;
     uint8_t data[];
@@ -188,6 +198,7 @@ struct NodeMessage {
     uint8_t record_count;
     Record records[];
 };
+*/
 
 void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
 {
@@ -224,7 +235,7 @@ void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
     memcpy(order, first_pref, MAX_DATA_RECORDS);
 }
 
-const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
+//const int MAX_NODE_MESSAGES = MAX_MESSAGE_SIZE / sizeof(NodeMessage);
 
 uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 {
@@ -499,6 +510,7 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_SHARP_GP2Y1010AU0F :
             {
+                SHARP_GP2Y1010AU0F_STRUCT* data_struct = (SHARP_GP2Y1010AU0F_STRUCT*)&data[index];
                 uint16_t dust = (data[index++] << 8);
                 dust = dust | (data[index++] & 0xff);
                 uint32_t timestamp = (data[index] << 24)
@@ -508,6 +520,8 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
                 index += 4;
                 output(F("SHARP_GP2Y1010AU0F VAL: %d; TIMESTAMP: %d\n"),
                     dust, timestamp);
+                output(F("FROM STRUCT -- VAL: %d; TIMESTAMP: %d\n"),
+                    data_struct->value, data_struct->timestamp);
                 break;
             }
             case DATA_TYPE_WARN_50_PCT_DATA_HISTORY :
