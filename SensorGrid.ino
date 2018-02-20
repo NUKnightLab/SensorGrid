@@ -389,15 +389,6 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         //for (int i=previous_max_record_id+1; i<historical_data_index
                     && new_data_index < MAX_DATA_LENGTH - 7; i++) {
             p(F("Setting data record from historical index: %d\n"), i);
-/*
-            new_data[new_data_index++] = historical_data[i].type;
-            new_data[new_data_index++] = historical_data[i].value >> 8;
-            new_data[new_data_index++] = historical_data[i].value & 0xff;
-            new_data[new_data_index++] = historical_data[i].timestamp >> 24;
-            new_data[new_data_index++] = historical_data[i].timestamp >> 16;
-            new_data[new_data_index++] = historical_data[i].timestamp >> 8;
-            new_data[new_data_index++] = historical_data[i].timestamp & 0xff;
-*/
             SHARP_GP2Y1010AU0F_STRUCT* data_struct =
                 (SHARP_GP2Y1010AU0F_STRUCT*)&new_data[new_data_index];
             *data_struct = {
@@ -522,22 +513,11 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_SHARP_GP2Y1010AU0F :
             {
+                index--; /* TODO: remove this after struct completion */
                 SHARP_GP2Y1010AU0F_STRUCT* data_struct =
-                    (SHARP_GP2Y1010AU0F_STRUCT*)&data[index-1];
-                uint16_t dust = (data[index++] << 8);
-                dust = dust | (data[index++] & 0xff);
-                //uint32_t timestamp = (data[index] << 24)
-                //    | (data[index+1] << 16)
-                //    | (data[index+2] << 8)
-                //    | (data[index+3] & 0xff);
-                uint32_t timestamp = (data[index] & 0xff )
-                    | (data[index+1] << 8)
-                    | (data[index+2] << 16)
-                    | (data[index+3] << 24);
-                index += 4;
+                    (SHARP_GP2Y1010AU0F_STRUCT*)&data[index];
+                index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
                 output(F("SHARP_GP2Y1010AU0F VAL: %d; TIMESTAMP: %d\n"),
-                    dust, timestamp);
-                output(F("FROM STRUCT -- VAL: %d; TIMESTAMP: %d\n"),
                     data_struct->value, data_struct->timestamp);
                 break;
             }
