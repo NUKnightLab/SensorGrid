@@ -346,11 +346,16 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
         case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
         {
-            uint16_t seconds = (data[index++] << 8);
-            seconds = seconds | (data[index++] & 0xff);
-            p(F("NEXT_ACTIVITY_SECONDS: %d\n"), seconds);
+            index--; // TODO: remove
+            NEXT_ACTIVITY_SECONDS_STRUCT* data_struct =
+                (NEXT_ACTIVITY_SECONDS_STRUCT*)&data[index];
+            index += sizeof(NEXT_ACTIVITY_SECONDS_STRUCT);
+
+            //uint16_t seconds = (data[index++] << 8);
+            //seconds = seconds | (data[index++] & 0xff);
+            p(F("NEXT_ACTIVITY_SECONDS: %d\n"), data_struct->value);
             radio->sleep();
-            next_activity_time = millis() + seconds * 1000;
+            next_activity_time = millis() + data_struct->value * 1000;
             return; /* TODO: re-transmit? */
             break;
         }
@@ -753,12 +758,22 @@ void send_next_activity_seconds(uint16_t seconds)
     uint8_t data[5 + node_count*2] = {
         config.node_id,                 // Byte 0
         ++msg_id,                       // 1
-        1,                              // 2
-        DATA_TYPE_NEXT_ACTIVITY_SECONDS,// 3
-    };                                  // --> 4 preliminary bytes total
+        1 };//,                              // 2
+        //DATA_TYPE_NEXT_ACTIVITY_SECONDS,// 3
+    //};                                  // --> 4 preliminary bytes total
+    uint8_t data_index = 3;
+    /*
     uint8_t data_index = 4;
     data[data_index++] = seconds >> 8;
     data[data_index++] = seconds & 0xff;
+    */
+    NEXT_ACTIVITY_SECONDS_STRUCT* data_struct =
+        (NEXT_ACTIVITY_SECONDS_STRUCT*)&data[data_index];
+    *data_struct = {
+        .type = DATA_TYPE_NEXT_ACTIVITY_SECONDS,
+        .value = seconds
+    };
+    data_index += sizeof(NEXT_ACTIVITY_SECONDS_STRUCT);
     p(F("Broadcasting next activity seconds: %d\n"), seconds);
     send_data(data, data_index, RH_BROADCAST_ADDRESS);
 } /* send_next_activity_seconds */
