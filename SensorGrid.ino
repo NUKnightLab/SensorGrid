@@ -1,10 +1,12 @@
 #include "SensorGrid.h"
 #include "config.h"
 #include <pt.h>
+#include <assert.h>
 
+#define __ASSERT_USE_STDERR
 #define VERBOSE 1
 #define USE_SLOW_RELIABLE_MODE 0
-#define WAIT_SERIAL 0
+#define WAIT_SERIAL 1
 #define DISPLAY_UPDATE_PERIOD 1000
 #define MAX_NODES 20
 #define MAX_MESSAGE_SIZE 200
@@ -387,6 +389,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         //for (int i=previous_max_record_id+1; i<historical_data_index
                     && new_data_index < MAX_DATA_LENGTH - 7; i++) {
             p(F("Setting data record from historical index: %d\n"), i);
+/*
             new_data[new_data_index++] = historical_data[i].type;
             new_data[new_data_index++] = historical_data[i].value >> 8;
             new_data[new_data_index++] = historical_data[i].value & 0xff;
@@ -396,6 +399,13 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             new_data[new_data_index++] = historical_data[i].timestamp & 0xff;
             new_data[added_record_count_index]++;
             new_data[max_record_id_index] = i;
+*/
+            SHARP_GP2Y1010AU0F_STRUCT data_struct = {
+                .type = historical_data[i].type,
+                .value = historical_data[i].value,
+                .timestamp = historical_data[i].timestamp
+            }
+            new_data_index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
             if (i == historical_data_index - 1) {
                 p(F("No more historical data\n"));
                 has_more_data = false;
@@ -514,10 +524,14 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
                     (SHARP_GP2Y1010AU0F_STRUCT*)&data[index-1];
                 uint16_t dust = (data[index++] << 8);
                 dust = dust | (data[index++] & 0xff);
-                uint32_t timestamp = (data[index] << 24)
-                    | (data[index+1] << 16)
-                    | (data[index+2] << 8)
-                    | (data[index+3] & 0xff);
+                //uint32_t timestamp = (data[index] << 24)
+                //    | (data[index+1] << 16)
+                //    | (data[index+2] << 8)
+                //    | (data[index+3] & 0xff);
+                uint32_t timestamp = (data[index] & 0xff )
+                    | (data[index+1] << 8)
+                    | (data[index+2] << 16)
+                    | (data[index+3] << 24);
                 index += 4;
                 output(F("SHARP_GP2Y1010AU0F VAL: %d; TIMESTAMP: %d\n"),
                     dust, timestamp);
@@ -840,6 +854,13 @@ void setup()
     time of the acknowledgement (preamble+6 octets) plus the latency/poll time of
     the receiver. */
     //router->setTimeout(TIMEOUT);
+    /* Verify packing of data type structs.
+       TODO: can we make these compile-time assertions? Note: __assert is not
+       being called on the Feather M0. Is there a way we can get something
+       to print out for these? */
+    assert(sizeof(SHARP_GP2Y1010AU0F_STRUCT) == 7);
+    p(F("SHARP_GP2Y1010AU0F_STRUCT size verified\n"));
+
     p(F("Setup complete\n"));
     delay(100);
 }
