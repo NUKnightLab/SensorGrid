@@ -42,6 +42,19 @@ static uint8_t data_id = 0;
 
 /* Data type structs */
 
+typedef struct __attribute__((packed)) CollectNodeStruct
+{
+    uint8_t node_id;
+    uint8_t previous_max_record_id;
+};
+
+typedef struct __attribute__((packed)) COLLECTION_LIST_STRUCT
+{
+    uint8_t type;
+    uint8_t node_count;
+    CollectNodeStruct nodes[MAX_NODES];
+};
+
 typedef struct __attribute__((packed)) NEXT_ACTIVITY_SECONDS_STRUCT
 {
     uint8_t type;
@@ -317,8 +330,32 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     switch (data_type) {
         case DATA_TYPE_NODE_COLLECTION_LIST :
         {
+            index--; // TODO: remove
             p(F("COLLECTION_LIST: "));
             collector = from_node_id;
+            COLLECTION_LIST_STRUCT* data_struct =
+                (COLLECTION_LIST_STRUCT*)&data[index];
+            uint8_t new_nodes_index = 0;
+            for (int i=0; i<data_struct->node_count; i++) {
+                CollectNodeStruct n = data_struct->nodes[i];
+                if (n.node_id == config.node_id) {
+                    if (historical_data_shift_offset) {
+                        previous_max_record_id = n.previous_max_record_id - historical_data_shift_offset;
+                        historical_data_shift_offset = 0;
+                    } else {
+                        previous_max_record_id = n.previous_max_record_id;
+                    }
+                } else {
+                    data_struct->nodes[new_nodes_index++] = {
+                        .node_id = n.node_id,
+                        .previous_max_record_id = n.previous_max_record_id
+                    };
+                }
+            }
+            memcpy(&new_data[new_data_index], data_struct,
+                sizeof(COLLECTION_LIST_STRUCT) + new_nodes_index * sizeof(CollectNodeStruct));
+
+/*
             uint8_t node_count_index = new_data_index++;
             new_data[node_count_index] = 0;
             uint8_t node_count = data[index++];
@@ -341,6 +378,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                     next_nodes[next_nodes_index++] = node;
                 }
             }
+*/
             output(F("\n"));
             break;
         }
@@ -887,6 +925,10 @@ void setup()
     p(F("BATTERY_LEVEL_STRUCT size verified\n"));
     assert(sizeof(NEXT_ACTIVITY_SECONDS_STRUCT) == 3);
     p(F("NEXT_ACTIVITY_SECONDS_STRUCT size verified\n"));
+    assert(sizeof(CollectNodeStruct) == 2);
+    p(F("CollectNodeStruct size verified\n"));
+    assert(sizeof(COLLECTION_LIST_STRUCT) == 2);
+    p(F("COLLECTION_LIST_STRUCT size verified\n"));
 
     p(F("Setup complete\n"));
     delay(100);
