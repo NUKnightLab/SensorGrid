@@ -510,7 +510,8 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_SHARP_GP2Y1010AU0F :
             {
-                SHARP_GP2Y1010AU0F_STRUCT* data_struct = (SHARP_GP2Y1010AU0F_STRUCT*)&data[index];
+                SHARP_GP2Y1010AU0F_STRUCT* data_struct =
+                    (SHARP_GP2Y1010AU0F_STRUCT*)&data[index-1];
                 uint16_t dust = (data[index++] << 8);
                 dust = dust | (data[index++] & 0xff);
                 uint32_t timestamp = (data[index] << 24)
