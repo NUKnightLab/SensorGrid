@@ -404,7 +404,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                 .type = historical_data[i].type,
                 .value = historical_data[i].value,
                 .timestamp = historical_data[i].timestamp
-            }
+            };
             new_data_index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
             if (i == historical_data_index - 1) {
                 p(F("No more historical data\n"));
