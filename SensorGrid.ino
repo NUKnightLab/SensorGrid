@@ -397,14 +397,14 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             new_data[new_data_index++] = historical_data[i].timestamp >> 16;
             new_data[new_data_index++] = historical_data[i].timestamp >> 8;
             new_data[new_data_index++] = historical_data[i].timestamp & 0xff;
-            new_data[added_record_count_index]++;
-            new_data[max_record_id_index] = i;
 */
             SHARP_GP2Y1010AU0F_STRUCT data_struct = {
                 .type = historical_data[i].type,
                 .value = historical_data[i].value,
                 .timestamp = historical_data[i].timestamp
             };
+            new_data[added_record_count_index]++;
+            new_data[max_record_id_index] = i;
             new_data_index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
             if (i == historical_data_index - 1) {
                 p(F("No more historical data\n"));
