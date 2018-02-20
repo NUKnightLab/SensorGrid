@@ -42,6 +42,12 @@ static uint8_t data_id = 0;
 
 /* Data type structs */
 
+typedef struct __attribute__((packed)) BATTERY_LEVEL_STRUCT
+{
+    uint8_t type;
+    uint8_t value;
+};
+
 typedef struct __attribute__((packed)) SHARP_GP2Y1010AU0F_STRUCT
 {
     uint8_t type;
@@ -360,9 +366,16 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
 
         /* battery */
         if (new_data_index < MAX_DATA_LENGTH - 2) {
-            new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
-            new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
+            //new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
+            //new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
+            BATTERY_LEVEL_STRUCT* data_struct =
+                (BATTERY_LEVEL_STRUCT*)&new_data[new_data_index];
+            *data_struct = {
+                .type = DATA_TYPE_BATTERY_LEVEL,
+                .value = (uint8_t)(roundf(batteryLevel() * 10))
+            };
             new_data[added_record_count_index]++;
+            new_data_index += sizeof(BATTERY_LEVEL_STRUCT);
         }
 
         /* 50% data history warning */
@@ -399,6 +412,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             new_data[added_record_count_index]++;
             new_data[max_record_id_index] = i;
             new_data_index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
+
             if (i == historical_data_index - 1) {
                 p(F("No more historical data\n"));
                 has_more_data = false;
@@ -507,8 +521,12 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_BATTERY_LEVEL :
             {
-                uint8_t bat = data[index++];
-                output(F("BATTERY_LEVEL: %d\n"), bat);
+                index--; /* TODO: remove this after struct completion */
+                //uint8_t bat = data[index++];
+                BATTERY_LEVEL_STRUCT* data_struct =
+                    (BATTERY_LEVEL_STRUCT*)&data[index];
+                index += sizeof(BATTERY_LEVEL_STRUCT);
+                output(F("BATTERY_LEVEL: %d\n"), data_struct->value);
                 break;
             }
             case DATA_TYPE_SHARP_GP2Y1010AU0F :
@@ -842,6 +860,8 @@ void setup()
        to print out for these? */
     assert(sizeof(SHARP_GP2Y1010AU0F_STRUCT) == 7);
     p(F("SHARP_GP2Y1010AU0F_STRUCT size verified\n"));
+    assert(sizeof(BATTERY_LEVEL_STRUCT) == 2);
+    p(F("BATTERY_LEVEL_STRUCT size verified\n"));
 
     p(F("Setup complete\n"));
     delay(100);
