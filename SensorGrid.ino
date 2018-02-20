@@ -6,7 +6,7 @@
 #define __ASSERT_USE_STDERR
 #define VERBOSE 1
 #define USE_SLOW_RELIABLE_MODE 0
-#define WAIT_SERIAL 0
+#define WAIT_SERIAL 1
 #define DISPLAY_UPDATE_PERIOD 1000
 #define MAX_NODES 20
 #define MAX_MESSAGE_SIZE 200
@@ -927,7 +927,7 @@ void setup()
     p(F("NEXT_ACTIVITY_SECONDS_STRUCT size verified\n"));
     assert(sizeof(CollectNodeStruct) == 2);
     p(F("CollectNodeStruct size verified\n"));
-    assert(sizeof(COLLECTION_LIST_STRUCT) == 2);
+    assert(sizeof(COLLECTION_LIST_STRUCT) == 2 + sizeof(CollectNodeStruct)*MAX_NODES);
     p(F("COLLECTION_LIST_STRUCT size verified\n"));
 
     p(F("Setup complete\n"));
