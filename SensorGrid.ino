@@ -55,6 +55,11 @@ typedef struct __attribute__((packed)) SHARP_GP2Y1010AU0F_STRUCT
     uint32_t timestamp;
 };
 
+typedef struct __attribute__((packed)) WARN_50_PCT_DATA_HISTORY_STRUCT
+{
+    uint8_t type;
+};
+
 /* LoRa */
 RH_RF95 *radio;
 #if defined(USE_MESH_ROUTER)
@@ -379,8 +384,16 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         /* 50% data history warning */
         if ( (historical_data_index - historical_data_head) > HISTORICAL_DATA_SIZE / 2 ) {
             if (new_data_index < MAX_DATA_LENGTH - 1) {
-                new_data[new_data_index++] = DATA_TYPE_WARN_50_PCT_DATA_HISTORY;
+                //new_data[new_data_index++] = DATA_TYPE_WARN_50_PCT_DATA_HISTORY;
+                //new_data[added_record_count_index]++;
+
+                WARN_50_PCT_DATA_HISTORY_STRUCT* data_struct =
+                    (WARN_50_PCT_DATA_HISTORY_STRUCT*)&new_data[new_data_index];
+                *data_struct = {
+                    .type = DATA_TYPE_WARN_50_PCT_DATA_HISTORY,
+                };
                 new_data[added_record_count_index]++;
+                new_data_index += sizeof(WARN_50_PCT_DATA_HISTORY_STRUCT);
             }
         }
 
@@ -858,6 +871,8 @@ void setup()
     assert(sizeof(SHARP_GP2Y1010AU0F_STRUCT) == 7);
     p(F("SHARP_GP2Y1010AU0F_STRUCT size verified\n"));
     assert(sizeof(BATTERY_LEVEL_STRUCT) == 2);
+    p(F("BATTERY_LEVEL_STRUCT size verified\n"));
+    assert(sizeof(WARN_50_PCT_DATA_HISTORY_STRUCT) == 1);
     p(F("BATTERY_LEVEL_STRUCT size verified\n"));
 
     p(F("Setup complete\n"));
