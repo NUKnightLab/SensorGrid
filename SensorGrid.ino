@@ -34,6 +34,7 @@ static uint8_t received_record_ids[MAX_NODES];
 static Data historical_data[HISTORICAL_DATA_SIZE];
 static uint8_t historical_data_head = 0;
 static uint8_t historical_data_index = 0;
+static uint8_t historical_data_shift_offset = 0;
 static uint8_t data_id = 0;
 
 
@@ -297,7 +298,12 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                 output(F("NODE_ID: %d; MAX_RECORD_ID: %d; "),
                 node, max_record);
                 if (node == config.node_id) {
-                    previous_max_record_id = max_record;
+                    if (historical_data_shift_offset) {
+                        previous_max_record_id = max_record - historical_data_shift_offset;
+                        historical_data_shift_offset = 0;
+                    } else {
+                        previous_max_record_id = max_record;
+                    }
                 } else {
                     new_data[new_data_index++] = node;
                     new_data[new_data_index++] = max_record;
@@ -453,13 +459,11 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             case DATA_TYPE_NODE_COLLECTION_LIST :
             {
                 uncollected_nodes_index = 0;
-/*
                 if (flags == 1) {
                     p(F("Sender is not fully collected. Will restart collection from %d\n"),
                         from);
                     uncollected_nodes[uncollected_nodes_index++] = from;
                 }
-*/
                 uint8_t collector = from_node_id; // should be this node. TODO: check?
                 uint8_t node_count = data[index++];
                 output(F("NODE_COLLECTION_LIST NODE_COUNT: %d; NODES: "), node_count);
@@ -713,9 +717,10 @@ void sharp_dust_sample()
             return;
         }
         uint8_t len = historical_data_index - historical_data_head;
-        p(F("Shifting historical data and resetting"));
+        p(F("Shifting historical data and resetting\n"));
         memcpy(historical_data, historical_data + historical_data_head,
             len * sizeof(Data));
+        historical_data_shift_offset = historical_data_head;
         historical_data_head = 0;
         historical_data_index = len;
     }
