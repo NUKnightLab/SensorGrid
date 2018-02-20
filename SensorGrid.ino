@@ -366,8 +366,6 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
 
         /* battery */
         if (new_data_index < MAX_DATA_LENGTH - 2) {
-            //new_data[new_data_index++] = DATA_TYPE_BATTERY_LEVEL;
-            //new_data[new_data_index++] = (uint8_t)(roundf(batteryLevel() * 10));
             BATTERY_LEVEL_STRUCT* data_struct =
                 (BATTERY_LEVEL_STRUCT*)&new_data[new_data_index];
             *data_struct = {
@@ -522,7 +520,6 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             case DATA_TYPE_BATTERY_LEVEL :
             {
                 index--; /* TODO: remove this after struct completion */
-                //uint8_t bat = data[index++];
                 BATTERY_LEVEL_STRUCT* data_struct =
                     (BATTERY_LEVEL_STRUCT*)&data[index];
                 index += sizeof(BATTERY_LEVEL_STRUCT);
