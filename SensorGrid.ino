@@ -398,7 +398,9 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             new_data[new_data_index++] = historical_data[i].timestamp >> 8;
             new_data[new_data_index++] = historical_data[i].timestamp & 0xff;
 */
-            SHARP_GP2Y1010AU0F_STRUCT data_struct = {
+            SHARP_GP2Y1010AU0F_STRUCT* data_struct =
+                (SHARP_GP2Y1010AU0F_STRUCT*)&new_data[new_data_index];
+            *data_struct = {
                 .type = historical_data[i].type,
                 .value = historical_data[i].value,
                 .timestamp = historical_data[i].timestamp
