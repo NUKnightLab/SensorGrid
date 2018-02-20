@@ -352,6 +352,14 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             new_data[added_record_count_index]++;
         }
 
+        /* 50% data history warning */
+        if ( (historical_data_index - historical_data_head) > HISTORICAL_DATA_SIZE / 2 ) {
+            if (new_data_index < MAX_DATA_LENGTH - 1) {
+                new_data[new_data_index++] = DATA_TYPE_WARN_50_PCT_DATA_HISTORY;
+                new_data[added_record_count_index]++;
+            }
+        }
+
         /*  add in historical data */
         if (historical_data_index == 0) {
             has_more_data = false;
@@ -498,9 +506,13 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
                     | (data[index+2] << 8)
                     | (data[index+3] & 0xff);
                 index += 4;
-                output(F("SHARP_GP2Y1010AU0F NODE_ID: %d; VAL: %d; TIMESTAMP: %d\n"),
+                output(F("SHARP_GP2Y1010AU0F VAL: %d; TIMESTAMP: %d\n"),
                     from_node_id, dust, timestamp);
                 break;
+            }
+            case DATA_TYPE_WARN_50_PCT_DATA_HISTORY :
+            {
+                output(F("WARN: 50%_DATA_HISTORY_UTIL\n"));
             }
         }
     }
