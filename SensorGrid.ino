@@ -350,9 +350,6 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             NEXT_ACTIVITY_SECONDS_STRUCT* data_struct =
                 (NEXT_ACTIVITY_SECONDS_STRUCT*)&data[index];
             index += sizeof(NEXT_ACTIVITY_SECONDS_STRUCT);
-
-            //uint16_t seconds = (data[index++] << 8);
-            //seconds = seconds | (data[index++] & 0xff);
             p(F("NEXT_ACTIVITY_SECONDS: %d\n"), data_struct->value);
             radio->sleep();
             next_activity_time = millis() + data_struct->value * 1000;
@@ -533,8 +530,6 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
             {
-                //uint16_t seconds = (data[index++] << 8);
-                //seconds = seconds | (data[index++] & 0xff);
                 index--; /* TODO: remove this after struct completion */
                 NEXT_ACTIVITY_SECONDS_STRUCT* data_struct =
                     (NEXT_ACTIVITY_SECONDS_STRUCT*)&data[index];
@@ -758,15 +753,9 @@ void send_next_activity_seconds(uint16_t seconds)
     uint8_t data[5 + node_count*2] = {
         config.node_id,                 // Byte 0
         ++msg_id,                       // 1
-        1 };//,                              // 2
-        //DATA_TYPE_NEXT_ACTIVITY_SECONDS,// 3
-    //};                                  // --> 4 preliminary bytes total
-    uint8_t data_index = 3;
-    /*
-    uint8_t data_index = 4;
-    data[data_index++] = seconds >> 8;
-    data[data_index++] = seconds & 0xff;
-    */
+        1                               //
+    };
+    uint8_t data_index = 3; // 3 preliminary bytes
     NEXT_ACTIVITY_SECONDS_STRUCT* data_struct =
         (NEXT_ACTIVITY_SECONDS_STRUCT*)&data[data_index];
     *data_struct = {
