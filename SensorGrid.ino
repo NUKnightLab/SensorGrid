@@ -325,7 +325,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
     uint8_t record_count = data[index++];
     new_data[new_data_index++] = record_count;
     uint8_t data_type = data[index++];
-    new_data[new_data_index++] = data_type;
+    //new_data[new_data_index++] = data_type;
     static uint8_t previous_max_record_id = 0;
     switch (data_type) {
         case DATA_TYPE_NODE_COLLECTION_LIST :
@@ -335,9 +335,14 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             collector = from_node_id;
             COLLECTION_LIST_STRUCT* data_struct =
                 (COLLECTION_LIST_STRUCT*)&data[index];
+            p(F("COLLECTION LIST STRUCT: type: %d; node_count: %d\n"),
+                data_struct->type, data_struct->node_count);
             uint8_t new_nodes_index = 0;
-            for (int i=0; i<data_struct->node_count; i++) {
+            uint8_t node_count = data_struct->node_count;
+            data_struct->node_count = 0;
+            for (int i=0; i<node_count; i++) {
                 CollectNodeStruct n = data_struct->nodes[i];
+                output(F("[%d %d]"), n.node_id, n.previous_max_record_id);
                 if (n.node_id == config.node_id) {
                     if (historical_data_shift_offset) {
                         previous_max_record_id = n.previous_max_record_id - historical_data_shift_offset;
@@ -350,11 +355,17 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                         .node_id = n.node_id,
                         .previous_max_record_id = n.previous_max_record_id
                     };
+                    data_struct->node_count++;
+                    next_nodes[next_nodes_index++] = n.node_id;
                 }
             }
-            memcpy(&new_data[new_data_index], data_struct,
-                sizeof(COLLECTION_LIST_STRUCT) + new_nodes_index * sizeof(CollectNodeStruct));
-
+            //uint8_t len = sizeof(COLLECTION_LIST_STRUCT) +
+            uint8_t len = 2 +
+                data_struct->node_count * sizeof(CollectNodeStruct);
+            p(F("memcpy data_struct len: %d into new_data at index: %d\n"),
+                len, new_data_index);
+            memcpy(&new_data[new_data_index], data_struct, len);
+            new_data_index += len;
 /*
             uint8_t node_count_index = new_data_index++;
             new_data[node_count_index] = 0;
