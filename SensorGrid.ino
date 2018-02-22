@@ -79,6 +79,11 @@ typedef struct __attribute__((packed)) WARN_50_PCT_DATA_HISTORY_STRUCT
     uint8_t type;
 };
 
+typedef struct __attribute__((packed)) DataRecord
+{
+
+};
+
 /* LoRa */
 RH_RF95 *radio;
 #if defined(USE_MESH_ROUTER)
@@ -366,6 +371,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                 len, new_data_index);
             memcpy(&new_data[new_data_index], data_struct, len);
             new_data_index += len;
+            index += len;
 /*
             uint8_t node_count_index = new_data_index++;
             new_data[node_count_index] = 0;
@@ -423,7 +429,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         //new_data[new_data_index++] = ++recent_max_record_id;
         max_record_id_index = new_data_index;
         new_data[new_data_index++] = 0;
-        added_record_count_index = index;
+        added_record_count_index = new_data_index;
         new_data[new_data_index++] = 0; // record count
 
         /* battery */
@@ -463,6 +469,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
         p(F("Traversing historical data from index %d to %d\n"),
                 historical_data_head, historical_data_index);
+/*
         for (int i=historical_data_head; i<historical_data_index
         //for (int i=previous_max_record_id+1; i<historical_data_index
                     && new_data_index < MAX_DATA_LENGTH - 7; i++) {
@@ -483,6 +490,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                 has_more_data = false;
             }
         }
+*/
     }
 
     if (has_more_data) {
