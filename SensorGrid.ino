@@ -348,7 +348,6 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 
 void node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
-/*
     uint8_t datalen = len - sizeof(Message);
     p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
     if (datalen < 3) return;
@@ -791,16 +790,9 @@ void check_message()
 void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
 {
     static uint8_t msg_id = 0;
-    RecordSet record_set = {
-        .node_id = config.node_id,
-        .message_id = ++msg_id,
-        .record_count = 1,
-    };
     DataRecord record = {
-        .type = DATA_TYPE_NODE_COLLECTION_LIST
-    };
-    record.collection_list = {
-        .node_count = node_count
+        DATA_TYPE_NODE_COLLECTION_LIST,
+        { node_count }
     };
     for (int i=0; i<node_count; i++) {
         record.collection_list.nodes[i] = {
@@ -808,14 +800,7 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
             .previous_max_record_id = received_record_ids[nodes[i]]
         };
     }
-    record_set.records[0] = record;
-    p(F("Sending data collection request\n"));
-    p(F("Size of record set: %d\n"), sizeof_record_set(&record_set));
-    p(F("Bytes: "));
-    for (int i=0; i<sizeof_record_set(&record_set); i++) {
-        output("%d ", ((uint8_t*)&record_set)[i]);
-    }
-    output(F("\n"));
+    RecordSet record_set = { config.node_id, ++msg_id, 1, { record } };
     /* TODO: use a preferred routing order */
     for (int i=0; i<node_count; i++) {
         uint8_t node_id = nodes[i]; // until get_preferred is working
