@@ -50,39 +50,74 @@ typedef struct __attribute__((packed)) CollectNodeStruct
 
 typedef struct __attribute__((packed)) COLLECTION_LIST_STRUCT
 {
-    uint8_t type;
     uint8_t node_count;
     CollectNodeStruct nodes[MAX_NODES];
 };
 
 typedef struct __attribute__((packed)) NEXT_ACTIVITY_SECONDS_STRUCT
 {
-    uint8_t type;
     uint16_t value;
 };
 
 typedef struct __attribute__((packed)) BATTERY_LEVEL_STRUCT
 {
-    uint8_t type;
     uint8_t value;
 };
 
 typedef struct __attribute__((packed)) SHARP_GP2Y1010AU0F_STRUCT
 {
-    uint8_t type;
     uint16_t value;
     uint32_t timestamp;
 };
 
 typedef struct __attribute__((packed)) WARN_50_PCT_DATA_HISTORY_STRUCT
 {
-    uint8_t type;
 };
 
 typedef struct __attribute__((packed)) DataRecord
 {
-
+    uint8_t type;
+    union {
+        COLLECTION_LIST_STRUCT collection_list;
+        NEXT_ACTIVITY_SECONDS_STRUCT next_activity_seconds;
+        BATTERY_LEVEL_STRUCT battery_level;
+        SHARP_GP2Y1010AU0F_STRUCT sharp_gp2y1010au0f;
+        WARN_50_PCT_DATA_HISTORY_STRUCT warn_50_pct_data_history;
+    };
 };
+
+typedef struct __attribute__((packed)) RecordSet
+{
+    uint8_t node_id;
+    uint8_t message_id;
+    uint8_t record_count;
+    DataRecord records[255];
+};
+
+uint8_t sizeof_record_set(RecordSet* record_set)
+{
+    uint8_t size = 4; /* node_id + messge_id + record_count + type = 4 bytes */
+    for (int i=0; i< record_set->record_count; i++) {
+        DataRecord record = record_set->records[i];
+        switch (record.type) {
+            case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
+            {
+                size += sizeof(NEXT_ACTIVITY_SECONDS_STRUCT);
+                break;
+            }
+            case DATA_TYPE_NODE_COLLECTION_LIST :
+            {
+                uint8_t node_count = record.collection_list.node_count;
+                size += 1 + 2 * node_count;
+                break;
+            }
+            case 7 :
+                break;
+        }
+    }
+    return size;
+}
+
 
 /* LoRa */
 RH_RF95 *radio;
@@ -313,6 +348,7 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 
 void node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
+/*
     uint8_t datalen = len - sizeof(Message);
     p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
     if (datalen < 3) return;
@@ -395,7 +431,6 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
                     next_nodes[next_nodes_index++] = node;
                 }
             }
-*/
             output(F("\n"));
             break;
         }
@@ -408,17 +443,17 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             p(F("NEXT_ACTIVITY_SECONDS: %d\n"), data_struct->value);
             radio->sleep();
             next_activity_time = millis() + data_struct->value * 1000;
-            return; /* TODO: re-transmit? */
+            return;
             break;
         }
     }
-    /* copy in the remaining data */
+    // copy in the remaining data 
     while(index < datalen) {
         new_data[new_data_index++] = data[index++];
     }
-    /* After this point, we need to be sure not to overrun MAX_DATA_LENGTH */
+    // After this point, we need to be sure not to overrun MAX_DATA_LENGTH 
 
-    /* add self data to new data */
+    // add self data to new data 
 
     bool has_more_data = true;
     uint8_t max_record_id_index = 0;
@@ -432,7 +467,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         added_record_count_index = new_data_index;
         new_data[new_data_index++] = 0; // record count
 
-        /* battery */
+        // battery 
         if (new_data_index < MAX_DATA_LENGTH - 2) {
             BATTERY_LEVEL_STRUCT* data_struct =
                 (BATTERY_LEVEL_STRUCT*)&new_data[new_data_index];
@@ -444,7 +479,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             new_data_index += sizeof(BATTERY_LEVEL_STRUCT);
         }
 
-        /* 50% data history warning */
+        // 50% data history warning 
         if ( (historical_data_index - historical_data_head) > HISTORICAL_DATA_SIZE / 2 ) {
             if (new_data_index < MAX_DATA_LENGTH - 1) {
                 WARN_50_PCT_DATA_HISTORY_STRUCT* data_struct =
@@ -457,7 +492,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
             }
         }
 
-        /*  add in historical data */
+        //  add in historical data
         if (historical_data_index == 0) {
             has_more_data = false;
         }
@@ -469,28 +504,28 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
         p(F("Traversing historical data from index %d to %d\n"),
                 historical_data_head, historical_data_index);
-/*
-        for (int i=historical_data_head; i<historical_data_index
-        //for (int i=previous_max_record_id+1; i<historical_data_index
-                    && new_data_index < MAX_DATA_LENGTH - 7; i++) {
-            p(F("Setting data record from historical index: %d\n"), i);
-            SHARP_GP2Y1010AU0F_STRUCT* data_struct =
-                (SHARP_GP2Y1010AU0F_STRUCT*)&new_data[new_data_index];
-            *data_struct = {
-                .type = historical_data[i].type,
-                .value = historical_data[i].value,
-                .timestamp = historical_data[i].timestamp
-            };
-            new_data[added_record_count_index]++;
-            new_data[max_record_id_index] = i;
-            new_data_index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
 
-            if (i == historical_data_index - 1) {
-                p(F("No more historical data\n"));
-                has_more_data = false;
-            }
-        }
-*/
+//        for (int i=historical_data_head; i<historical_data_index
+//        //for (int i=previous_max_record_id+1; i<historical_data_index
+//                    && new_data_index < MAX_DATA_LENGTH - 7; i++) {
+//            p(F("Setting data record from historical index: %d\n"), i);
+//            SHARP_GP2Y1010AU0F_STRUCT* data_struct =
+//                (SHARP_GP2Y1010AU0F_STRUCT*)&new_data[new_data_index];
+//            *data_struct = {
+//                .type = historical_data[i].type,
+//                .value = historical_data[i].value,
+//                .timestamp = historical_data[i].timestamp
+//            };
+//            new_data[added_record_count_index]++;
+//            new_data[max_record_id_index] = i;
+//            new_data_index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
+//
+//            if (i == historical_data_index - 1) {
+//                p(F("No more historical data\n"));
+//                has_more_data = false;
+//            }
+//        }
+//
     }
 
     if (has_more_data) {
@@ -531,7 +566,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         }
     }
 
-    /* send to the collector if all other nodes fail */
+    // send to the collector if all other nodes fail 
     if (collector) {
         uint8_t flags = 0;
         if (has_more_data) {
@@ -548,6 +583,7 @@ void node_process_message(Message* msg, uint8_t len, uint8_t from)
         p("WARNING: Did not forward and no collector!\n");
     }
     //router->printRoutingTable();
+*/
 }
 
 static uint8_t uncollected_nodes[MAX_NODES];
@@ -555,6 +591,8 @@ static uint8_t uncollected_nodes_index = 0;
 
 uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
 {
+    return 1;
+/*
     uint8_t index = 0;
     uint8_t from_node_id = data[index++];
     uint8_t max_record_id = data[index++];
@@ -587,7 +625,7 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
             {
-                index--; /* TODO: remove this after struct completion */
+                index--; // TODO: remove this after struct completion
                 NEXT_ACTIVITY_SECONDS_STRUCT* data_struct =
                     (NEXT_ACTIVITY_SECONDS_STRUCT*)&data[index];
                 index += sizeof(NEXT_ACTIVITY_SECONDS_STRUCT);
@@ -596,7 +634,7 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_BATTERY_LEVEL :
             {
-                index--; /* TODO: remove this after struct completion */
+                index--; // TODO: remove this after struct completion
                 BATTERY_LEVEL_STRUCT* data_struct =
                     (BATTERY_LEVEL_STRUCT*)&data[index];
                 index += sizeof(BATTERY_LEVEL_STRUCT);
@@ -605,7 +643,7 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
             }
             case DATA_TYPE_SHARP_GP2Y1010AU0F :
             {
-                index--; /* TODO: remove this after struct completion */
+                index--; // TODO: remove this after struct completion 
                 SHARP_GP2Y1010AU0F_STRUCT* data_struct =
                     (SHARP_GP2Y1010AU0F_STRUCT*)&data[index];
                 index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
@@ -621,6 +659,7 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
         }
     }
     return index;
+*/
 }
 
 void collector_process_message(Message* msg, uint8_t len, uint8_t from, uint8_t flags)
@@ -752,41 +791,48 @@ void check_message()
 void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
 {
     static uint8_t msg_id = 0;
-    //const uint8_t node_count = sizeof(known_nodes);
-    uint8_t data[5 + MAX_NODES*2] = {
-        config.node_id,                 // Byte 0
-        ++msg_id,                       // 1
-        1,                              // 2
-        DATA_TYPE_NODE_COLLECTION_LIST, // 3
-        node_count                      // 4
-    };                                  // --> 5 preliminary bytes total
-    uint8_t data_index = 5;
+    RecordSet record_set = {
+        .node_id = config.node_id,
+        .message_id = ++msg_id,
+        .record_count = 1,
+    };
+    DataRecord record = {
+        .type = DATA_TYPE_NODE_COLLECTION_LIST
+    };
+    record.collection_list = {
+        .node_count = node_count
+    };
     for (int i=0; i<node_count; i++) {
-        data[data_index++] = nodes[i];
-        data[data_index++] = received_record_ids[nodes[i]];
+        record.collection_list.nodes[i] = {
+            .node_id = nodes[i],
+            .previous_max_record_id = received_record_ids[nodes[i]]
+        };
     }
-    uint8_t dest = nodes[0];
-    /* get_prefered_routing_order is clobbering data! Why?!!!
-       using known_nodes for now instead */
-    //uint8_t ordered_nodes[node_count];
-    //get_preferred_routing_order(known_nodes, node_count, ordered_nodes);
+    record_set.records[0] = record;
+    p(F("Sending data collection request\n"));
+    p(F("Size of record set: %d\n"), sizeof_record_set(&record_set));
+    p(F("Bytes: "));
+    for (int i=0; i<sizeof_record_set(&record_set); i++) {
+        output("%d ", ((uint8_t*)&record_set)[i]);
+    }
+    output(F("\n"));
+    /* TODO: use a preferred routing order */
     for (int i=0; i<node_count; i++) {
         uint8_t node_id = nodes[i]; // until get_preferred is working
 #if defined(USE_MESH_ROUTER)
-        if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_data(
+                record_set, sizeof_record_set(&record_set), node_id)) {
             next_activity_time = millis() + 20000; // timeout in case no response from network
             return;
         }
 #else
-        p(F("\nSending DATA: "));
-        for (int j=0; j<data_index; j++) output(F("%d "), data[j]);
-        output(F("\n"));
         bool trial = false;
         if (router->getRouteTo(node_id)->state != RHRouter::Valid) {
             router->addRouteTo(node_id, node_id);
             trial = true;
         }
-        if (RH_ROUTER_ERROR_NONE == send_data(data, data_index, node_id)) {
+        if (RH_ROUTER_ERROR_NONE == send_data(
+                (uint8_t*)&record_set, sizeof_record_set(&record_set), node_id)) {
             next_activity_time = millis() + 20000; // timeout in case no response from network
             p(F("Set next_activity_time for timeout: %d\n"), next_activity_time);
             return;
@@ -797,7 +843,7 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
             }
         }
     }
-    /* No successful collection requests sent. Wait for next attempt */
+    // No successful collection requests sent. Wait for next attempt //
     send_next_activity_seconds(30);
     next_activity_time = millis() + 30000 + 2000;
 #endif
@@ -805,6 +851,27 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
 
 void send_next_activity_seconds(uint16_t seconds)
 {
+    static uint8_t msg_id = 0;
+    const uint8_t node_count = sizeof(known_nodes);
+    RecordSet record_set = {
+        .node_id = config.node_id,
+        .message_id = ++msg_id,
+        .record_count = 1,
+    };
+    DataRecord record = {
+        .type = DATA_TYPE_NEXT_ACTIVITY_SECONDS,
+    };
+    record.next_activity_seconds = { .value = seconds };
+    record_set.records[0] = record;
+    p(F("Broadcasting next activity seconds: %d\n"), seconds);
+    p(F("Size of record set: %d\n"), sizeof_record_set(&record_set));
+    p(F("Bytes: "));
+    for (int i=0; i<sizeof_record_set(&record_set); i++) {
+        output("%d ", ((uint8_t*)&record_set)[i]);
+    }
+
+    //send_data(data, data_index, RH_BROADCAST_ADDRESS);
+    /*
     static uint8_t msg_id = 0;
     const uint8_t node_count = sizeof(known_nodes);
     uint8_t data[5 + node_count*2] = {
@@ -822,6 +889,7 @@ void send_next_activity_seconds(uint16_t seconds)
     data_index += sizeof(NEXT_ACTIVITY_SECONDS_STRUCT);
     p(F("Broadcasting next activity seconds: %d\n"), seconds);
     send_data(data, data_index, RH_BROADCAST_ADDRESS);
+    */
 } /* send_next_activity_seconds */
 
 /* sensor data sampling */
@@ -936,17 +1004,18 @@ void setup()
        TODO: can we make these compile-time assertions? Note: __assert is not
        being called on the Feather M0. Is there a way we can get something
        to print out for these? */
-    assert(sizeof(SHARP_GP2Y1010AU0F_STRUCT) == 7);
+    assert(sizeof(SHARP_GP2Y1010AU0F_STRUCT) == 6);
     p(F("SHARP_GP2Y1010AU0F_STRUCT size verified\n"));
-    assert(sizeof(BATTERY_LEVEL_STRUCT) == 2);
+    assert(sizeof(BATTERY_LEVEL_STRUCT) == 1);
     p(F("BATTERY_LEVEL_STRUCT size verified\n"));
-    assert(sizeof(WARN_50_PCT_DATA_HISTORY_STRUCT) == 1);
-    p(F("BATTERY_LEVEL_STRUCT size verified\n"));
-    assert(sizeof(NEXT_ACTIVITY_SECONDS_STRUCT) == 3);
+    p("size of 50pct: %d\n", sizeof(WARN_50_PCT_DATA_HISTORY_STRUCT));
+    //assert(sizeof(WARN_50_PCT_DATA_HISTORY_STRUCT) == 0);
+    //p(F("WARN_50_PCT_DATA_HISTORY_STRUCT size verified\n"));
+    assert(sizeof(NEXT_ACTIVITY_SECONDS_STRUCT) == 2);
     p(F("NEXT_ACTIVITY_SECONDS_STRUCT size verified\n"));
     assert(sizeof(CollectNodeStruct) == 2);
     p(F("CollectNodeStruct size verified\n"));
-    assert(sizeof(COLLECTION_LIST_STRUCT) == 2 + sizeof(CollectNodeStruct)*MAX_NODES);
+    assert(sizeof(COLLECTION_LIST_STRUCT) == 1 + sizeof(CollectNodeStruct)*MAX_NODES);
     p(F("COLLECTION_LIST_STRUCT size verified\n"));
 
     p(F("Setup complete\n"));
