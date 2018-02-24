@@ -45,7 +45,7 @@ static uint8_t data_id = 0;
 typedef struct __attribute__((packed)) CollectNodeStruct
 {
     uint8_t node_id;
-    uint8_t previous_max_record_id;
+    uint8_t prev_record_id;
 };
 
 typedef struct __attribute__((packed)) COLLECTION_LIST_STRUCT
@@ -109,6 +109,11 @@ uint8_t sizeof_record_set(RecordSet* record_set)
             {
                 uint8_t node_count = record.collection_list.node_count;
                 size += 1 + 2 * node_count;
+                break;
+            }
+            case DATA_TYPE_SHARP_GP2Y1010AU0F :
+            {
+                size += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
                 break;
             }
             case 7 :
@@ -311,7 +316,7 @@ void get_preferred_routing_order(uint8* nodes, uint8_t len, uint8_t* order)
 
 uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 {
-    p(F("Sending data to %d; LEN: %d; FLAGS: %d; DATA: "), dest, len, flags);
+    p(F("\nSending data to %d; LEN: %d; FLAGS: %d; DATA: "), dest, len, flags);
     for (int i=0; i<len; i++) output(F("%d "), data[i]);
     output(F("\n"));
     static struct Message *msg = NULL;
@@ -348,6 +353,71 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 
 void node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
+    uint8_t datalen = len - sizeof(Message);
+    p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
+    if (datalen < 3) return;
+    RecordSet* record_set = (RecordSet*)msg->data;
+    p(F("Record set NODE_ID: %d; MESSAGE_ID: %d; RECORD_COUNT: %d\n"),
+        record_set->node_id, record_set->message_id, record_set->record_count);
+    for (int i=0; i<record_set->record_count; i++) {
+        DataRecord record = record_set->records[i];
+        switch (record.type) {
+            case DATA_TYPE_NODE_COLLECTION_LIST :
+            {
+                p(F("Collection List. NODES: [ "));
+                COLLECTION_LIST_STRUCT list = record.collection_list;
+                uint8_t next_nodes_index;
+                uint8_t prev_record_id;
+                for (int n=0; n<list.node_count; n++) {
+                    output(F("%d (prev record id: %d); "), list.nodes[n].node_id,
+                        list.nodes[n].prev_record_id);
+                    if (list.nodes[n].node_id == config.node_id) {
+                        list.node_count--;
+                        if (historical_data_shift_offset) {
+                            prev_record_id = list.nodes[n].prev_record_id - historical_data_shift_offset;
+                            historical_data_shift_offset = 0;
+                        } else {
+                            prev_record_id = list.nodes[n].prev_record_id;
+                        }
+                    } else {
+                        list.nodes[next_nodes_index++] = {
+                            .node_id = list.nodes[n].node_id,
+                            .prev_record_id = list.nodes[n].prev_record_id
+                        };
+                    }
+                }
+                output(F("]\n"));
+                p(F("Next nodes: [ "));
+                for (int n=0; n<list.node_count; n++) {
+                    output(F("%d (prev id: %d); "), list.nodes[n].node_id,
+                        list.nodes[n].prev_record_id);
+                }
+                output(F("]\n"));
+                break;
+            }
+            case DATA_TYPE_NEXT_ACTIVITY_SECONDS :
+            {
+                p(F("next activity\n"));
+                break;
+            }
+            case DATA_TYPE_BATTERY_LEVEL :
+            {
+                p(F("battery level\n"));
+                break;
+            }
+            case DATA_TYPE_SHARP_GP2Y1010AU0F :
+            {
+                p(F("sharp dust\n"));
+                break;
+            }
+            case DATA_TYPE_WARN_50_PCT_DATA_HISTORY :
+            {
+                p(F("warn 50 pct\n"));
+                break;
+            }
+        }
+    }
+/*
     uint8_t datalen = len - sizeof(Message);
     p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
     if (datalen < 3) return;
@@ -797,10 +867,25 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
     for (int i=0; i<node_count; i++) {
         record.collection_list.nodes[i] = {
             .node_id = nodes[i],
-            .previous_max_record_id = received_record_ids[nodes[i]]
+            .prev_record_id = received_record_ids[nodes[i]]
         };
     }
     RecordSet record_set = { config.node_id, ++msg_id, 1, { record } };
+
+    uint8_t * ptr = (uint8_t*)(&record_set) + sizeof_record_set(&record_set);
+
+    /* TODO: this is a temporary hack in of extra data for development */
+    //DataRecord fake_data_record = {
+    //*ptr = {
+    uint8_t * fake_data_record = {
+        DATA_TYPE_SHARP_GP2Y1010AU0F,
+        1234, 50150150
+    };
+    memcpy(ptr, fake_data_record, 4);
+    record_set.record_count++;
+
+    /* TODO: see above note. remove hack code to here */
+
     /* TODO: use a preferred routing order */
     for (int i=0; i<node_count; i++) {
         uint8_t node_id = nodes[i]; // until get_preferred is working
