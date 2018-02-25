@@ -351,7 +351,17 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
     }
 } /* send_data */
 
+
 void node_process_message(Message* msg, uint8_t len, uint8_t from)
+{
+    uint8_t datalen = len - sizeof(Message);
+    p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
+    NewRecordSet record_set = {0};
+    from_bytes(&record_set, (uint8_t*)msg->data, &datalen);
+    print_record_set(&record_set);
+}
+
+void _node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
     uint8_t datalen = len - sizeof(Message);
     p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);

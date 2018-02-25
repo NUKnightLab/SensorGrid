@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "SensorGrid.h"
 #include "protocol.h"
 
 #define MAX_MESSAGE_SIZE 240
@@ -48,7 +49,7 @@ struct __attribute__((packed)) SHARP_GP2Y1010AU0F_STRUCT
     uint16_t value;
     uint32_t timestamp;
 } sharp_gp2y1010au0f = { DATA_TYPE_SHARP_GP2Y1010AU0F };
-typedef struct SHARP_GP2Y1010AU0F_STRUCT SHARP_GP2Y1010AU0F;
+typedef struct SHARP_GP2Y1010AU0F_STRUCT _SHARP_GP2Y1010AU0F;
 
 struct __attribute__((packed)) WARN_50_PCT_DATA_HISTORY_STRUCT
 {
@@ -58,13 +59,6 @@ typedef struct WARN_50_PCT_DATA_HISTORY_STRUCT WARN_50_PCT_DATA_HISTORY;
 
 //
 
-typedef struct __attribute__((packed)) RecordSet_s
-{
-    uint8_t node_id;
-    uint8_t message_id;
-    uint8_t record_count;
-    uint8_t data[100];
-} RecordSet;
 
 
 typedef void (*PrintRecordFunction)(uint8_t* record);
@@ -84,7 +78,7 @@ void print_battery_level(uint8_t* record)
 
 void print_sharp_gp2y1010au0f(uint8_t* record)
 {
-    SHARP_GP2Y1010AU0F* r = (SHARP_GP2Y1010AU0F*)record;
+    _SHARP_GP2Y1010AU0F* r = (_SHARP_GP2Y1010AU0F*)record;
     printf("SHARP_GP2Y1010AU0F VAL: %d; TIMESTAMP: %d\n", r->value, r->timestamp);
 }
 
@@ -95,11 +89,11 @@ void print_warn_50_pct_data_history(uint8_t* record)
 
 DataType data_types[] = {
     { DATA_TYPE_BATTERY_LEVEL, sizeof(BATTERY_LEVEL), &print_battery_level },
-    { DATA_TYPE_SHARP_GP2Y1010AU0F, sizeof(SHARP_GP2Y1010AU0F), &print_sharp_gp2y1010au0f },
+    { DATA_TYPE_SHARP_GP2Y1010AU0F, sizeof(_SHARP_GP2Y1010AU0F), &print_sharp_gp2y1010au0f },
     { DATA_TYPE_WARN_50_PCT_DATA_HISTORY, sizeof(WARN_50_PCT_DATA_HISTORY), &print_warn_50_pct_data_history }
 };
 
-void to_bytes(RecordSet* set, uint8_t* bytes, uint8_t* len)
+void to_bytes(NewRecordSet* set, uint8_t* bytes, uint8_t* len)
 {
     if (*len < 3) return;
     memcpy(bytes, set, 3); // node_id, message_id, record_count
@@ -131,7 +125,7 @@ void to_bytes(RecordSet* set, uint8_t* bytes, uint8_t* len)
     *len = bytes_index;
 }
 
-void from_bytes(RecordSet* set, uint8_t* bytes, uint8_t* len)
+void from_bytes(NewRecordSet* set, uint8_t* bytes, uint8_t* len)
 {
     memcpy(set, bytes, 3); // node_id, message_id, record_count
     uint8_t bytes_index = 3;
@@ -157,21 +151,21 @@ void from_bytes(RecordSet* set, uint8_t* bytes, uint8_t* len)
     *len = bytes_index;
 }
 
-void print_record_set(RecordSet* newset)
+void print_record_set(NewRecordSet* newset)
 {
     uint8_t index = 0;
-    printf("\nPrinting record set NODE_ID: %d, RECORD_COUNT: %d\n",
+    p(F("\nPrinting record set NODE_ID: %d, RECORD_COUNT: %d\n"),
         newset->node_id, newset->record_count);
     for (int i=0; i<newset->record_count; i++) {
         uint8_t type = newset->data[index];
         if (type == DATA_TYPE_NODE_COLLECTION_LIST) {
-            printf("COLLECTION_LIST: ");
+            p(F("COLLECTION_LIST: "));
             COLLECTION_LIST* list = (COLLECTION_LIST*)&newset->data[index];
             for (int n=0; n<list->node_count; n++) {
-                printf("[%d, %d] ", list->nodes[n].node_id,
+                output(F("[%d, %d] "), list->nodes[n].node_id,
                     list->nodes[n].prev_record_id);
             }
-            printf("\n");
+            output(F("\n"));
             index += (2 + 2 * list->node_count);
         } else {
             for (int j=0; j<sizeof(data_types); j++){
@@ -189,7 +183,7 @@ void print_record_set(RecordSet* newset)
 
 uint8_t received_record_ids[MAX_NODES];
 
-void add_record(RecordSet* record_set, uint8_t* record, uint8_t* index)
+void add_record(NewRecordSet* record_set, uint8_t* record, uint8_t* index)
 {
     uint8_t type = record[0];
     uint8_t size;
@@ -258,19 +252,19 @@ int _main(int argc, char** argv)
     len = MAX_MESSAGE_SIZE - buf_index;
 
     /* data record set from node 2 */
-    RecordSet set = {
+    NewRecordSet set = {
         .node_id = 2, .message_id = 200, .record_count = 0
     };
     uint8_t record_index = 0;
 
     /* sharp dust sample */
-    SHARP_GP2Y1010AU0F record1 = sharp_gp2y1010au0f;
+    _SHARP_GP2Y1010AU0F record1 = sharp_gp2y1010au0f;
     record1.value = 123;
     record1.timestamp = 123456;
     add_record(&set, (uint8_t*)&record1, &record_index);
 
     /* another sharp dust sample */
-    SHARP_GP2Y1010AU0F record2 = sharp_gp2y1010au0f;
+    _SHARP_GP2Y1010AU0F record2 = sharp_gp2y1010au0f;
     record2.value = 789;
     record2.timestamp = 654321;
     add_record(&set, (uint8_t*)&record2, &record_index);
@@ -294,7 +288,7 @@ int _main(int argc, char** argv)
     buf_index = 0;
     uint8_t record_set_size = 0;
     do {
-        RecordSet newset = {0};
+        NewRecordSet newset = {0};
         from_bytes(&newset, &buffer[buf_index], &record_set_size);
         print_record_set(&newset);
         buf_index += record_set_size;
