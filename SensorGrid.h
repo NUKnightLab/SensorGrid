@@ -156,8 +156,6 @@ Serial.print("Address of str $"); Serial.println((int)&str, HEX);
 If the address is $2000000 or larger, its in SRAM. If the address is between $0000 and $3FFFF Then it is in FLASH
 */
 
-class __FlashStringHelper;
-#define F(string_literal) (reinterpret_cast<const __FlashStringHelper*>(PSTR(string_literal)))
 
 void fail(enum ERRORS err);
 void flashLED(int times, int endState);
@@ -165,9 +163,5 @@ float batteryLevel();
 void printRam();
 int freeRam();
 void aButton_ISR();
-void p(char *fmt, ...);
-void p(const __FlashStringHelper *fmt, ... );
-void output(char *fmt, ...);
-void output(const __FlashStringHelper *fmt, ... );
 
 #endif

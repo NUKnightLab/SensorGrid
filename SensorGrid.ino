@@ -352,13 +352,110 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 } /* send_data */
 
 
-void node_process_message(Message* msg, uint8_t len, uint8_t from)
+void node_process_message(Message* message, uint8_t len, uint8_t from)
 {
+    uint8_t datalen = len - sizeof(Message);
+    uint8_t data[MAX_DATA_LENGTH];
+
+    /* print out incoming message */
+    uint8_t incoming_datalen = datalen;
+    uint8_t in_data_index = 0;
+    uint8_t in_record_set_size = 0;
+    p("** Incoming message:\n");
+    do {
+        NewRecordSet newset = {0};
+        from_bytes(&newset, (uint8_t*)&message->data+in_data_index, &in_record_set_size);
+        print_record_set(&newset);
+        in_data_index += in_record_set_size;
+        incoming_datalen -= in_record_set_size;
+    } while (incoming_datalen > 0);
+    p("**\n\n");
+    /* */
+
+    NewRecordSet record_set = {0};
+    from_bytes(&record_set, (uint8_t*)message->data, &datalen);
+    print_record_set(&record_set);
+    copy_data(data, (uint8_t*)message->data, &datalen, config.node_id);
+    record_set = {0};
+    from_bytes(&record_set, data, &datalen);
+    print_record_set(&record_set);
+
+    /* record set for this node */
+    static uint8_t msg_id = 0;
+    NewRecordSet set = {
+        .node_id = config.node_id, .message_id = ++msg_id, .record_count = 0
+    };
+
+    uint8_t remaining_len = MAX_DATA_LENGTH - datalen;
+
+    uint8_t set_index = 0;
+    // battery
+    if (datalen < MAX_DATA_LENGTH - 2) {
+        _BATTERY_LEVEL bat = {
+            .type = DATA_TYPE_BATTERY_LEVEL,
+            .value = (uint8_t)(roundf(batteryLevel() * 10)) };
+        add_record(&set, (uint8_t*)&bat, &set_index);
+    }
+
+    to_bytes(&set, &data[datalen], &remaining_len);
+
+    /* print outgoing message */
+    uint8_t outgoing_datalen = datalen + remaining_len;
+    uint8_t out_data_index = 0;
+    uint8_t out_record_set_size = 0;
+    p("** Outgoing message:\n");
+    do {
+        NewRecordSet newset = {0};
+        from_bytes(&newset, &data[out_data_index], &out_record_set_size);
+        print_record_set(&newset);
+        out_data_index += out_record_set_size;
+        outgoing_datalen -= out_record_set_size;
+    } while (outgoing_datalen > 0);
+    p("**\n\n");
+    /* */
+}
+
+void __node_process_message(Message* message, uint8_t len, uint8_t from)
+{
+/*
     uint8_t datalen = len - sizeof(Message);
     p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
     NewRecordSet record_set = {0};
-    from_bytes(&record_set, (uint8_t*)msg->data, &datalen);
+    from_bytes(&record_set, (uint8_t*)message->data, &datalen);
     print_record_set(&record_set);
+    if (record_set.data[0] != DATA_TYPE_NODE_COLLECTION_LIST) {
+        p("WARNING: Unrecognized message format does not begin with collection request\n");
+        return;
+    }
+    uint8_t* msg[MAX_MESSAGE_SIZE];
+    unint8_t index = copy_node_collection(msg, &record_set, config.node_id);
+    memcpy(msg[index], (uint8_t*)message + col_list_size, remaining_data_size);
+*/
+
+    /* remove current node from the collection list */
+    //_COLLECTION_LIST* list = (_COLLECTION_LIST*)&record_set.data[0];
+    //uint8_t col_list_size = 2 + 2*list->node_count;
+    //uint8_t remaining_data_size = len - col_list_size;
+    //if (remove_collection_list_node(list, config.node_id) ) {
+    //    col_list_size -= 2;
+    //}
+/*
+    memcpy(msg, (uint8_t*)message + col_list_size, remaining_data_size);
+    print_record_set(&record_set);
+    uint8_t index = col_list_size + remaining_data_size;
+
+    // battery
+    if (index < MAX_DATA_LENGTH - 2) {
+        BATTERY_LEVEL_STRUCT* data_struct =
+            (BATTERY_LEVEL_STRUCT*)&new_data[new_data_index];
+        *data_struct = {
+            .type = DATA_TYPE_BATTERY_LEVEL,
+            .value = (uint8_t)(roundf(batteryLevel() * 10))
+        };
+        new_data[added_record_count_index]++;
+        new_data_index += sizeof(BATTERY_LEVEL_STRUCT);
+    }
+*/
 }
 
 void _node_process_message(Message* msg, uint8_t len, uint8_t from)

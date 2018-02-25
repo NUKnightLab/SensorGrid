@@ -16,8 +16,8 @@ static int _freeRam()
 }
 #endif
 
-
 #include <stdarg.h>
+
 
 void output(char *fmt, ... ){
         char buf[128]; // resulting string limited to 128 chars
