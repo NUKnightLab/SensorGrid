@@ -860,6 +860,13 @@ void check_message()
 void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
 {
     static uint8_t msg_id = 0;
+    uint8_t len = MAX_MESSAGE_SIZE;
+    uint8_t buffer[MAX_MESSAGE_SIZE];
+    uint8_t buf_index = 0;
+    create_collection_record(config.node_id, ++msg_id, known_nodes,
+        sizeof(known_nodes), buffer, &len);
+
+/*
     DataRecord record = {
         DATA_TYPE_NODE_COLLECTION_LIST,
         { node_count }
@@ -873,16 +880,19 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
     RecordSet record_set = { config.node_id, ++msg_id, 1, { record } };
 
     uint8_t * ptr = (uint8_t*)(&record_set) + sizeof_record_set(&record_set);
+*/
 
     /* TODO: this is a temporary hack in of extra data for development */
     //DataRecord fake_data_record = {
     //*ptr = {
+/*
     uint8_t * fake_data_record = {
         DATA_TYPE_SHARP_GP2Y1010AU0F,
         1234, 50150150
     };
     memcpy(ptr, fake_data_record, 4);
     record_set.record_count++;
+*/
 
     /* TODO: see above note. remove hack code to here */
 
@@ -891,7 +901,8 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
         uint8_t node_id = nodes[i]; // until get_preferred is working
 #if defined(USE_MESH_ROUTER)
         if (RH_ROUTER_ERROR_NONE == send_data(
-                record_set, sizeof_record_set(&record_set), node_id)) {
+                buffer, len, node_id)) {
+                //record_set, sizeof_record_set(&record_set), node_id)) {
             next_activity_time = millis() + 20000; // timeout in case no response from network
             return;
         }
@@ -902,7 +913,8 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
             trial = true;
         }
         if (RH_ROUTER_ERROR_NONE == send_data(
-                (uint8_t*)&record_set, sizeof_record_set(&record_set), node_id)) {
+                buffer, len, node_id)) {
+                //(uint8_t*)&record_set, sizeof_record_set(&record_set), node_id)) {
             next_activity_time = millis() + 20000; // timeout in case no response from network
             p(F("Set next_activity_time for timeout: %d\n"), next_activity_time);
             return;

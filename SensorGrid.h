@@ -10,6 +10,7 @@
 #include <Arduino.h>
 #include "io.h"
 #include <WiFi101.h>
+#include "protocol.h"
 
 #define CAD_TIMEOUT 1000
 #define TIMEOUT 2000

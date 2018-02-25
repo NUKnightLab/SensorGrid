@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "protocol.h"
 
 #define MAX_MESSAGE_SIZE 240
 #define MAX_NODES 100
@@ -242,7 +243,7 @@ void create_collection_record(uint8_t node_id, uint8_t message_id,
 }
 
 
-int main(int argc, char** argv)
+int _main(int argc, char** argv)
 {
 
     /* intiate a message buffer with a collection list request */
