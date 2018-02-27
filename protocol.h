@@ -19,7 +19,8 @@ typedef struct __attribute__((packed)) NewRecordSet
     uint8_t node_id;
     uint8_t message_id;
     uint8_t record_count;
-    uint8_t data[100];
+    uint8_t data[];
+    //uint8_t data[100];
 };
 
 void create_collection_record(uint8_t node_id, uint8_t message_id,

@@ -355,7 +355,7 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 void node_process_message(Message* message, uint8_t len, uint8_t from)
 {
     uint8_t datalen = len - sizeof(Message);
-    uint8_t data[MAX_DATA_LENGTH];
+    static uint8_t data[MAX_DATA_LENGTH];
 
     /* print out incoming message */
     uint8_t incoming_datalen = datalen;
@@ -379,28 +379,72 @@ void node_process_message(Message* message, uint8_t len, uint8_t from)
     record_set = {0};
     from_bytes(&record_set, data, &datalen);
     print_record_set(&record_set);
+    p("Done printing\n");
 
     /* record set for this node */
     static uint8_t msg_id = 0;
-    NewRecordSet set = {
-        .node_id = config.node_id, .message_id = ++msg_id, .record_count = 0
-    };
 
-    uint8_t remaining_len = MAX_DATA_LENGTH - datalen;
+    //NewRecordSet set = {
+    //    .node_id = config.node_id, .message_id = ++msg_id, .record_count = 0
+    //};
+    p("datalen: %d\n", datalen);
+    for (int i=0; i<datalen; i++) output("%d ", data[i]);
+    output("\n");
+    NewRecordSet* set = (NewRecordSet*)&data[datalen];
+    set->node_id = config.node_id;
+    set->message_id = ++msg_id;
+    set->record_count = 0;
+    p("Added record set\n");
+    for (int i=0; i<datalen+3; i++) output("%d ", data[i]);
+    output("\n");
 
-    uint8_t set_index = 0;
+    uint8_t data_size = MAX_DATA_LENGTH - (datalen + 3);
+
+    uint8_t index = 0;
     // battery
-    if (datalen < MAX_DATA_LENGTH - 2) {
-        _BATTERY_LEVEL bat = {
-            .type = DATA_TYPE_BATTERY_LEVEL,
-            .value = (uint8_t)(roundf(batteryLevel() * 10)) };
-        add_record(&set, (uint8_t*)&bat, &set_index);
+    if ((index + sizeof(_BATTERY_LEVEL)) < data_size) {
+        _BATTERY_LEVEL* bat = (_BATTERY_LEVEL*)&(set->data[index]);
+        bat->type = DATA_TYPE_BATTERY_LEVEL;
+        bat->value = (uint8_t)(roundf(batteryLevel() * 10));
+        index += sizeof(_BATTERY_LEVEL);
+        set->record_count++;
+    }
+    p("added battery. index: %d\n", index);
+
+    // 50% data history warning  TODO: take out the true
+    if ((index + sizeof(_WARN_50_PCT_DATA_HISTORY)) < data_size) {
+        if ( true
+        || (historical_data_index - historical_data_head) > HISTORICAL_DATA_SIZE / 2 ) {
+            _WARN_50_PCT_DATA_HISTORY* warn = (_WARN_50_PCT_DATA_HISTORY*)&(set->data[index]);
+            warn->type = DATA_TYPE_WARN_50_PCT_DATA_HISTORY;
+            index += sizeof(_WARN_50_PCT_DATA_HISTORY);
+            set->record_count++;
+        }
     }
 
-    to_bytes(&set, &data[datalen], &remaining_len);
+    bool has_more_data = historical_data_index > historical_data_head;
+    for (int i=historical_data_head; i<historical_data_index
+                && index + sizeof(_SHARP_GP2Y1010AU0F) < data_size; i++) {
+        p(F("Setting data record from historical index: %d\n"), i);
+        _SHARP_GP2Y1010AU0F* sharp = (_SHARP_GP2Y1010AU0F*)&(set->data[index]);
+        *sharp = {
+            .type = historical_data[i].type,
+            .value = historical_data[i].value,
+            .timestamp = historical_data[i].timestamp
+        };
+        index += sizeof(_SHARP_GP2Y1010AU0F);
+        set->record_count++;
+        if (i == historical_data_index - 1) {
+            p(F("No more historical data\n"));
+            has_more_data = false;
+        }
+    }
 
     /* print outgoing message */
-    uint8_t outgoing_datalen = datalen + remaining_len;
+    uint8_t outgoing_datalen = datalen + sizeof(NewRecordSet) + index;
+    p("outgoing datalen: %d\n", outgoing_datalen);
+    for (int i=0; i<outgoing_datalen; i++) output("%d ", data[i]);
+    output("\n");
     uint8_t out_data_index = 0;
     uint8_t out_record_set_size = 0;
     p("** Outgoing message:\n");
@@ -413,6 +457,52 @@ void node_process_message(Message* message, uint8_t len, uint8_t from)
     } while (outgoing_datalen > 0);
     p("**\n\n");
     /* */
+
+    NewRecordSet* collection_record = (NewRecordSet*)data;
+    _COLLECTION_LIST* list = (_COLLECTION_LIST*)collection_record->data;
+    uint8_t total_datalen = datalen + sizeof(NewRecordSet) + index;
+
+    if (!has_more_data && index < MAX_DATA_LENGTH - 10) {
+        // only forward if we can fit at least a record
+        p("next nodes: ");
+        for (int i=0; i<list->node_count; i++) output("%d ", list->nodes[i].node_id);
+        output("\n");
+        for (int i=0; i<list->node_count; i++) {
+            uint8_t to_node_id = list->nodes[i].node_id;
+            p(F("Attempting forward to: %d\n"), to_node_id);
+#if defined(USE_MESH_ROUTER)
+            if (RH_ROUTER_ERROR_NONE == send_data(data, total_datalen, to_node_id))
+                return;
+#else
+            bool trial = false;
+            if (router->getRouteTo(to_node_id)->state != RHRouter::Valid) {
+                router->addRouteTo(to_node_id, to_node_id);
+                trial = true;
+            }
+            if (RH_ROUTER_ERROR_NONE == send_data(data, total_datalen, to_node_id)) {
+                return;
+            } else {
+                if (trial) {
+                    router->deleteRouteTo(to_node_id);
+                }
+            }
+#endif
+        }
+    }
+
+    // send to the collector if all other nodes fail
+    uint8_t flags = 0;
+    uint8_t collector = collection_record->node_id;
+    if (has_more_data) {
+        flags = 1;
+        p(F("Sending data to collector with FlAG: This node HAS MORE DATA\n"));
+    }
+    p(F("Delivering to collector: %d\n"), collector);
+    if (router->getRouteTo(collector)->state != RHRouter::Valid) {
+        p(F("Adding route to %d via %d\n"), collector, from);
+        router->addRouteTo(collector, from);
+    }
+    send_data(data, total_datalen, collector, flags);
 }
 
 void __node_process_message(Message* message, uint8_t len, uint8_t from)
@@ -695,12 +785,12 @@ void _node_process_message(Message* msg, uint8_t len, uint8_t from)
 //            new_data[added_record_count_index]++;
 //            new_data[max_record_id_index] = i;
 //            new_data_index += sizeof(SHARP_GP2Y1010AU0F_STRUCT);
-//
 //            if (i == historical_data_index - 1) {
 //                p(F("No more historical data\n"));
 //                has_more_data = false;
 //            }
 //        }
+
 //
     }
 
@@ -759,6 +849,7 @@ void _node_process_message(Message* msg, uint8_t len, uint8_t from)
         p("WARNING: Did not forward and no collector!\n");
     }
     //router->printRoutingTable();
+
 */
 }
 
