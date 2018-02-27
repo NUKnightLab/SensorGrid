@@ -229,6 +229,18 @@ void create_collection_record(uint8_t node_id, uint8_t message_id,
     *len = index;
 }
 
+void create_next_activity_record(uint8_t node_id, uint8_t message_id,
+        uint16_t seconds, uint8_t* buffer, uint8_t* len)
+{
+    NewRecordSet* set = (NewRecordSet*)buffer;
+    set->node_id = node_id;
+    set->message_id = message_id;
+    set->record_count = 1;
+    _next_activity_seconds* record = (_next_activity_seconds*)set->data; 
+    record->type = DATA_TYPE_NEXT_ACTIVITY_SECONDS;
+    record->value = seconds;
+    *len = sizeof(NewRecordSet) + sizeof(_next_activity_seconds);
+}
 
 int _main(int argc, char** argv)
 {

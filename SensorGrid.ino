@@ -505,9 +505,9 @@ void node_process_message(Message* message, uint8_t len, uint8_t from)
     send_data(data, total_datalen, collector, flags);
 }
 
+/*
 void __node_process_message(Message* message, uint8_t len, uint8_t from)
 {
-/*
     uint8_t datalen = len - sizeof(Message);
     p(F("Node process message FROM: %d LEN: %d\n"), from, datalen);
     NewRecordSet record_set = {0};
@@ -545,8 +545,8 @@ void __node_process_message(Message* message, uint8_t len, uint8_t from)
         new_data[added_record_count_index]++;
         new_data_index += sizeof(BATTERY_LEVEL_STRUCT);
     }
-*/
 }
+*/
 
 void _node_process_message(Message* msg, uint8_t len, uint8_t from)
 {
@@ -929,12 +929,29 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
 */
 }
 
-void collector_process_message(Message* msg, uint8_t len, uint8_t from, uint8_t flags)
+void collector_process_message(Message* message, uint8_t len, uint8_t from, uint8_t flags)
 {
     uint8_t datalen = len - sizeof(Message);
     if (datalen < 3) return;
-    uint8_t* data = msg->data;
+    uint8_t* data = message->data;
     uint8_t index = 0;
+
+    /* print out incoming message */
+    uint8_t incoming_datalen = datalen;
+    uint8_t in_data_index = 0;
+    uint8_t in_record_set_size = 0;
+    p("** Incoming message:\n");
+    do {
+        NewRecordSet newset = {0};
+        from_bytes(&newset, (uint8_t*)&message->data+in_data_index, &in_record_set_size);
+        print_record_set(&newset);
+        in_data_index += in_record_set_size;
+        incoming_datalen -= in_record_set_size;
+    } while (incoming_datalen > 0);
+    p("**\n\n");
+    /* */
+
+/*
     while (index < datalen) {
         index += collector_process_data(&data[index], from, flags);
     }
@@ -942,6 +959,7 @@ void collector_process_message(Message* msg, uint8_t len, uint8_t from, uint8_t 
         p(F("\nSending data collection request from collector_process_message\n"));
         send_data_collection_request(uncollected_nodes, uncollected_nodes_index);
     }
+*/
     send_next_activity_seconds(30);
     next_activity_time = millis() + 30000 + 2000;
     p(F("Set next activity time: %d\n"), next_activity_time);
@@ -1063,37 +1081,6 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
     uint8_t buf_index = 0;
     create_collection_record(config.node_id, ++msg_id, known_nodes,
         sizeof(known_nodes), buffer, &len);
-
-/*
-    DataRecord record = {
-        DATA_TYPE_NODE_COLLECTION_LIST,
-        { node_count }
-    };
-    for (int i=0; i<node_count; i++) {
-        record.collection_list.nodes[i] = {
-            .node_id = nodes[i],
-            .prev_record_id = received_record_ids[nodes[i]]
-        };
-    }
-    RecordSet record_set = { config.node_id, ++msg_id, 1, { record } };
-
-    uint8_t * ptr = (uint8_t*)(&record_set) + sizeof_record_set(&record_set);
-*/
-
-    /* TODO: this is a temporary hack in of extra data for development */
-    //DataRecord fake_data_record = {
-    //*ptr = {
-/*
-    uint8_t * fake_data_record = {
-        DATA_TYPE_SHARP_GP2Y1010AU0F,
-        1234, 50150150
-    };
-    memcpy(ptr, fake_data_record, 4);
-    record_set.record_count++;
-*/
-
-    /* TODO: see above note. remove hack code to here */
-
     /* TODO: use a preferred routing order */
     for (int i=0; i<node_count; i++) {
         uint8_t node_id = nodes[i]; // until get_preferred is working
@@ -1132,44 +1119,12 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
 void send_next_activity_seconds(uint16_t seconds)
 {
     static uint8_t msg_id = 0;
-    const uint8_t node_count = sizeof(known_nodes);
-    RecordSet record_set = {
-        .node_id = config.node_id,
-        .message_id = ++msg_id,
-        .record_count = 1,
-    };
-    DataRecord record = {
-        .type = DATA_TYPE_NEXT_ACTIVITY_SECONDS,
-    };
-    record.next_activity_seconds = { .value = seconds };
-    record_set.records[0] = record;
+    uint8_t buffer[MAX_MESSAGE_SIZE];
+    uint8_t len = sizeof(buffer);
+    create_next_activity_record(config.node_id, ++msg_id, seconds,
+        buffer, &len);
     p(F("Broadcasting next activity seconds: %d\n"), seconds);
-    p(F("Size of record set: %d\n"), sizeof_record_set(&record_set));
-    p(F("Bytes: "));
-    for (int i=0; i<sizeof_record_set(&record_set); i++) {
-        output("%d ", ((uint8_t*)&record_set)[i]);
-    }
-
-    //send_data(data, data_index, RH_BROADCAST_ADDRESS);
-    /*
-    static uint8_t msg_id = 0;
-    const uint8_t node_count = sizeof(known_nodes);
-    uint8_t data[5 + node_count*2] = {
-        config.node_id,                 // Byte 0
-        ++msg_id,                       // 1
-        1                               //
-    };
-    uint8_t data_index = 3; // 3 preliminary bytes
-    NEXT_ACTIVITY_SECONDS_STRUCT* data_struct =
-        (NEXT_ACTIVITY_SECONDS_STRUCT*)&data[data_index];
-    *data_struct = {
-        .type = DATA_TYPE_NEXT_ACTIVITY_SECONDS,
-        .value = seconds
-    };
-    data_index += sizeof(NEXT_ACTIVITY_SECONDS_STRUCT);
-    p(F("Broadcasting next activity seconds: %d\n"), seconds);
-    send_data(data, data_index, RH_BROADCAST_ADDRESS);
-    */
+    send_data(buffer, len, RH_BROADCAST_ADDRESS);
 } /* send_next_activity_seconds */
 
 /* sensor data sampling */

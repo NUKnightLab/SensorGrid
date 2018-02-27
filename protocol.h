@@ -25,6 +25,8 @@ typedef struct __attribute__((packed)) NewRecordSet
 
 void create_collection_record(uint8_t node_id, uint8_t message_id,
         uint8_t* nodes, uint8_t node_count, uint8_t* buffer, uint8_t* len);
+void create_next_activity_record(uint8_t node_id, uint8_t message_id,
+        uint16_t seconds, uint8_t* buffer, uint8_t* len);
 void from_bytes(NewRecordSet* set, uint8_t* bytes, uint8_t* len);
 void print_record_set(NewRecordSet* newset);
 
