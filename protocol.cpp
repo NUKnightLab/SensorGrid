@@ -144,7 +144,7 @@ void from_bytes(NewRecordSet* set, uint8_t* bytes, uint8_t* len)
     *len = bytes_index;
 }
 
-void print_record_set(NewRecordSet* newset)
+void print_record_set(NewRecordSet* newset, uint8_t* size)
 {
     uint8_t index = 0;
     p(F("Printing record set NODE_ID: %d, RECORD_COUNT: %d\n"),
@@ -160,6 +160,14 @@ void print_record_set(NewRecordSet* newset)
             }
             output(F("\n"));
             index += (2 + 2 * list->node_count);
+        } else if (type == DATA_TYPE_NEXT_ACTIVITY_SECONDS) {
+            p("index: %d; data[index]: %d\n", index, newset->data[index]);
+            p("index: %d; data[index+1]: %d\n", index, newset->data[index+1]);
+            p("index: %d; data[index+2]: %d\n", index, newset->data[index+2]);
+            p(F("NEXT_ACTIVITY_SECONDS: "));
+            _next_activity_seconds* record = (_next_activity_seconds*)&(newset->data[index]);
+            output(F("%d\n"), record->value);
+            index += sizeof(_next_activity_seconds);
         } else {
             for (int j=0; j<sizeof(data_types); j++){
                 if (type == data_types[j].type) {
@@ -170,6 +178,21 @@ void print_record_set(NewRecordSet* newset)
             }
         }
     }
+    *size = sizeof(NewRecordSet) + index;
+}
+
+void print_records(uint8_t* data, uint8_t len)
+{
+    uint8_t index = 0;
+    uint8_t size;
+    p("Printing records for data stream: ");
+    for (int i=0; i<len; i++) output("%d ", data[i]);
+    output("\n");
+    do {
+        print_record_set((NewRecordSet*)&data[index], &size);
+        index += size;
+        len -= size;
+    } while (len > 0);
 }
 
 /* struct initializers */
@@ -298,10 +321,11 @@ int _main(int argc, char** argv)
     len = buf_index;
     buf_index = 0;
     uint8_t record_set_size = 0;
+    uint8_t size;
     do {
         NewRecordSet newset = {0};
         from_bytes(&newset, &buffer[buf_index], &record_set_size);
-        print_record_set(&newset);
+        print_record_set(&newset, &size);
         buf_index += record_set_size;
         len -= record_set_size;
     } while (len > 0);
