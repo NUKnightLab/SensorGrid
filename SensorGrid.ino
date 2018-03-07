@@ -892,6 +892,10 @@ void collector_process_message(Message* message, uint8_t len, uint8_t from, uint
     uint8_t size;
     p("** Incoming message:\n");
     print_records(message->data, datalen);
+    extract_records(message->data, datalen);
+    Serial.println("Serialized sensor data: ");
+    sensor_data.printTo(Serial);
+    Serial.println("");
 /*
     do {
         NewRecordSet newset = {0};

@@ -2,6 +2,7 @@
 #define _PROTOCOL_H
 
 #include "util.h"
+#include <ArduinoJson.h>
 
 #define MAX_MESSAGE_SIZE 240
 #define MAX_NODES 100
@@ -13,6 +14,10 @@
 #define DATA_TYPE_SHARP_GP2Y1010AU0F 4
 #define DATA_TYPE_WARN_50_PCT_DATA_HISTORY 5
 #define MAX_COLLECT_NODES 100
+
+static StaticJsonBuffer<200> jsonBuffer;
+static JsonObject& root = jsonBuffer.createObject();
+static JsonArray& sensor_data = root.createNestedArray("data");
 
 typedef struct __attribute__((packed)) NewRecordSet
 {
@@ -30,6 +35,7 @@ void create_next_activity_record(uint8_t node_id, uint8_t message_id,
 void from_bytes(NewRecordSet* set, uint8_t* bytes, uint8_t* len);
 //void print_record_set(NewRecordSet* newset, uint8_t* size);
 void print_records(uint8_t* data, uint8_t len);
+void extract_records(uint8_t* data, uint8_t len);
 
 typedef struct __attribute__((packed)) _CollectNodeStruct
 {

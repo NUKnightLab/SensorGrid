@@ -3,17 +3,18 @@
 #include <string.h>
 #include "protocol.h"
 
-
 //
 
-
 typedef void (*PrintRecordFunction)(uint8_t* record);
+typedef int (*SerializeRecordFunction)(uint8_t* record, char* str, size_t len);
+
 
 typedef struct DataType_s
 {
     uint8_t type;
     uint8_t size;
     PrintRecordFunction print_fcn;
+    SerializeRecordFunction serialize_fcn;
 } DataType;
 
 void print_battery_level(uint8_t* record)
@@ -22,10 +23,25 @@ void print_battery_level(uint8_t* record)
     p(F("BATTERY_LEVEL: %d\n"), r->value);
 }
 
+int serialize_battery_level(uint8_t* record, char* str, size_t len)
+{
+    _BATTERY_LEVEL* r = (_BATTERY_LEVEL*)record;
+    return snprintf(str, len, "{type:\"BATTERY_LEVEL\",value:%d}", r->value);
+}
+
+
 void print_sharp_gp2y1010au0f(uint8_t* record)
 {
     _SHARP_GP2Y1010AU0F* r = (_SHARP_GP2Y1010AU0F*)record;
     p(F("SHARP_GP2Y1010AU0F VAL: %d; TIMESTAMP: %d\n"), r->value, r->timestamp);
+}
+
+int serialize_sharp_gp2y1010au0f(uint8_t* record, char* str, size_t len)
+{
+    _SHARP_GP2Y1010AU0F* r = (_SHARP_GP2Y1010AU0F*)record;
+    return snprintf(str, len,
+        "{type:\"SHARP_GP2Y1010AU0F\",value:%d,timestamp:%d}",
+        r->value, r->timestamp);
 }
 
 void print_warn_50_pct_data_history(uint8_t* record)
@@ -33,10 +49,24 @@ void print_warn_50_pct_data_history(uint8_t* record)
     p(F("WARN_50_PCT_DATA_HISTORY\n"));
 }
 
+int serialize_warn_50_pct_data_history(uint8_t* record, char* str, size_t len)
+{
+    return snprintf(str, len, "{type:\"WARN_50_PCT_DATA_HISTORY\"}");
+}
+
 DataType data_types[] = {
-    { DATA_TYPE_BATTERY_LEVEL, sizeof(_BATTERY_LEVEL), &print_battery_level },
-    { DATA_TYPE_SHARP_GP2Y1010AU0F, sizeof(_SHARP_GP2Y1010AU0F), &print_sharp_gp2y1010au0f },
-    { DATA_TYPE_WARN_50_PCT_DATA_HISTORY, sizeof(_WARN_50_PCT_DATA_HISTORY), &print_warn_50_pct_data_history }
+    { DATA_TYPE_BATTERY_LEVEL,
+      sizeof(_BATTERY_LEVEL),
+      &print_battery_level,
+      &serialize_battery_level},
+    { DATA_TYPE_SHARP_GP2Y1010AU0F,
+      sizeof(_SHARP_GP2Y1010AU0F),
+      &print_sharp_gp2y1010au0f,
+      &serialize_sharp_gp2y1010au0f},
+    { DATA_TYPE_WARN_50_PCT_DATA_HISTORY,
+      sizeof(_WARN_50_PCT_DATA_HISTORY),
+      &print_warn_50_pct_data_history,
+      &serialize_warn_50_pct_data_history}
 };
 
 
@@ -181,6 +211,52 @@ void print_record_set(NewRecordSet* newset, uint8_t* size)
     *size = sizeof(NewRecordSet) + index;
 }
 
+void extract_record_set(NewRecordSet* newset, uint8_t* size, char* buf, size_t* buflen)
+{
+    uint8_t index = 0;
+    p(F("Extracting record set NODE_ID: %d, RECORD_COUNT: %d\n"),
+        newset->node_id, newset->record_count);
+    JsonObject& node_data = sensor_data.createNestedObject();
+    if (node_data.success()) {
+        Serial.println("Successfully created node_data object");
+        node_data["node_id"] = newset->node_id;
+        sensor_data.printTo(Serial);
+        Serial.println("");
+    } else {
+        Serial.println("Node data object creation was not successful");
+    }
+    for (int i=0; i<newset->record_count; i++) {
+        uint8_t type = newset->data[index];
+        if (type == DATA_TYPE_NODE_COLLECTION_LIST) {
+            p(F("COLLECTION_LIST: "));
+            _COLLECTION_LIST* list = (_COLLECTION_LIST*)&newset->data[index];
+            for (int n=0; n<list->node_count; n++) {
+                output(F("[%d, %d] "), list->nodes[n].node_id,
+                    list->nodes[n].prev_record_id);
+            }
+            output(F("\n"));
+            index += (2 + 2 * list->node_count);
+        } else if (type == DATA_TYPE_NEXT_ACTIVITY_SECONDS) {
+            p("index: %d; data[index]: %d\n", index, newset->data[index]);
+            p("index: %d; data[index+1]: %d\n", index, newset->data[index+1]);
+            p("index: %d; data[index+2]: %d\n", index, newset->data[index+2]);
+            p(F("NEXT_ACTIVITY_SECONDS: "));
+            _next_activity_seconds* record = (_next_activity_seconds*)&(newset->data[index]);
+            output(F("%d\n"), record->value);
+            index += sizeof(_next_activity_seconds);
+        } else {
+            for (int j=0; j<sizeof(data_types); j++){
+                if (type == data_types[j].type) {
+                    data_types[j].print_fcn(&newset->data[index]);
+                    index += data_types[j].size;
+                    break;
+                }
+            }
+        }
+    }
+    *size = sizeof(NewRecordSet) + index;
+}
+
 void print_records(uint8_t* data, uint8_t len)
 {
     uint8_t index = 0;
@@ -190,6 +266,23 @@ void print_records(uint8_t* data, uint8_t len)
     output("\n");
     do {
         print_record_set((NewRecordSet*)&data[index], &size);
+        index += size;
+        len -= size;
+    } while (len > 0);
+}
+
+void extract_records(uint8_t* data, uint8_t len)
+{
+    uint8_t index = 0;
+    uint8_t size;
+    static char* apibuf[100];
+    static size_t apibuflen = 100;
+    static uint8_t apibufindex = 0;
+    p("Extracting records for data stream: ");
+    for (int i=0; i<len; i++) output("%d ", data[i]);
+    output("\n");
+    do {
+        extract_record_set((NewRecordSet*)&data[index], &size, (char*)&apibuf[apibufindex], &apibuflen);
         index += size;
         len -= size;
     } while (len > 0);
