@@ -15,6 +15,7 @@
 #define DATA_TYPE_WARN_50_PCT_DATA_HISTORY 5
 #define MAX_COLLECT_NODES 100
 
+static uint8_t received_record_ids[MAX_NODES];
 static StaticJsonBuffer<200> jsonBuffer;
 static JsonObject& root = jsonBuffer.createObject();
 static JsonArray& sensor_data = root.createNestedArray("data");

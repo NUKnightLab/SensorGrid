@@ -12,6 +12,11 @@
 #define MAX_MESSAGE_SIZE 200
 #define RECV_BUFFER_SIZE MAX_MESSAGE_SIZE
 
+static const int COLLECTION_BUFFER_SIZE = 10000;
+static uint8_t collection_buffer[COLLECTION_BUFFER_SIZE];
+static int collection_buffer_index = 0;
+
+
 /* TODO: this size is reduced for development purposes */
 static const uint8_t MAX_DATA_LENGTH = MAX_MESSAGE_SIZE - sizeof(Message) - 100;
 
@@ -28,7 +33,6 @@ uint32_t display_clock_time = 0;
 //static uint8_t known_nodes[] = { 2, 3, 4 };
 static uint8_t known_nodes[] = { 2, 4 };
 static unsigned long next_activity_time = 0;
-static uint8_t received_record_ids[MAX_NODES];
 
 /* Sensor data */
 #define HISTORICAL_DATA_SIZE 20
@@ -878,10 +882,6 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
 */
 }
 
-static const int COLLECTION_BUFFER_SIZE = 10000;
-static uint8_t collection_buffer[COLLECTION_BUFFER_SIZE];
-static int collection_buffer_index = 0;
-
 void collector_process_message(Message* message, uint8_t len, uint8_t from, uint8_t flags)
 {
     uint8_t datalen = len - sizeof(Message);
@@ -1028,8 +1028,8 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
     uint8_t len = MAX_MESSAGE_SIZE;
     uint8_t buffer[MAX_MESSAGE_SIZE];
     uint8_t buf_index = 0;
-    create_collection_record(config.node_id, ++msg_id, known_nodes,
-        sizeof(known_nodes), buffer, &len);
+    create_collection_record(config.node_id, ++msg_id, nodes,
+        node_count, buffer, &len);
     /* TODO: use a preferred routing order */
     for (int i=0; i<node_count; i++) {
         uint8_t node_id = nodes[i]; // until get_preferred is working

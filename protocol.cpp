@@ -350,18 +350,45 @@ void _extract_records(uint8_t* data, uint8_t len)
     } while (len > 0);
 }
 
+
+void record_record_set_received_id(NewRecordSet* record_set, uint8_t* size)
+{
+    uint8_t index = 0;
+    p("Recording received id: [%d, %d]\n", record_set->node_id, record_set->message_id);
+    received_record_ids[record_set->node_id] = record_set->message_id;
+    for (int i=0; i<record_set->record_count; i++) {
+        for (int j=0; j<sizeof(data_types); j++){
+            if (record_set->data[index] == data_types[j].type) {
+                index += data_types[j].size;
+                break;
+            }
+        }
+    }
+    *size = sizeof(NewRecordSet) + index;
+}
+
+void record_received_ids(uint8_t* data, int len)
+{
+    uint8_t index = 0;
+    uint8_t size;
+    while (len > 0) {
+        record_record_set_received_id((NewRecordSet*)&data[index], &size);
+        index += size;
+        len -= size;
+    }
+}
+
 int extract_records(uint8_t* buf, uint8_t* data, uint8_t len)
 {
     NewRecordSet* record_set = (NewRecordSet*)data;
     _COLLECTION_LIST* list = (_COLLECTION_LIST*)(record_set->data);
     uint8_t index = sizeof(NewRecordSet) + 2 + list->node_count * sizeof(_collect_node);
     memcpy(buf, &data[index], len - index);
+    record_received_ids(&data[index], len - index);
     return len - index;
 }
 
 /* struct initializers */
-
-uint8_t received_record_ids[MAX_NODES];
 
 void add_record(NewRecordSet* record_set, uint8_t* record, uint8_t* index)
 {
