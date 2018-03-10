@@ -878,48 +878,40 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
 */
 }
 
+static const int COLLECTION_BUFFER_SIZE = 10000;
+static uint8_t collection_buffer[COLLECTION_BUFFER_SIZE];
+static int collection_buffer_index = 0;
+
 void collector_process_message(Message* message, uint8_t len, uint8_t from, uint8_t flags)
 {
     uint8_t datalen = len - sizeof(Message);
     if (datalen < 3) return;
     uint8_t* data = message->data;
     uint8_t index = 0;
-
-    /* print out incoming message */
-    uint8_t incoming_datalen = datalen;
-    uint8_t in_data_index = 0;
-    uint8_t in_record_set_size = 0;
-    uint8_t size;
     p("** Incoming message:\n");
     print_records(message->data, datalen);
-    extract_records(message->data, datalen);
-    Serial.println("Serialized sensor data: ");
-    sensor_data.printTo(Serial);
-    Serial.println("");
-/*
-    do {
-        NewRecordSet newset = {0};
-        from_bytes(&newset, (uint8_t*)&message->data+in_data_index, &in_record_set_size);
-        print_record_set(&newset, &size);
-        in_data_index += in_record_set_size;
-        incoming_datalen -= in_record_set_size;
-    } while (incoming_datalen > 0);
-*/
-    p("**\n\n");
-    /* */
-
-/*
-    while (index < datalen) {
-        index += collector_process_data(&data[index], from, flags);
+    p("***\n");
+    NewRecordSet* record_set = (NewRecordSet*)data;
+    if (record_set->data[0] == DATA_TYPE_NODE_COLLECTION_LIST) {
+        collection_buffer_index += extract_records(
+            &collection_buffer[collection_buffer_index], message->data, datalen);
+        _COLLECTION_LIST* list = (_COLLECTION_LIST*)record_set->data;
+        if (list->node_count > 0) {
+            uint8_t nodes[20];
+            for (int i=0; i< list->node_count; i++) {
+                nodes[i] = list->nodes[i].node_id;
+            }
+            p(F("\nSending data collection request from collector_process_message\n"));
+            send_data_collection_request(nodes, list->node_count);
+            return;
+        }
     }
-    if (uncollected_nodes_index > 0) {
-        p(F("\nSending data collection request from collector_process_message\n"));
-        send_data_collection_request(uncollected_nodes, uncollected_nodes_index);
-    }
-*/
     send_next_activity_seconds(30);
     next_activity_time = millis() + 30000 + 2000;
     p(F("Set next activity time: %d\n"), next_activity_time);
+    /* TODO: POST collection data to API */
+    print_records(collection_buffer, collection_buffer_index);
+    collection_buffer_index = 0;
 }
 
 void process_message(Message* msg, uint8_t len, uint8_t from, uint8_t flags) {

@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
+#include "config.h"
 #include "protocol.h"
 
 //
@@ -216,18 +217,54 @@ void extract_record_set(NewRecordSet* newset, uint8_t* size, char* buf, size_t* 
     uint8_t index = 0;
     p(F("Extracting record set NODE_ID: %d, RECORD_COUNT: %d\n"),
         newset->node_id, newset->record_count);
-    JsonObject& node_data = sensor_data.createNestedObject();
-    if (node_data.success()) {
-        Serial.println("Successfully created node_data object");
-        node_data["node_id"] = newset->node_id;
-        sensor_data.printTo(Serial);
-        Serial.println("");
-    } else {
-        Serial.println("Node data object creation was not successful");
+    if (newset->node_id == config.node_id) {
+        /* skip through the collection record and set the size */
+        p(F("Skipping JSON rendering for collection list.\n"));
+        if (newset->record_count == 1) {
+            uint8_t type = newset->data[index];
+            if (type == DATA_TYPE_NODE_COLLECTION_LIST) {
+                p(F("COLLECTION_LIST: "));
+                _COLLECTION_LIST* list = (_COLLECTION_LIST*)&newset->data[index];
+                for (int n=0; n<list->node_count; n++) {
+                    output(F("[%d, %d] "), list->nodes[n].node_id,
+                        list->nodes[n].prev_record_id);
+                }
+                output(F("\n"));
+                index += (2 + 2 * list->node_count);
+            } else {
+                p(F("** WARNING: Non-collection list record type for collector ID\n"));
+            }
+        } else {
+            p(F("** WARNING: bad record count for record with collector ID\n"));
+        }
+        *size = sizeof(NewRecordSet) + index;
+        return;
     }
+/*
+    JsonObject& node_data = sensor_data.createNestedObject();
+    if (!node_data.success()) {
+        p(F("Node data object creation was not successful"));
+        return;
+    }
+    JsonArray& data_array = node_data.createNestedArray("data");
+    if (!data_array.success()) {
+        p(F("data array creation was not successful"));
+        return;
+    }
+*/
+    const int JSON_BUFFER_SIZE = 500;
+    char json[JSON_BUFFER_SIZE];
+    int json_index = snprintf(json, JSON_BUFFER_SIZE, "{node:%d,data:[", newset->node_id);
+    //uint8_t json_index = 0;
+    p(F("Successfully created node_data object and array\n"));
+    //node_data["node_id"] = newset->node_id;
+    //sensor_data.printTo(Serial);
+    //Serial.println("");
     for (int i=0; i<newset->record_count; i++) {
         uint8_t type = newset->data[index];
         if (type == DATA_TYPE_NODE_COLLECTION_LIST) {
+            p(F("** WARNING: theoretical unreachable condition - collection list\n"));
+            /*
             p(F("COLLECTION_LIST: "));
             _COLLECTION_LIST* list = (_COLLECTION_LIST*)&newset->data[index];
             for (int n=0; n<list->node_count; n++) {
@@ -236,6 +273,7 @@ void extract_record_set(NewRecordSet* newset, uint8_t* size, char* buf, size_t* 
             }
             output(F("\n"));
             index += (2 + 2 * list->node_count);
+            */
         } else if (type == DATA_TYPE_NEXT_ACTIVITY_SECONDS) {
             p("index: %d; data[index]: %d\n", index, newset->data[index]);
             p("index: %d; data[index+1]: %d\n", index, newset->data[index+1]);
@@ -247,13 +285,37 @@ void extract_record_set(NewRecordSet* newset, uint8_t* size, char* buf, size_t* 
         } else {
             for (int j=0; j<sizeof(data_types); j++){
                 if (type == data_types[j].type) {
-                    data_types[j].print_fcn(&newset->data[index]);
-                    index += data_types[j].size;
-                    break;
+                    //char str[100];
+                    //data_types[j].serialize_fcn(&newset->data[index], str, 100);
+                    //data_array.add(str);
+                    int sz = data_types[j].serialize_fcn(&newset->data[index],
+                        &json[json_index], JSON_BUFFER_SIZE - json_index);
+                    if (sz >= 0 && sz < JSON_BUFFER_SIZE - json_index) {
+                        //data_types[j].print_fcn(&newset->data[index]);
+                        index += data_types[j].size;
+                        json_index += sz;
+                        break;
+                    } else {
+                        p(F("Full JSON buffer:\n"));
+                        json[json_index-1] = ']';
+                        json[json_index++] = '}';
+                        json[json_index] = '\0';
+                        p(json);
+                        output("\n");
+                        json_index = 0;
+                        i--; // redo this loop with cleared buffer
+                    }
                 }
             }
         }
+        if (i < newset->record_count) {
+            json[json_index++] = ',';
+        } else {
+            json[json_index++] = ']';
+        }
     }
+    //sensor_data.printTo(Serial);
+    Serial.println(json);
     *size = sizeof(NewRecordSet) + index;
 }
 
@@ -264,14 +326,14 @@ void print_records(uint8_t* data, uint8_t len)
     p("Printing records for data stream: ");
     for (int i=0; i<len; i++) output("%d ", data[i]);
     output("\n");
-    do {
+    while (len > 0) {
         print_record_set((NewRecordSet*)&data[index], &size);
         index += size;
         len -= size;
-    } while (len > 0);
+    };
 }
 
-void extract_records(uint8_t* data, uint8_t len)
+void _extract_records(uint8_t* data, uint8_t len)
 {
     uint8_t index = 0;
     uint8_t size;
@@ -286,6 +348,15 @@ void extract_records(uint8_t* data, uint8_t len)
         index += size;
         len -= size;
     } while (len > 0);
+}
+
+int extract_records(uint8_t* buf, uint8_t* data, uint8_t len)
+{
+    NewRecordSet* record_set = (NewRecordSet*)data;
+    _COLLECTION_LIST* list = (_COLLECTION_LIST*)(record_set->data);
+    uint8_t index = sizeof(NewRecordSet) + 2 + list->node_count * sizeof(_collect_node);
+    memcpy(buf, &data[index], len - index);
+    return len - index;
 }
 
 /* struct initializers */
