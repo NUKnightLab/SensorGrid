@@ -98,6 +98,18 @@ typedef struct __attribute__((packed)) RecordSet
     DataRecord records[255];
 };
 
+
+void clean_history(uint8_t acked_message_id)
+{
+    while (historical_data_head < historical_data_index) {
+        if (historical_data[historical_data_head].id <= acked_message_id) {
+            historical_data_head++;
+        } else {
+            break;
+        }
+    }
+}
+
 uint8_t sizeof_record_set(RecordSet* record_set)
 {
     uint8_t size = 4; /* node_id + messge_id + record_count + type = 4 bytes */
@@ -359,6 +371,7 @@ uint8_t send_data(uint8_t* data, uint8_t len, uint8_t dest, uint8_t flags=0)
 void node_process_message(Message* message, uint8_t len, uint8_t from)
 {
     uint8_t datalen = len - sizeof(Message);
+    p(F("Node is process message with datalen: %d\n"), datalen);
     static uint8_t data[MAX_DATA_LENGTH];
 
     /* If incoming message is a next-activity control, simply re-broadast and wait */
@@ -384,18 +397,21 @@ void node_process_message(Message* message, uint8_t len, uint8_t from)
     p("**\n\n");
     /* */
 
-    copy_data(data, (uint8_t*)message->data, &datalen, config.node_id);
+    uint8_t acknowledged_message_id = copy_data(
+        data, (uint8_t*)message->data, &datalen, config.node_id);
+    clean_history(acknowledged_message_id);
     print_records(data, datalen);
 
     /* record set for this node */
-    static uint8_t msg_id = 0;
+    //static uint8_t msg_id = 0;
 
     p("datalen: %d\n", datalen);
     for (int i=0; i<datalen; i++) output("%d ", data[i]);
     output("\n");
     NewRecordSet* set = (NewRecordSet*)&data[datalen];
     set->node_id = config.node_id;
-    set->message_id = ++msg_id;
+    //set->message_id = ++msg_id;
+    set->message_id = 0;
     set->record_count = 0;
     p("Added record set\n");
     for (int i=0; i<datalen+3; i++) output("%d ", data[i]);
@@ -414,7 +430,6 @@ void node_process_message(Message* message, uint8_t len, uint8_t from)
     }
     p("added battery. index: %d\n", index);
 
-    // 50% data history warning  TODO: take out the true
     if ((index + sizeof(_WARN_50_PCT_DATA_HISTORY)) < data_size) {
         if ( (historical_data_index - historical_data_head) > HISTORICAL_DATA_SIZE / 2 ) {
             _WARN_50_PCT_DATA_HISTORY* warn = (_WARN_50_PCT_DATA_HISTORY*)&(set->data[index]);
@@ -434,6 +449,9 @@ void node_process_message(Message* message, uint8_t len, uint8_t from)
             .value = historical_data[i].value,
             .timestamp = historical_data[i].timestamp
         };
+        if (historical_data[i].id > set->message_id) {
+            set->message_id = historical_data[i].id;
+        }
         index += sizeof(_SHARP_GP2Y1010AU0F);
         set->record_count++;
         if (i == historical_data_index - 1) {
@@ -1016,6 +1034,7 @@ void check_message()
     if (!++count) output(F("."));
     if (receive_message(recv_buf, &len, &from, &dest, &msg_id, &flags)) {
         Message *_msg = (Message*)recv_buf;
+        p(F("Received message of length: %d\n"), len);
         process_message(_msg, len, from, flags);
     }
     release_recv_buffer();

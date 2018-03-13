@@ -88,20 +88,22 @@ bool remove_collection_list_node(_COLLECTION_LIST* list, uint8_t node_id)
     return removed;
 }
 
-void copy_data(uint8_t* data, uint8_t* buffer, uint8_t* len,
+uint8_t copy_data(uint8_t* data, uint8_t* buffer, uint8_t* len,
             uint8_t remove_node_id)
 {
-
+    /* returns the ID associated with node removed from collection if it exists */
+    uint8_t r = 0;
     // node_id, message_id, record_count, type
     memcpy(data, buffer, 4);
     uint8_t data_index = 4;
     uint8_t buffer_index = 4;
     if (buffer[3] == DATA_TYPE_NODE_COLLECTION_LIST) {
-        data_index++; // skip the node count for now
+        data_index++; // skip the ID for now
         uint8_t node_count = buffer[buffer_index++];
         for (int i=0; i<buffer[4]; i++) {
             if (buffer[buffer_index] == remove_node_id) {
-                buffer_index += 2;
+                buffer_index++;
+                r = buffer[buffer_index++];
                 node_count--;
             } else {
                 memcpy(&data[data_index], &buffer[buffer_index], 2);
@@ -111,10 +113,13 @@ void copy_data(uint8_t* data, uint8_t* buffer, uint8_t* len,
         }
         data[4] = node_count;
     }
+    p(F("memcpy %d bytes from buffer_index %d to data_index %d"),
+        *len-buffer_index, buffer_index, data_index);
     if (buffer_index < *len) {
         memcpy(&data[data_index], &buffer[buffer_index], *len-buffer_index);
     }
-    *len = data_index;
+    *len = data_index + *len - buffer_index;
+    return r;
 }
 
 void to_bytes(NewRecordSet* set, uint8_t* bytes, uint8_t* len)

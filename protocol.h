@@ -89,7 +89,7 @@ typedef struct _WARN_50_PCT_DATA_HISTORY_STRUCT _WARN_50_PCT_DATA_HISTORY;
 void to_bytes(NewRecordSet* set, uint8_t* bytes, uint8_t* len);
 void add_record(NewRecordSet* record_set, uint8_t* record, uint8_t* index);
 bool remove_collection_list_node(_COLLECTION_LIST* list, uint8_t node_id);
-void copy_data(uint8_t* data, uint8_t* buffer, uint8_t* len,
+uint8_t copy_data(uint8_t* data, uint8_t* buffer, uint8_t* len,
             uint8_t remove_node_id);
 
 #endif
