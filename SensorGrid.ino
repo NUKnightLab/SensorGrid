@@ -31,7 +31,7 @@ uint32_t display_clock_time = 0;
 
 /* Collection state */
 //static uint8_t known_nodes[] = { 2, 3, 4 };
-static uint8_t known_nodes[] = { 2, 4 };
+static uint8_t known_nodes[] = { 2, 4, 6 };
 static unsigned long next_activity_time = 0;
 
 /* Sensor data */
@@ -1181,10 +1181,10 @@ void setup()
        in the application layer. */
     //router->setRetries(0);
     router->clearRoutingTable();
-    router->addRouteTo(1, 1);
-    router->addRouteTo(2, 2);
-    router->addRouteTo(3, 3);
-    router->addRouteTo(4, 4);
+    //router->addRouteTo(1, 1);
+    //router->addRouteTo(2, 2);
+    //router->addRouteTo(3, 3);
+    //router->addRouteTo(4, 4);
 #endif
     if (USE_SLOW_RELIABLE_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);

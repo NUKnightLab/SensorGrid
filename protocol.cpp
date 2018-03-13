@@ -197,9 +197,6 @@ void print_record_set(NewRecordSet* newset, uint8_t* size)
             output(F("\n"));
             index += (2 + 2 * list->node_count);
         } else if (type == DATA_TYPE_NEXT_ACTIVITY_SECONDS) {
-            p("index: %d; data[index]: %d\n", index, newset->data[index]);
-            p("index: %d; data[index+1]: %d\n", index, newset->data[index+1]);
-            p("index: %d; data[index+2]: %d\n", index, newset->data[index+2]);
             p(F("NEXT_ACTIVITY_SECONDS: "));
             _next_activity_seconds* record = (_next_activity_seconds*)&(newset->data[index]);
             output(F("%d\n"), record->value);
