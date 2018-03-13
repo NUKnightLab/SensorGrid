@@ -928,7 +928,9 @@ void collector_process_message(Message* message, uint8_t len, uint8_t from, uint
     next_activity_time = millis() + 30000 + 2000;
     p(F("Set next activity time: %d\n"), next_activity_time);
     /* TODO: POST collection data to API */
+    p(F("*** Records to be posted to API ***\n"));
     print_records(collection_buffer, collection_buffer_index);
+    serialize_records(collection_buffer, collection_buffer_index);
     collection_buffer_index = 0;
 }
 

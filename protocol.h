@@ -37,6 +37,7 @@ void from_bytes(NewRecordSet* set, uint8_t* bytes, uint8_t* len);
 //void print_record_set(NewRecordSet* newset, uint8_t* size);
 void print_records(uint8_t* data, uint8_t len);
 int extract_records(uint8_t* buf, uint8_t* data, uint8_t len);
+void serialize_records(uint8_t* data, int len);
 
 typedef struct __attribute__((packed)) _CollectNodeStruct
 {

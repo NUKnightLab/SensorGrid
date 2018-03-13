@@ -214,7 +214,7 @@ void print_record_set(NewRecordSet* newset, uint8_t* size)
     *size = sizeof(NewRecordSet) + index;
 }
 
-void extract_record_set(NewRecordSet* newset, uint8_t* size, char* buf, size_t* buflen)
+void _extract_record_set(NewRecordSet* newset, uint8_t* size, char* buf, size_t* buflen)
 {
     uint8_t index = 0;
     p(F("Extracting record set NODE_ID: %d, RECORD_COUNT: %d\n"),
@@ -335,6 +335,7 @@ void print_records(uint8_t* data, uint8_t len)
     };
 }
 
+/*
 void _extract_records(uint8_t* data, uint8_t len)
 {
     uint8_t index = 0;
@@ -351,7 +352,24 @@ void _extract_records(uint8_t* data, uint8_t len)
         len -= size;
     } while (len > 0);
 }
+*/
 
+
+void serialize_record_set(NewRecordSet* record_set, uint8_t* size)
+{
+    uint8_t index = 0;
+    char str[100];
+    for (int i=0; i<record_set->record_count; i++) {
+        for (int j=0; j<sizeof(data_types); j++){
+            if (record_set->data[index] == data_types[j].type) {
+                data_types[j].serialize_fcn(&record_set->data[i], str, 100);
+                Serial.println(str);
+                break;
+            }
+        }
+    }
+    *size = sizeof(NewRecordSet) + index;
+}
 
 void record_record_set_received_id(NewRecordSet* record_set, uint8_t* size)
 {
@@ -367,6 +385,18 @@ void record_record_set_received_id(NewRecordSet* record_set, uint8_t* size)
         }
     }
     *size = sizeof(NewRecordSet) + index;
+}
+
+
+void serialize_records(uint8_t* data, int len)
+{
+    uint8_t index = 0;
+    uint8_t size;
+    while (len > 0) {
+        serialize_record_set((NewRecordSet*)&data[index], &size);
+        index += size;
+        len -= size;
+    }
 }
 
 void record_received_ids(uint8_t* data, int len)
