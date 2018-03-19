@@ -355,36 +355,81 @@ void _extract_records(uint8_t* data, uint8_t len)
 */
 
 
-void serialize_record_set(char* buf, int* buflen, NewRecordSet* rs, uint8_t* rslen)
+void serialize_record_set(char* buf, size_t* buflen, NewRecordSet* rs, uint8_t* rslen)
 {
-    char* orig_buf = buf;
     uint8_t rs_index = 0;
-    int charlen;
-    *rslen += sizeof(NewRecordSet);
     p("record count: %d\n", rs->record_count);
-    int offset = sprintf(buf, "{node_id:%d,data:[", rs->node_id);
-    buf = buf+offset;
-    *buflen = *buflen - offset;
+    int buf_index = sprintf(buf, "{node_id:%d,data:[", rs->node_id);
+    size_t _buflen = *buflen - buf_index;
     for (int i=0; i<rs->record_count; i++) {
-        p("i: %d\n", i);
         for (int j=0; j<sizeof(data_types); j++){
             if (rs->data[rs_index] == data_types[j].type) {
-                charlen = data_types[j].serialize_fcn(&rs->data[rs_index], buf, *buflen);
-                p(buf);
-                output("\n");
-                p(orig_buf);
-                output("\n");
-                buf = buf+charlen;
-                *buflen = *buflen - charlen;
+                int charlen = data_types[j].serialize_fcn(&rs->data[rs_index],
+                    &buf[buf_index], _buflen);
+                p(F("charlen: %d\n"), charlen);
+                buf_index += charlen;
+                _buflen = _buflen - charlen;
                 rs_index += data_types[j].size;
                 break;
             }
         }
-        *buf++ = ',';
+        buf[buf_index++] = ',';
     }
-    *(buf-1) = ']';
-    *buf++ = '}';
-    *rslen += sizeof(NewRecordSet) + rs_index;
+    buf[buf_index-1] = ']';
+    buf[buf_index++] = '}';
+    *buflen = _buflen;
+    *rslen = sizeof(NewRecordSet) + rs_index;
+}
+
+void serialize_records(char* buf, size_t buflen, uint8_t* data, int datalen)
+{
+    uint8_t index = 0;
+    int buf_index = 0;
+    uint8_t size;
+    p("Serializing records for data stream: ");
+    for (int i=0; i<datalen; i++) output("%d ", data[i]);
+    output("\n");
+    while (datalen > 0) {
+        print_record_set((NewRecordSet*)&data[index], &size);
+        serialize_record_set(&buf[buf_index], &buflen,
+            (NewRecordSet*)&data[data_index], &datalen);
+        index += size;
+        datalen -= size;
+    };
+}
+
+void _serialize_records(char* buf, size_t buflen, uint8_t* data, int datalen)
+{
+    char* orig_buf = buf;
+    p("buflen: %d\n", buflen);
+    p("datalen: %d\n", datalen);
+    uint8_t data_index = 0;
+    int orig_datalen = datalen;
+    int buf_index = sprintf(buf, "{data:[");
+TODO: buflen is screwed up here. new attempt above
+    buflen = buflen - buf_index;
+    while (data_index < datalen && buf_index < buflen) {
+        uint8_t _datalen = datalen - data_index;
+        //size_t _buflen = buflen - buf_index;
+        p("_datalen: %d\n", _datalen);
+        p("_buflen: %d\n", _buflen);
+        serialize_record_set(&buf[buf_index], &_buflen,
+            (NewRecordSet*)&data[data_index], &_datalen);
+        data_index += _datalen;
+        for (int i=0; i<orig_datalen; i++) {
+            output("%d ", data[i]);
+        }
+        output("\n");
+        Serial.println(data_index);
+        buf_index += _buflen;
+        buf[buf_index++] = ',';
+    }
+    if (data_index < datalen - 1) {
+        p(F("WARNING: too much data to serialize\n"));
+    }
+    buf[buf_index-1] = ']';
+    buf[buf_index++] = '}';
+    buf[buf_index++] = '\0';
 }
 
 void record_record_set_received_id(NewRecordSet* record_set, uint8_t* size)
@@ -403,33 +448,6 @@ void record_record_set_received_id(NewRecordSet* record_set, uint8_t* size)
     *size = sizeof(NewRecordSet) + index;
 }
 
-void serialize_records(char* buf, int buflen, uint8_t* data, int datalen)
-{
-    p("buflen: %d\n", buflen);
-    p("datalen: %d\n", datalen);
-    static uint8_t data_index = 0;
-    static int buf_index = 0;
-    int offset = sprintf(buf, "{data:[");
-    buf = buf+offset;
-    buflen = buflen - offset;
-    while (data_index < datalen && buf_index < buflen) {
-        uint8_t _datalen = datalen - data_index;
-        int _buflen = buflen - buf_index;
-        p("_datalen: %d\n", _datalen);
-        p("_buflen: %d\n", _buflen);
-        serialize_record_set(&buf[buf_index], &_buflen,
-            (NewRecordSet*)&data[data_index], &_datalen);
-        data_index += _datalen;
-        buf_index += _buflen;
-        buf[buf_index++] = ',';
-    }
-    if (data_index < datalen - 1) {
-        p(F("WARNING: too much data to serialize\n"));
-    }
-    buf[buf_index++] = ']';
-    buf[buf_index++] = '}';
-    buf[buf_index++] = '\0';
-}
 
 void record_received_ids(uint8_t* data, int len)
 {

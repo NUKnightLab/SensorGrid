@@ -914,8 +914,10 @@ void collector_process_message(Message* message, uint8_t len, uint8_t from, uint
     p("***\n");
     NewRecordSet* record_set = (NewRecordSet*)data;
     if (record_set->data[0] == DATA_TYPE_NODE_COLLECTION_LIST) {
+        p(F("Extracting records into collection buffer index: %d\n"), collection_buffer_index);
         collection_buffer_index += extract_records(
             &collection_buffer[collection_buffer_index], message->data, datalen);
+        p(F("New collection buffer index: %d\n"), collection_buffer_index);
         _COLLECTION_LIST* list = (_COLLECTION_LIST*)record_set->data;
         if (list->node_count > 0) {
             uint8_t nodes[20];
@@ -931,13 +933,13 @@ void collector_process_message(Message* message, uint8_t len, uint8_t from, uint
     next_activity_time = millis() + 30000 + 2000;
     p(F("Set next activity time: %d\n"), next_activity_time);
     /* TODO: POST collection data to API */
-    p(F("*** Records to be posted to API ***\n"));
+    p(F("*** Records to be posted to API collector_process_message ***\n"));
     print_records(collection_buffer, collection_buffer_index);
     memset(json_buffer, 0, JSON_BUFFER_SIZE);
     serialize_records(json_buffer, JSON_BUFFER_SIZE, collection_buffer, collection_buffer_index);
     Serial.println(json_buffer);
     collection_buffer_index = 0;
-}
+} /* collector_process_message */
 
 void process_message(Message* msg, uint8_t len, uint8_t from, uint8_t flags) {
     if (config.node_type == NODE_TYPE_ORDERED_COLLECTOR) {
@@ -1088,6 +1090,13 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
     // No successful collection requests sent. Wait for next attempt //
     send_next_activity_seconds(30);
     next_activity_time = millis() + 30000 + 2000;
+    /* TODO: POST collection data to API */
+    p(F("*** Records to be posted to API (send_data_collection_request) ***\n"));
+    print_records(collection_buffer, collection_buffer_index);
+    memset(json_buffer, 0, JSON_BUFFER_SIZE);
+    serialize_records(json_buffer, JSON_BUFFER_SIZE, collection_buffer, collection_buffer_index);
+    Serial.println(json_buffer);
+    collection_buffer_index = 0;
 #endif
 } /* send_data_collection_request */
 
