@@ -827,9 +827,9 @@ void _node_process_message(Message* msg, uint8_t len, uint8_t from)
 static uint8_t uncollected_nodes[MAX_NODES];
 static uint8_t uncollected_nodes_index = 0;
 
-uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
-{
-    return 1;
+//uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
+//{
+//    return 1;
 /*
     uint8_t index = 0;
     uint8_t from_node_id = data[index++];
@@ -898,7 +898,10 @@ uint8_t collector_process_data(uint8_t* data, uint8_t from, uint8_t flags)
     }
     return index;
 */
-}
+//}
+
+#define JSON_BUFFER_SIZE 5000
+static char json_buffer[JSON_BUFFER_SIZE] = {0};
 
 void collector_process_message(Message* message, uint8_t len, uint8_t from, uint8_t flags)
 {
@@ -930,7 +933,9 @@ void collector_process_message(Message* message, uint8_t len, uint8_t from, uint
     /* TODO: POST collection data to API */
     p(F("*** Records to be posted to API ***\n"));
     print_records(collection_buffer, collection_buffer_index);
-    serialize_records(collection_buffer, collection_buffer_index);
+    memset(json_buffer, 0, JSON_BUFFER_SIZE);
+    serialize_records(json_buffer, JSON_BUFFER_SIZE, collection_buffer, collection_buffer_index);
+    Serial.println(json_buffer);
     collection_buffer_index = 0;
 }
 
