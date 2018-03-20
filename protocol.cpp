@@ -356,7 +356,7 @@ void _extract_records(uint8_t* data, uint8_t len)
 
 
 int serialize_record_set(char* buf, size_t* buflen, NewRecordSet* rs,
-        uint8_t* rslen, bool* buffer_full)
+        size_t* rslen, bool* buffer_full)
 {
     static const int min_serialization_size = sizeof("{\"type\":\"X\"}");
     uint8_t rs_index = 0;
@@ -395,10 +395,10 @@ int serialize_record_set(char* buf, size_t* buflen, NewRecordSet* rs,
     return buf_index;
 }
 
-void serialize_records(char* buf, size_t buflen, uint8_t* data, int datalen)
+void serialize_records(char* buf, size_t buflen, uint8_t* data, size_t datalen)
 {
-    uint8_t data_index = 0;
-    uint8_t size;
+    int data_index = 0;
+    size_t size;
     int buf_index = sprintf(buf, "{\"data\":[");
     buflen -= (buf_index + 3); // reserve buffer for end characters
     bool buffer_full = false;
