@@ -27,7 +27,7 @@ void print_battery_level(uint8_t* record)
 int serialize_battery_level(uint8_t* record, char* str, size_t len)
 {
     _BATTERY_LEVEL* r = (_BATTERY_LEVEL*)record;
-    return snprintf(str, len, "{type:\"BATTERY_LEVEL\",value:%d}", r->value);
+    return snprintf(str, len, "{\"type\":\"BATTERY_LEVEL\",\"value\":%d}", r->value);
 }
 
 
@@ -41,7 +41,7 @@ int serialize_sharp_gp2y1010au0f(uint8_t* record, char* str, size_t len)
 {
     _SHARP_GP2Y1010AU0F* r = (_SHARP_GP2Y1010AU0F*)record;
     return snprintf(str, len,
-        "{type:\"SHARP_GP2Y1010AU0F\",value:%d,timestamp:%d}",
+        "{\"type\":\"SHARP_GP2Y1010AU0F\",\"value\":%d,\"timestamp\":%d}",
         r->value, r->timestamp);
 }
 
@@ -52,7 +52,7 @@ void print_warn_50_pct_data_history(uint8_t* record)
 
 int serialize_warn_50_pct_data_history(uint8_t* record, char* str, size_t len)
 {
-    return snprintf(str, len, "{type:\"WARN_50_PCT_DATA_HISTORY\"}");
+    return snprintf(str, len, "{\"type\":\"WARN_50_PCT_DATA_HISTORY\"}");
 }
 
 DataType data_types[] = {
@@ -355,18 +355,19 @@ void _extract_records(uint8_t* data, uint8_t len)
 */
 
 
-void serialize_record_set(char* buf, size_t* buflen, NewRecordSet* rs, uint8_t* rslen)
+int serialize_record_set(char* buf, size_t* buflen, NewRecordSet* rs, uint8_t* rslen)
 {
     uint8_t rs_index = 0;
     p("record count: %d\n", rs->record_count);
-    int buf_index = sprintf(buf, "{node_id:%d,data:[", rs->node_id);
+    int buf_index = sprintf(buf, "{\"node_id\":%d,\"data\":[", rs->node_id);
     size_t _buflen = *buflen - buf_index;
+    //int _total_chars = 0;
     for (int i=0; i<rs->record_count; i++) {
         for (int j=0; j<sizeof(data_types); j++){
             if (rs->data[rs_index] == data_types[j].type) {
                 int charlen = data_types[j].serialize_fcn(&rs->data[rs_index],
                     &buf[buf_index], _buflen);
-                p(F("charlen: %d\n"), charlen);
+                //_total_chars += charlen;
                 buf_index += charlen;
                 _buflen = _buflen - charlen;
                 rs_index += data_types[j].size;
@@ -379,34 +380,49 @@ void serialize_record_set(char* buf, size_t* buflen, NewRecordSet* rs, uint8_t* 
     buf[buf_index++] = '}';
     *buflen = _buflen;
     *rslen = sizeof(NewRecordSet) + rs_index;
+    return buf_index;
 }
 
 void serialize_records(char* buf, size_t buflen, uint8_t* data, int datalen)
 {
-    uint8_t index = 0;
-    int buf_index = 0;
-    uint8_t size;
+    uint8_t data_index = 0;
+    uint8_t size_p;
+    uint8_t size_s;
     p("Serializing records for data stream: ");
     for (int i=0; i<datalen; i++) output("%d ", data[i]);
     output("\n");
+    int buf_index = sprintf(buf, "{\"data\":[");
     while (datalen > 0) {
-        print_record_set((NewRecordSet*)&data[index], &size);
-        serialize_record_set(&buf[buf_index], &buflen,
-            (NewRecordSet*)&data[data_index], &datalen);
-        index += size;
-        datalen -= size;
+        print_record_set((NewRecordSet*)&data[data_index], &size_p);
+        buf_index += serialize_record_set(&buf[buf_index], &buflen,
+            (NewRecordSet*)&data[data_index], &size_s);
+        if (size_s == size_p) {
+            p("Yep: %d == %d\n", size_s, size_p);
+        } else {
+            p("NOOOOOOOO: %d != %d\n", size_s, size_p);
+        }
+        data_index += size_s;
+        datalen -= size_s;
+        buf[buf_index++] = ',';
+        p("Current buffer index: %d\n", buf_index);
+        Serial.println(buf);
+        Serial.println("");
     };
+    buf[buf_index-1] = ']';
+    buf[buf_index++] = '}';
+    buf[buf_index++] = '\0';
+    p("Final size of buffer fill: %d\n", buf_index);
 }
 
 void _serialize_records(char* buf, size_t buflen, uint8_t* data, int datalen)
 {
+/*
     char* orig_buf = buf;
     p("buflen: %d\n", buflen);
     p("datalen: %d\n", datalen);
     uint8_t data_index = 0;
     int orig_datalen = datalen;
     int buf_index = sprintf(buf, "{data:[");
-TODO: buflen is screwed up here. new attempt above
     buflen = buflen - buf_index;
     while (data_index < datalen && buf_index < buflen) {
         uint8_t _datalen = datalen - data_index;
@@ -430,6 +446,7 @@ TODO: buflen is screwed up here. new attempt above
     buf[buf_index-1] = ']';
     buf[buf_index++] = '}';
     buf[buf_index++] = '\0';
+ */
 }
 
 void record_record_set_received_id(NewRecordSet* record_set, uint8_t* size)
