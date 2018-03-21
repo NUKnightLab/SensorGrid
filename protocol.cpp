@@ -395,7 +395,7 @@ int serialize_record_set(char* buf, size_t* buflen, NewRecordSet* rs,
     return buf_index;
 }
 
-void serialize_records(char* buf, size_t buflen, uint8_t* data, size_t datalen)
+int serialize_records(char* buf, size_t buflen, uint8_t* data, size_t datalen)
 {
     int data_index = 0;
     size_t size;
@@ -416,6 +416,7 @@ void serialize_records(char* buf, size_t buflen, uint8_t* data, size_t datalen)
     buf[buf_index++] = ']';
     buf[buf_index++] = '}';
     buf[buf_index++] = '\0';
+    return data_index;
 }
 
 void record_record_set_received_id(NewRecordSet* record_set, uint8_t* size)
@@ -588,4 +589,40 @@ int _main(int argc, char** argv)
         buf_index += record_set_size;
         len -= record_set_size;
     } while (len > 0);
+}
+
+/**
+ *  adjust head of collection buffer to current data_index location
+ *  re-writes the header if mid-record
+ */
+void trim_collection_buffer(uint8_t* buffer, int* current_index, int trim_index)
+{
+    int index = 0;
+    int _index = 0;
+    for (int i=0; i<*current_index; i++) output("%d ", buffer[i]);
+    output("\n");
+    while (index <= trim_index) {
+        NewRecordSet* rs = (NewRecordSet*)&buffer[index];
+        uint8_t record_count = rs->record_count;
+        for (int i=0; index <= trim_index && i < rs->record_count; i++) {
+            uint8_t type = rs->data[index];
+            for (int j=0; j<sizeof(data_types); j++){
+                if (type == data_types[j].type) {
+                    index += data_types[j].size;
+                    if (index <= trim_index) record_count--;
+                    break;
+                }
+            }
+        }
+        if (index > trim_index) {
+            buffer[_index++] = rs->node_id;
+            buffer[_index++] = rs->message_id;
+            buffer[_index++] = record_count;
+        }
+    };
+    int size = *current_index - trim_index;
+    memcpy(&buffer[_index], &buffer[trim_index], size);
+    *current_index = _index + size;
+    for (int i=0; i<*current_index; i++) output("%d ", buffer[i]);
+    output("\n");
 }

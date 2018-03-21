@@ -827,8 +827,9 @@ void _node_process_message(Message* msg, uint8_t len, uint8_t from)
 static uint8_t uncollected_nodes[MAX_NODES];
 static uint8_t uncollected_nodes_index = 0;
 
-#define JSON_BUFFER_SIZE 500 // TODO: should be able to increase this to ~5000
+#define JSON_BUFFER_SIZE 200 // TODO: should be able to increase this to ~5000
 static char json_buffer[JSON_BUFFER_SIZE] = {0};
+
 
 void collector_process_message(Message* message, uint8_t len, uint8_t from, uint8_t flags)
 {
@@ -863,9 +864,47 @@ void collector_process_message(Message* message, uint8_t len, uint8_t from, uint
     p(F("*** Records to be posted to API collector_process_message ***\n"));
     print_records(collection_buffer, collection_buffer_index);
     memset(json_buffer, 0, JSON_BUFFER_SIZE);
-    serialize_records(json_buffer, JSON_BUFFER_SIZE, collection_buffer, collection_buffer_index);
+    int data_index = 0;
+    int count = 0;
+    data_index = serialize_records(json_buffer, JSON_BUFFER_SIZE,
+        collection_buffer, collection_buffer_index);
+    Serial.println(json_buffer);
+/*
+    while (count < 10 && data_index < collection_buffer_index) {
+        //count++;
+        p("before data_index: %d; collection_buffer_index: %d\n", data_index, collection_buffer_index);
+        data_index = serialize_records(json_buffer, JSON_BUFFER_SIZE,
+            collection_buffer, collection_buffer_index);
+        Serial.println(json_buffer);
+        trim_collection_buffer(collection_buffer, &collection_buffer_index, data_index);
+        p("after data_index: %d; collection_buffer_index: %d\n", data_index, collection_buffer_index);
+    }
+*/
+/*
+    if (collection_buffer_index > 0) {
+        data_index = serialize_records(json_buffer, JSON_BUFFER_SIZE,
+            collection_buffer, collection_buffer_index);
+        p("Final data_index: %d\n", data_index);
+        Serial.println(json_buffer);
+        collection_buffer_index = 0;
+    }
+*/
+/*
+    int data_index = serialize_records(json_buffer, JSON_BUFFER_SIZE,
+        collection_buffer, collection_buffer_index);
+    p("Trimming collection buffer at index: %d\n", data_index);
+    p("BEFORE:\n");
+    for (int i=0; i< collection_buffer_index; i++) output("%d ", collection_buffer[i]);
+    output("\n");
+    if (data_index < collection_buffer_index) {
+        trim_collection_buffer(collection_buffer, &collection_buffer_index, data_index);
+    }
+    p("AFTER:\n");
+    for (int i=0; i< collection_buffer_index; i++) output("%d ", collection_buffer[i]);
+    output("\n");
     Serial.println(json_buffer);
     collection_buffer_index = 0;
+*/
 } /* collector_process_message */
 
 void process_message(Message* msg, uint8_t len, uint8_t from, uint8_t flags) {
@@ -1021,9 +1060,45 @@ void send_data_collection_request(uint8_t* nodes, uint8_t node_count)
     p(F("*** Records to be posted to API (send_data_collection_request) ***\n"));
     print_records(collection_buffer, collection_buffer_index);
     memset(json_buffer, 0, JSON_BUFFER_SIZE);
-    serialize_records(json_buffer, JSON_BUFFER_SIZE, collection_buffer, collection_buffer_index);
+    int data_index = 0;
+    int count = 0;
+    data_index = serialize_records(json_buffer, JSON_BUFFER_SIZE,
+        collection_buffer, collection_buffer_index);
     Serial.println(json_buffer);
+/*
+    while (count < 10 && data_index < collection_buffer_index) {
+        //count++;
+        p("before data_index: %d; collection_buffer_index: %d\n", data_index, collection_buffer_index);
+        data_index = serialize_records(json_buffer, JSON_BUFFER_SIZE,
+            collection_buffer, collection_buffer_index);
+        Serial.println(json_buffer);
+        trim_collection_buffer(collection_buffer, &collection_buffer_index, data_index);
+        p("after data_index: %d; collection_buffer_index: %d\n", data_index, collection_buffer_index);
+    }
+    if (collection_buffer_index > 0) {
+        data_index = serialize_records(json_buffer, JSON_BUFFER_SIZE,
+            collection_buffer, collection_buffer_index);
+        p("Final data_index: %d\n", data_index);
+        Serial.println(json_buffer);
+        collection_buffer_index = 0;
+    }
+*/
+/*
+    int data_index = serialize_records(json_buffer, JSON_BUFFER_SIZE,
+        collection_buffer, collection_buffer_index);
+    Serial.println(json_buffer);
+    p("Trimming collection buffer at index: %d\n", data_index);
+    p("BEFORE:\n");
+    for (int i=0; i< collection_buffer_index; i++) output("%d ", collection_buffer[i]);
+    output("\n");
+    if (data_index < collection_buffer_index) {
+        trim_collection_buffer(collection_buffer, &collection_buffer_index, data_index);
+    }
+    p("AFTER:\n");
+    for (int i=0; i< collection_buffer_index; i++) output("%d ", collection_buffer[i]);
+    output("\n");
     collection_buffer_index = 0;
+*/
 #endif
 } /* send_data_collection_request */
 

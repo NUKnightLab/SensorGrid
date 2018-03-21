@@ -21,7 +21,7 @@
 #include <SPI.h>
 #include <SD.h>
 
-#define DEFAULT_SD_CHIP_SELECT_PIN 4//10
+#define DEFAULT_SD_CHIP_SELECT_PIN 10
 #define ALTERNATE_RFM95_CS 10 //19
 
 /* sensor configs */
@@ -40,9 +40,9 @@ void setup() {
   digitalWrite(ALTERNATE_RFM95_CS, HIGH);
   // Open serial communications and wait for port to open:
   Serial.begin(9600);
-  while (!Serial) {
-    ; // wait for serial port to connect. Needed for native USB port only
-  }
+  //while (!Serial) {
+  //  ; // wait for serial port to connect. Needed for native USB port only
+  //}
 
 
   Serial.print("Initializing SD card...");
@@ -157,10 +157,16 @@ void loop() {
   dataFile.print(F(" - Dust Density: "));
   Serial.println(dust_density);
   dataFile.println(dust_density);
-
+  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(500);                       // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW 
   dataFile.close();
-  Serial.println("Closing dataFile");
+  delay(1000);
+  digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(500);                       // wait for a second
+  digitalWrite(LED_BUILTIN, LOW);    // turn the LED off by making the voltage LOW 
+  Serial.println("Closed dataFile");
 
-  delay(10000);
+  delay(30*1000);
 }
 
