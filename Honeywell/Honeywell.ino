@@ -1,3 +1,7 @@
+#include "RTClib.h"
+#include <SD.h>
+
+
 byte enable_autosend[] = {0x68, 0x01, 0x40, 0x57};
 byte stop_autosend[] = { 0x68, 0x01, 0x20, 0x77 };
 byte start_pm[] = { 0x68, 0x01, 0x01, 0x96 };
@@ -6,6 +10,26 @@ byte read_pm_results[] = { 0x68, 0x01, 0x04, 0x93 };
 byte uartbuf[32];
 
 #define UART_TIMEOUT 1000
+
+#define VBATPIN 9
+#define DEFAULT_SD_CHIP_SELECT_PIN 10 //4 for Uno
+#define ALTERNATE_RFM95_CS 19 //10 for Uno
+#define DEFAULT_RFM95_CS 8 //not needed for Uno
+
+/* real time clock */
+RTC_PCF8523 rtc;
+bool setClock = false;
+char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+int nodeId = 1;
+
+float batteryLevel()
+{
+    float measuredvbat = analogRead(VBATPIN);
+    measuredvbat *= 2;    // we divided by 2, so multiply back
+    measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
+    measuredvbat /= 1024; // convert to voltage
+    return measuredvbat;
+}
 
 /**
  * More or less deprecated but here in case needed. Currently, the broader read_message is being used
@@ -163,14 +187,36 @@ void send_stop_autosend()
 
 void setup()
 {
-    while (!Serial);
+    //while (!Serial);
     Serial.begin(115200);
     Serial1.begin(9600);
+
+    Serial.print("Initializing SD card...");
+    digitalWrite(DEFAULT_SD_CHIP_SELECT_PIN, HIGH);
+    digitalWrite(DEFAULT_RFM95_CS, HIGH);
+    digitalWrite(ALTERNATE_RFM95_CS, HIGH);
+    if (!SD.begin(DEFAULT_SD_CHIP_SELECT_PIN)) {
+        digitalWrite(ALTERNATE_RFM95_CS, LOW);
+        digitalWrite(DEFAULT_SD_CHIP_SELECT_PIN, LOW);
+        Serial.println("Card failed, or not present");
+    }
+    Serial.println("card initialized.");
+    if (!rtc.begin()) {
+        Serial.println("Error: Failed to initialize RTC");
+    }
+    if (setClock) {
+        Serial.print("Printing initial DateTime: ");
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+        Serial.print(F(__DATE__));
+        Serial.print('/');
+        Serial.println(F(__TIME__));
+    }  
     delay(3000);
 }
 
 void loop()
 {
+    digitalWrite(LED_BUILTIN, HIGH);
     send_start_pm();
     delay(100);
     send_stop_autosend();
@@ -185,5 +231,33 @@ void loop()
     }
     Serial.println("\n---");
     send_stop_pm();
-    delay(20000);
+
+    File dataFile = SD.open("datalog.txt", FILE_WRITE);
+    if (dataFile) {
+        Serial.println("Opening dataFile...");
+    } else {
+        Serial.println("error opening datalog.txt");
+    }
+    DateTime now = rtc.now();
+    dataFile.print(now.year());
+    dataFile.print("-");
+    dataFile.print(now.month());
+    dataFile.print("-");
+    dataFile.print(now.day());
+    dataFile.print("T");
+    dataFile.print(now.hour());
+    dataFile.print(":");
+    dataFile.print(now.minute());
+    dataFile.print(":");
+    dataFile.print(now.second());
+    dataFile.print(",");
+    dataFile.print(batteryLevel());
+    dataFile.print(",");
+    dataFile.print(uartbuf[3]*256 + uartbuf[4]); // PM 2.5
+    dataFile.print(",");
+    dataFile.println(uartbuf[5]*256+uartbuf[6]); // PM 10
+    dataFile.close();
+    Serial.println("Closing dataFile");
+    digitalWrite(LED_BUILTIN, LOW);
+    delay(30000);
 }
