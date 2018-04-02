@@ -1,6 +1,8 @@
 #include "RTClib.h"
 #include <SD.h>
+#include <Adafruit_SleepyDog.h>
 
+static bool USE_WATCHDOG = true;
 
 byte enable_autosend[] = {0x68, 0x01, 0x40, 0x57};
 byte stop_autosend[] = { 0x68, 0x01, 0x20, 0x77 };
@@ -29,6 +31,15 @@ float batteryLevel()
     measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
     measuredvbat /= 1024; // convert to voltage
     return measuredvbat;
+}
+
+void sleep(int ms)
+{
+    if (USE_WATCHDOG) {
+        Watchdog.sleep(ms);
+    } else {
+        delay(ms);
+    }
 }
 
 /**
@@ -155,7 +166,7 @@ void send_stop_pm()
      *  following logic attempts to read out a subsequent STOP_PM ack with the assumption
      *  that the data just needs to be cleared out of the buffer -- but that does not seem
      *  to be the case. Rather, it seems that we are really getting a data payload instead of the ACK
-     *  
+     *
      *  TODO: verify that the fan is stopping consistently even if a data message is received
      *  instead of an ACK. If so, warning can be removed.
      */
@@ -188,9 +199,15 @@ void send_stop_autosend()
 void setup()
 {
     //while (!Serial);
+    delay(5000);
+    if (Serial) {
+        USE_WATCHDOG = false;
+    }
     Serial.begin(115200);
     Serial1.begin(9600);
-
+    if (!USE_WATCHDOG) {
+        Serial.println("Continuing without watchdog");
+    }
     Serial.print("Initializing SD card...");
     digitalWrite(DEFAULT_SD_CHIP_SELECT_PIN, HIGH);
     digitalWrite(DEFAULT_RFM95_CS, HIGH);
@@ -210,19 +227,28 @@ void setup()
         Serial.print(F(__DATE__));
         Serial.print('/');
         Serial.println(F(__TIME__));
-    }  
+    }
     delay(3000);
 }
 
+static long last_data_sample = 0;
+
 void loop()
 {
-    digitalWrite(LED_BUILTIN, HIGH);
+    long diff = rtc.now().secondstime() - last_data_sample;
+    if (diff < 30) {
+        /* Sleep up to remainder of period or max watchdog sleep time */
+        sleep(30000 - diff*1000);
+        return;
+    }
+    last_data_sample = rtc.now().secondstime();
+    //digitalWrite(LED_BUILTIN, HIGH);
     send_start_pm();
     delay(100);
     send_stop_autosend();
     for (int i=0; i<6; i++) {
         Serial.print(".");
-        delay(1000);
+        sleep(1000);
     }
     Serial.println("\nReading samples ---");
     for (int i=0; i<5; i++) {
@@ -256,8 +282,9 @@ void loop()
     dataFile.print(uartbuf[3]*256 + uartbuf[4]); // PM 2.5
     dataFile.print(",");
     dataFile.println(uartbuf[5]*256+uartbuf[6]); // PM 10
-    dataFile.close();
     Serial.println("Closing dataFile");
+    dataFile.close();
+    digitalWrite(LED_BUILTIN, HIGH);
+    sleep(500);
     digitalWrite(LED_BUILTIN, LOW);
-    delay(30000);
 }
