@@ -1,7 +1,10 @@
-#include "RTClib.h"
+#include "Honeywell.h"
 #include <SD.h>
 #include <Adafruit_SleepyDog.h>
+#include <pt.h>
 
+Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
+RTC_PCF8523 rtc;
 static bool USE_WATCHDOG = true;
 
 byte enable_autosend[] = {0x68, 0x01, 0x40, 0x57};
@@ -13,25 +16,15 @@ byte uartbuf[32];
 
 #define UART_TIMEOUT 1000
 
-#define VBATPIN 9
 #define DEFAULT_SD_CHIP_SELECT_PIN 10 //4 for Uno
 #define ALTERNATE_RFM95_CS 19 //10 for Uno
 #define DEFAULT_RFM95_CS 8 //not needed for Uno
 
 /* real time clock */
-RTC_PCF8523 rtc;
 bool setClock = false;
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 int nodeId = 1;
 
-float batteryLevel()
-{
-    float measuredvbat = analogRead(VBATPIN);
-    measuredvbat *= 2;    // we divided by 2, so multiply back
-    measuredvbat *= 3.3;  // Multiply by 3.3V, our reference voltage
-    measuredvbat /= 1024; // convert to voltage
-    return measuredvbat;
-}
 
 void sleep(int ms)
 {
@@ -199,6 +192,7 @@ void send_stop_autosend()
 void setup()
 {
     //while (!Serial);
+    setupDisplay();
     delay(5000);
     if (Serial) {
         USE_WATCHDOG = false;
@@ -228,6 +222,7 @@ void setup()
         Serial.print('/');
         Serial.println(F(__TIME__));
     }
+    displayCurrentRTCDateTime();
     delay(3000);
 }
 
@@ -242,21 +237,24 @@ void loop()
         return;
     }
     last_data_sample = rtc.now().secondstime();
-    //digitalWrite(LED_BUILTIN, HIGH);
-    send_start_pm();
-    delay(100);
-    send_stop_autosend();
-    for (int i=0; i<6; i++) {
-        Serial.print(".");
-        sleep(1000);
-    }
-    Serial.println("\nReading samples ---");
-    for (int i=0; i<5; i++) {
-        read_pm_results_data(uartbuf);
+    float BAT_THRESH = 3.7;
+    float bat = batteryLevel();
+    if (bat >= BAT_THRESH) {
+        send_start_pm();
         delay(100);
+        send_stop_autosend();
+        for (int i=0; i<6; i++) {
+            Serial.print(".");
+            sleep(1000);
+        }
+        Serial.println("\nReading samples ---");
+        for (int i=0; i<5; i++) {
+            read_pm_results_data(uartbuf);
+            delay(100);
+        }
+        Serial.println("\n---");
+        send_stop_pm();
     }
-    Serial.println("\n---");
-    send_stop_pm();
 
     File dataFile = SD.open("datalog.txt", FILE_WRITE);
     if (dataFile) {
@@ -277,14 +275,21 @@ void loop()
     dataFile.print(":");
     dataFile.print(now.second());
     dataFile.print(",");
-    dataFile.print(batteryLevel());
+    dataFile.print(bat);
     dataFile.print(",");
-    dataFile.print(uartbuf[3]*256 + uartbuf[4]); // PM 2.5
-    dataFile.print(",");
-    dataFile.println(uartbuf[5]*256+uartbuf[6]); // PM 10
+
+    if (bat >= BAT_THRESH) {
+        dataFile.print(uartbuf[3]*256 + uartbuf[4]); // PM 2.5
+        dataFile.print(",");
+        dataFile.println(uartbuf[5]*256+uartbuf[6]); // PM 10
+    } else {
+        dataFile.print(",");
+    }
+
     Serial.println("Closing dataFile");
     dataFile.close();
     digitalWrite(LED_BUILTIN, HIGH);
     sleep(500);
     digitalWrite(LED_BUILTIN, LOW);
+
 }
