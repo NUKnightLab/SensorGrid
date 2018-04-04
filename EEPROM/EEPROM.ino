@@ -16,7 +16,7 @@
 #define ClearBit(A,k)   ( A[(k/32)] &= ~(1 << (k%32)) )
 #define TestBit(A,k)    ( A[(k/32)] & (1 << (k%32)) )
 
-#define IS_CORE 1
+#define IS_CORE 0
 
 //#define MAX_EEPROM_ADDR 0x7FFF
 #define MAX_EEPROM_ADDR 500
@@ -105,7 +105,7 @@ void i2c_eeprom_read_checked_page(byte* buf, int8_t* buflen, int deviceaddress, 
     }
     if (sum == checksum) {
         Serial.print("Addr: ");
-        Serial.print(eeaddress>>8 | eeaddress&0xFF, DEC);
+        Serial.print(eeaddress, DEC);
         Serial.print(" OK. sum: ");
         Serial.print(checksum, DEC);
         *buflen = i;
@@ -355,7 +355,9 @@ void loop()
         if (current_cycle_id != cycle_id) {
             cycle_id = current_cycle_id;
             memset(rec, 0, CYCLE_SIZE/sizeof(long));
-            Serial.println("---------");
+            Serial.print("---------");
+            Serial.print(" Reading data from cycle: ");
+            Serial.println(cycle_id, DEC);
         }
         delay(1000);
     }
