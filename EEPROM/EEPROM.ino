@@ -16,7 +16,7 @@ bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
 bool TEST_RANDOM_CHECKSUMS = false;
 
-bool core = false;
+bool core = true;
 
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data ) {
     int rdata = data;
@@ -200,7 +200,7 @@ void test_bytes(byte val)
     Serial.println(" bad pages");
 }
 
-void test_random_writes()
+void generate_random_writes()
 {
     int pagecount = 0;
     for (int pageaddr=0; pageaddr<=MAX_EEPROM_ADDR; pageaddr+=32) {
@@ -218,8 +218,13 @@ void test_random_writes()
     }
     int bad_page_count = 0;
     Serial.print("Random test pages written: "); Serial.println(pagecount);
-    delay(2000);
+}
+
+void test_random_writes()
+{
+    generate_random_writes();
     Serial.println("\nReading pages:");
+    int bad_page_count = 0;
     for (int i=0; i<=MAX_EEPROM_ADDR; i+=32) {
         byte buf[30];
         int8_t buflen = 30;
@@ -282,20 +287,28 @@ void setup()
     if (TEST_RANDOM_CHECKSUMS)
         test_random_writes();
 
-    randomSeed(100);
     if (core) {
-        test_random_writes();
-        read_all_data();
-    } else {
-        while(1) {
-            read_all_data(true);
-        }
+        clear_data();
     }
+    //randomSeed(100);
+    Serial.println("Ready ...");
 }
 
 void loop()
 {
+    if (core) {
+        byte b = i2c_eeprom_read_byte(0x50, 0);
+        if (!b) {
+            Serial.println("Starting new data write cycle");
+            generate_random_writes();
+            //test_random_writes();
+            //read_all_data();
+        }
+    } else {
+        read_all_data(true);
+    }
     return;
+
     static int addr=0;
     char data[32];
     if (core) {
