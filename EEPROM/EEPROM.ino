@@ -11,12 +11,12 @@
 #include <Wire.h>
 
 //#define MAX_EEPROM_ADDR 0x7FFF
-#define MAX_EEPROM_ADDR 100
+#define MAX_EEPROM_ADDR 200
 bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
 bool TEST_RANDOM_CHECKSUMS = false;
 
-bool core = true;
+bool core = false;
 
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data ) {
     int rdata = data;
@@ -240,17 +240,26 @@ void test_random_writes()
     Serial.println(" bad pages");
 }
 
-void read_all_data()
+void read_all_data(bool delete_data=false)
 {
-    for (int pageaddr=0; pageaddr<=MAX_EEPROM_ADDR; pageaddr+=32) {
-        byte buf[30];
-        int8_t buflen = 30;
-        i2c_eeprom_read_checked_page(buf, &buflen, 0x50, pageaddr);
-        for (int j=0; j<buflen; j++) {
-            Serial.print(buf[j], DEC);
-            Serial.print(" ");
+    for (int pageaddr=0; pageaddr<=MAX_EEPROM_ADDR; ) {
+        byte b = i2c_eeprom_read_byte(0x50, pageaddr);
+        if (b) {
+            byte buf[30];
+            int8_t buflen = 30;
+            i2c_eeprom_read_checked_page(buf, &buflen, 0x50, pageaddr);
+            Serial.print(" Data: ");
+            for (int j=0; j<buflen; j++) {
+                Serial.print(buf[j], DEC);
+                Serial.print(" ");
+            }
+            Serial.println("");
+            pageaddr += 32;
+        } else {
+            Serial.print("Waiting for data at address: ");
+            Serial.println(pageaddr, DEC);
+            delay(1000);
         }
-        Serial.println("");
     }
 }
 
