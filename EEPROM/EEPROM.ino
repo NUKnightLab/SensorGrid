@@ -16,11 +16,11 @@
 #define ClearBit(A,k)   ( A[(k/32)] &= ~(1 << (k%32)) )
 #define TestBit(A,k)    ( A[(k/32)] & (1 << (k%32)) )
 
-#define IS_CORE 0
+#define IS_CORE 1
 
-#define MAX_EEPROM_ADDR 0x7FFF
-//#define MAX_EEPROM_ADDR 500
-const int CYCLE_SIZE = MAX_EEPROM_ADDR / (32 * 4) + 1;
+//#define MAX_EEPROM_ADDR 0x7FFF
+#define MAX_EEPROM_ADDR 500
+const int CYCLE_SIZE = MAX_EEPROM_ADDR / (64*2)  +  1;
 bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
 bool TEST_RANDOM_CHECKSUMS = false;
@@ -148,6 +148,7 @@ void clear_data()
      *  clear a page in 3 separate writes. Ideally we would have a Wire buffer of >= 66 bytes in order to clear a whole
      *  page at once.
      */
+    Serial.println("Clearing all data ...");
     byte nodata_22[22] = {};
     byte nodata_20[20] = {};
     int addr = 0;
@@ -158,6 +159,7 @@ void clear_data()
         addr += 64;
     }
     delay(500); // Max page write time
+    Serial.println(".. cleared");
 }
 
 /**
@@ -209,28 +211,40 @@ void test_bytes(byte val)
 
 void read_cycle_data(byte cycle_id, long* rec)
 {
-    int offset = (cycle_id % 4) < 2 ? 0 : 32;
     int start_page = (cycle_id % 2) + 1; // first page reserved for meta
-    for (int page=start_page; (page*64+offset)<=MAX_EEPROM_ADDR; page+=2) {
+    for (int page=start_page; page*64<=MAX_EEPROM_ADDR; page+=2) {
         if (!TestBit(rec, page/2)) {
             byte buf[30];
             int8_t buflen = 30;
-            i2c_eeprom_read_checked_page(buf, &buflen, 0x50, page*64+offset);
+            i2c_eeprom_read_checked_page(buf, &buflen, 0x50, page*64);
             if (buflen > 0) {
                 Serial.print(" New data at addr: ");
-                Serial.println(page*64+offset);
+                Serial.println(page*64);
                 SetBit(rec, page/2);
             }
         }
     }
 }
 
-void generate_random_writes(int cycle_id)
+void clear_cycle_data(byte cycle_id)
 {
-    int pagecount = 0;
+    Serial.println("Clearing data for cycle ..");
     int offset = (cycle_id % 4) < 2 ? 0 : 32;
     int start_page = (cycle_id % 2) + 1; // first page reserved for meta
     for (int page=start_page; (page*64+offset)<=MAX_EEPROM_ADDR; page+=2) {
+        byte buf[30] = {};
+        i2c_eeprom_write_page(0x50, page*64+offset, buf, 30);
+        delay(500);
+    }
+    Serial.println(".. Cleared");
+}
+
+void generate_random_writes(int cycle_id)
+{
+    int pagecount = 0;
+    //int offset = (cycle_id % 4) < 2 ? 0 : 32;
+    int start_page = (cycle_id % 2) + 1; // first page reserved for meta
+    for (int page=start_page; page*64<=MAX_EEPROM_ADDR; page+=2) {
         byte testdata[28] = {};
         int r = (rand() % 28) + 1;
         int index = 0;
@@ -240,7 +254,7 @@ void generate_random_writes(int cycle_id)
             sum += b;
             testdata[index++] = b;
         }
-        i2c_eeprom_write_checked_page(0x50, page*64+offset, testdata, 28);
+        i2c_eeprom_write_checked_page(0x50, page*64, testdata, 28);
         pagecount++;
         //delay(2000);
     }
@@ -311,7 +325,8 @@ void setup()
         test_random_writes();
 
     if (IS_CORE) {
-        clear_data();
+        //clear_data();
+        i2c_eeprom_write_byte(0x50, 0, 0);
     }
     //randomSeed(100);
     Serial.print("Cycle size: ");
@@ -323,15 +338,19 @@ void loop()
 {
     static byte cycle_id = 0;
     if (IS_CORE) {
+        cycle_id++;
         Serial.print("Starting new data write cycle: ");
         Serial.println(cycle_id, DEC);
+        generate_random_writes(cycle_id);
         i2c_eeprom_write_byte(0x50, 0, cycle_id);
-        generate_random_writes(cycle_id++);
         delay(5000);
     } else {
         static long rec[CYCLE_SIZE/sizeof(long)] = {};
-        static int read_index = 32;
         int current_cycle_id = i2c_eeprom_read_byte(0x50, 0);
+        if (!current_cycle_id) {
+            delay(1000);
+            return;
+        }
         read_cycle_data(cycle_id, rec);
         if (current_cycle_id != cycle_id) {
             cycle_id = current_cycle_id;
