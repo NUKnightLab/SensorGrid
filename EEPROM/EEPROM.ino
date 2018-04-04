@@ -203,7 +203,7 @@ void test_bytes(byte val)
 void generate_random_writes()
 {
     int pagecount = 0;
-    for (int pageaddr=0; pageaddr<=MAX_EEPROM_ADDR; pageaddr+=32) {
+    for (int pageaddr=32; pageaddr<=MAX_EEPROM_ADDR; pageaddr+=32) {
         byte testdata[28] = {};
         int r = (rand() % 28) + 1;
         int index = 0;
@@ -215,8 +215,8 @@ void generate_random_writes()
         }
         i2c_eeprom_write_checked_page(0x50, pageaddr, testdata, 28);
         pagecount++;
+        //delay(2000);
     }
-    int bad_page_count = 0;
     Serial.print("Random test pages written: "); Serial.println(pagecount);
 }
 
@@ -270,11 +270,12 @@ void read_all_data(bool delete_data=false)
                 i2c_eeprom_write_page(0x50, pageaddr, nodata, 30);
             }
             pageaddr += 32;
-        } else {
+        }
+        /* else {
             Serial.print("Waiting for data at address: ");
             Serial.println(pageaddr, DEC);
             delay(2000);
-        }
+        } */
     }
 }
 
@@ -300,17 +301,25 @@ void setup()
 
 void loop()
 {
+    static uint16_t cycle_id = 0;
     if (core) {
-        byte b = i2c_eeprom_read_byte(0x50, 0);
-        if (!b) {
-            Serial.println("Starting new data write cycle");
-            generate_random_writes();
-            //test_random_writes();
-            //read_all_data();
-        }
-        delay(1000);
+        cycle_id++;
+        Serial.print("Starting new data write cycle: ");
+        Serial.println(cycle_id, DEC);
+        byte _id[] = { 8>>cycle_id, 0xFF&cycle_id };
+        i2c_eeprom_write_page(0x50, 0, _id, 2);
+        generate_random_writes();
+        delay(5000);
     } else {
-        read_all_data(true);
+        static int read_index = 32;
+        int current_cycle_id = i2c_eeprom_read_byte(0x50, 0)<<8
+            | i2c_eeprom_read_byte(0x50, 1)&0xFF;
+        if (current_cycle_id = cycle_id) {
+            Serial.println("Waiting for new data cycle ..");
+            delay(1000);
+        } else {
+            read_all_data();
+        }
     }
     return;
 
