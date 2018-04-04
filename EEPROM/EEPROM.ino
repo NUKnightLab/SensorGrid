@@ -16,7 +16,7 @@ bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
 bool TEST_RANDOM_CHECKSUMS = false;
 
-bool core = false;
+bool core = true;
 
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data ) {
     int rdata = data;
@@ -308,6 +308,7 @@ void loop()
             //test_random_writes();
             //read_all_data();
         }
+        delay(1000);
     } else {
         read_all_data(true);
     }
