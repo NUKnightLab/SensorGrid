@@ -10,13 +10,20 @@
 #include <time.h>
 #include <Wire.h>
 
-#define MAX_EEPROM_ADDR 0x7FFF
-//#define MAX_EEPROM_ADDR 200
+
+/* http://www.mathcs.emory.edu/~cheung/Courses/255/Syllabus/1-C-intro/bit-array.html */
+#define SetBit(A,k)     ( A[(k/32)] |= (1 << (k%32)) )
+#define ClearBit(A,k)   ( A[(k/32)] &= ~(1 << (k%32)) )
+#define TestBit(A,k)    ( A[(k/32)] & (1 << (k%32)) )
+
+//#define MAX_EEPROM_ADDR 0x7FFF
+#define MAX_EEPROM_ADDR 500
+const int CYCLE_SIZE = MAX_EEPROM_ADDR / 32 / 4;
 bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
 bool TEST_RANDOM_CHECKSUMS = false;
 
-bool core = false;
+bool core = true;
 
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data ) {
     int rdata = data;
@@ -60,7 +67,7 @@ void i2c_eeprom_write_checked_page(int deviceaddress, unsigned int eeaddresspage
     buf[1] = sum&0xFF;
     memcpy(buf+2, data, len);
     Wire.beginTransmission(deviceaddress);
-    Serial.print("WRITING Addr: "); Serial.println(eeaddresspage, HEX);
+    Serial.print("WRITING Addr: "); Serial.println(eeaddresspage, DEC);
     Wire.write((int)(eeaddresspage >> 8)); // MSB
     Wire.write((int)(eeaddresspage & 0xFF)); // LSB
     Wire.write(buf, 30);
@@ -200,10 +207,30 @@ void test_bytes(byte val)
     Serial.println(" bad pages");
 }
 
-void generate_random_writes()
+void read_cycle_data(byte cycle_id, long* rec)
+{
+    int offset = (cycle_id % 4) < 2 ? 0 : 32;
+    int start_page = (cycle_id % 2) + 1; // first page reserved for meta
+    for (int page=start_page; (page*64+offset)<=MAX_EEPROM_ADDR; page+=2) {
+        if (!TestBit(rec, page)) {
+            byte buf[30];
+            int8_t buflen = 30;
+            i2c_eeprom_read_checked_page(buf, &buflen, 0x50, page*64+offset);
+            if (buflen > 0) {
+                Serial.print("New data at addr: ");
+                Serial.println(page*64+offset);
+                SetBit(rec, page);
+            }
+        }
+    }
+}
+
+void generate_random_writes(int cycle_id)
 {
     int pagecount = 0;
-    for (int pageaddr=32; pageaddr<=MAX_EEPROM_ADDR; pageaddr+=32) {
+    int offset = (cycle_id % 4) < 2 ? 0 : 32;
+    int start_page = (cycle_id % 2) + 1; // first page reserved for meta
+    for (int page=start_page; (page*64+offset)<=MAX_EEPROM_ADDR; page+=2) {
         byte testdata[28] = {};
         int r = (rand() % 28) + 1;
         int index = 0;
@@ -213,7 +240,7 @@ void generate_random_writes()
             sum += b;
             testdata[index++] = b;
         }
-        i2c_eeprom_write_checked_page(0x50, pageaddr, testdata, 28);
+        i2c_eeprom_write_checked_page(0x50, page*64+offset, testdata, 28);
         pagecount++;
         //delay(2000);
     }
@@ -222,7 +249,7 @@ void generate_random_writes()
 
 void test_random_writes()
 {
-    generate_random_writes();
+    generate_random_writes(0);
     Serial.println("\nReading pages:");
     int bad_page_count = 0;
     for (int i=0; i<=MAX_EEPROM_ADDR; i+=32) {
@@ -292,25 +319,23 @@ void setup()
 
 void loop()
 {
-    static uint16_t cycle_id = 0;
+    static byte cycle_id = 0;
     if (core) {
-        cycle_id++;
         Serial.print("Starting new data write cycle: ");
         Serial.println(cycle_id, DEC);
-        byte _id[] = { 8>>cycle_id, 0xFF&cycle_id };
-        i2c_eeprom_write_page(0x50, 0, _id, 2);
-        generate_random_writes();
+        i2c_eeprom_write_byte(0x50, 0, cycle_id);
+        generate_random_writes(cycle_id++);
         delay(5000);
     } else {
+        static long rec[CYCLE_SIZE/sizeof(long)] = {};
         static int read_index = 32;
-        int current_cycle_id = i2c_eeprom_read_byte(0x50, 0)<<8
-            | i2c_eeprom_read_byte(0x50, 1)&0xFF;
-        if (current_cycle_id == cycle_id) {
-            read_index = read_all_data(read_index);
-        } else {
-            cycle_id = current_cycle_id;
-            read_index = read_all_data(read_index); // clear out remaining
-            read_index = read_all_data(32);
+        int current_cycle_id = i2c_eeprom_read_byte(0x50, 0);
+        read_cycle_data(cycle_id, rec);
+        if (current_cycle_id != cycle_id) {
+            cycle_id++;
+            if (cycle_id < current_cycle_id)
+                Serial.println("WARNING: Read cycles falling behind writes");
+            memset(rec, 0, sizeof(rec));
         }
         delay(1000);
     }
