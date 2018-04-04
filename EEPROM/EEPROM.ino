@@ -10,13 +10,13 @@
 #include <time.h>
 #include <Wire.h>
 
-//#define MAX_EEPROM_ADDR 0x7FFF
-#define MAX_EEPROM_ADDR 200
+#define MAX_EEPROM_ADDR 0x7FFF
+//#define MAX_EEPROM_ADDR 200
 bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
 bool TEST_RANDOM_CHECKSUMS = false;
 
-bool core = true;
+bool core = false;
 
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data ) {
     int rdata = data;
@@ -245,15 +245,14 @@ void test_random_writes()
     Serial.println(" bad pages");
 }
 
-void read_all_data(bool delete_data=false)
+int read_all_data(int start_addr)
 {
-    for (int pageaddr=0; pageaddr<=MAX_EEPROM_ADDR; ) {
+    int pageaddr = start_addr;
+    while (pageaddr <= MAX_EEPROM_ADDR) {
         Serial.print("Reading address: ");
         Serial.println(pageaddr, DEC);
         byte b = i2c_eeprom_read_byte(0x50, pageaddr);
-        Serial.print("Byte: ");
-        Serial.println(b);
-        if (b) {
+        if (b && b!= 0xFF) {
             byte buf[30];
             int8_t buflen = 30;
             i2c_eeprom_read_checked_page(buf, &buflen, 0x50, pageaddr);
@@ -263,20 +262,12 @@ void read_all_data(bool delete_data=false)
                 Serial.print(" ");
             }
             Serial.println("");
-            if (delete_data) {
-                Serial.print("Deleting page at address: ");
-                Serial.println(pageaddr, DEC);
-                byte nodata[30] = {};
-                i2c_eeprom_write_page(0x50, pageaddr, nodata, 30);
-            }
             pageaddr += 32;
+        } else {
+            return pageaddr;
         }
-        /* else {
-            Serial.print("Waiting for data at address: ");
-            Serial.println(pageaddr, DEC);
-            delay(2000);
-        } */
     }
+    return pageaddr;
 }
 
 void setup()
@@ -314,41 +305,13 @@ void loop()
         static int read_index = 32;
         int current_cycle_id = i2c_eeprom_read_byte(0x50, 0)<<8
             | i2c_eeprom_read_byte(0x50, 1)&0xFF;
-        if (current_cycle_id = cycle_id) {
-            Serial.println("Waiting for new data cycle ..");
-            delay(1000);
+        if (current_cycle_id == cycle_id) {
+            read_index = read_all_data(read_index);
         } else {
-            read_all_data();
+            cycle_id = current_cycle_id;
+            read_index = read_all_data(read_index); // clear out remaining
+            read_index = read_all_data(32);
         }
-    }
-    return;
-
-    static int addr=0;
-    char data[32];
-    if (core) {
-        int len = 1 + sprintf(data, "data at address %d", addr);
-        Serial.print("Writing data: ");
-        Serial.println(data);
-        Serial.print("Of length: "); Serial.println(len);
-        if (addr + len > 0x7FFF) addr = 0;
-        i2c_eeprom_write_page(0x50, addr, (byte *)data, len);
-        addr += len;
-        Serial.print("New address: ");
-        Serial.println(addr, DEC);
-        delay(2000);
-    } else {
-        addr = 0;
-        while (addr <= 0x7FFF) {
-            byte b = i2c_eeprom_read_byte(0x50, addr);
-            while (b!=0) {
-                Serial.print((char)b);
-                b = i2c_eeprom_read_byte(0x50, ++addr);
-                i2c_eeprom_write_byte(0x50, addr, 0);
-            }
-            addr++;
-            if (b!=0) {
-                Serial.println("");
-            }
-        }
+        delay(1000);
     }
 }
