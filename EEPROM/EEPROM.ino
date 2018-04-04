@@ -254,11 +254,17 @@ void read_all_data(bool delete_data=false)
                 Serial.print(" ");
             }
             Serial.println("");
+            if (delete_data) {
+                Serial.print("Deleting page at address: ");
+                Serial.println(pageaddr, DEC);
+                byte nodata[30] = {};
+                i2c_eeprom_write_page(0x50, pageaddr, nodata, 30);
+            }
             pageaddr += 32;
         } else {
             Serial.print("Waiting for data at address: ");
             Serial.println(pageaddr, DEC);
-            delay(1000);
+            delay(2000);
         }
     }
 }
@@ -279,8 +285,12 @@ void setup()
     randomSeed(100);
     if (core) {
         test_random_writes();
+        read_all_data();
+    } else {
+        while(1) {
+            read_all_data(true);
+        }
     }
-    read_all_data();
 }
 
 void loop()
