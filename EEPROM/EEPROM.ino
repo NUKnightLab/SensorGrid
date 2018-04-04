@@ -16,10 +16,10 @@
 #define ClearBit(A,k)   ( A[(k/32)] &= ~(1 << (k%32)) )
 #define TestBit(A,k)    ( A[(k/32)] & (1 << (k%32)) )
 
-#define IS_CORE 0
+#define IS_CORE 1
 
-//#define MAX_EEPROM_ADDR 0x7FFF
-#define MAX_EEPROM_ADDR 500
+#define MAX_EEPROM_ADDR 0x7FFF
+//#define MAX_EEPROM_ADDR 2400
 const int CYCLE_SIZE = MAX_EEPROM_ADDR / (64*2)  +  1;
 bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
@@ -339,7 +339,7 @@ void loop()
     static byte cycle_id = 0;
     if (IS_CORE) {
         cycle_id++;
-        Serial.print("Starting new data write cycle: ");
+        Serial.print("-------- Starting new data write cycle: ");
         Serial.println(cycle_id, DEC);
         generate_random_writes(cycle_id);
         i2c_eeprom_write_byte(0x50, 0, cycle_id);
