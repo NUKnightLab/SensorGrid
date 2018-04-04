@@ -16,7 +16,7 @@ bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
 bool TEST_RANDOM_CHECKSUMS = false;
 
-bool core = true;
+bool core = false;
 
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data ) {
     int rdata = data;
@@ -37,7 +37,7 @@ void i2c_eeprom_write_page( int deviceaddress, unsigned int eeaddresspage, byte*
     byte buf[30] = {};
     memcpy(buf, data, len);
     Wire.beginTransmission(deviceaddress);
-    Serial.print("WRITING Addr: "); Serial.println(eeaddresspage, HEX);
+    Serial.print("WRITING Addr: "); Serial.println(eeaddresspage, DEC);
     Wire.write((int)(eeaddresspage >> 8)); // MSB
     Wire.write((int)(eeaddresspage & 0xFF)); // LSB
     Wire.write(buf, 30);
@@ -248,7 +248,11 @@ void test_random_writes()
 void read_all_data(bool delete_data=false)
 {
     for (int pageaddr=0; pageaddr<=MAX_EEPROM_ADDR; ) {
+        Serial.print("Reading address: ");
+        Serial.println(pageaddr, DEC);
         byte b = i2c_eeprom_read_byte(0x50, pageaddr);
+        Serial.print("Byte: ");
+        Serial.println(b);
         if (b) {
             byte buf[30];
             int8_t buflen = 30;
