@@ -219,13 +219,8 @@ void read_cycle_data(byte cycle_id, long* rec)
             if (buflen > 0) {
                 Serial.print(" New data at addr: ");
                 Serial.println(page*64+offset);
-                //rec[page/2] = 1;
                 SetBit(rec, page/2);
             }
-            for (int i=0; i<CYCLE_SIZE; i++) {
-                Serial.print(TestBit(rec, i) ? 1 : 0, DEC);
-            }
-            Serial.println();
         }
     }
 }
