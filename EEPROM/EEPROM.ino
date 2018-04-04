@@ -270,8 +270,8 @@ void setup()
     randomSeed(100);
     if (core) {
         test_random_writes();
-        read_all_data();
     }
+    read_all_data();
 }
 
 void loop()
