@@ -44,7 +44,7 @@ void i2c_eeprom_write_page( int deviceaddress, unsigned int eeaddresspage, byte*
     byte buf[30] = {};
     memcpy(buf, data, len);
     Wire.beginTransmission(deviceaddress);
-    Serial.print("WRITING Addr: "); Serial.println(eeaddresspage, DEC);
+    //Serial.print("WRITING Addr: "); Serial.println(eeaddresspage, DEC);
     Wire.write((int)(eeaddresspage >> 8)); // MSB
     Wire.write((int)(eeaddresspage & 0xFF)); // LSB
     Wire.write(buf, 30);
@@ -226,17 +226,45 @@ void read_cycle_data(byte cycle_id, long* rec)
     }
 }
 
+int read_available_data(byte cycle_id, int start_page)
+{
+    if (!start_page)
+        start_page = (cycle_id % 2) + 1; // first page reserved for meta
+    for (int page=start_page; page*64<MAX_EEPROM_ADDR; page+=2) {
+        byte b = i2c_eeprom_read_byte(0x50, page*64);
+        if (b == 0xFF) return page;
+        byte buf[30];
+        int8_t buflen = 30;
+        i2c_eeprom_read_checked_page(buf, &buflen, 0x50, page*64);
+        if (buflen > 0) {
+            Serial.print(" New data at addr: ");
+            Serial.println(page*64);
+        }
+    }
+}
+
 void clear_cycle_data(byte cycle_id)
 {
     Serial.println("Clearing data for cycle ..");
-    int offset = (cycle_id % 4) < 2 ? 0 : 32;
     int start_page = (cycle_id % 2) + 1; // first page reserved for meta
-    for (int page=start_page; (page*64+offset)<=MAX_EEPROM_ADDR; page+=2) {
-        byte buf[30] = {};
-        i2c_eeprom_write_page(0x50, page*64+offset, buf, 30);
-        delay(500);
+    unsigned long start = millis();
+    for (int page=start_page; page*64<MAX_EEPROM_ADDR; page+=2) {
+        i2c_eeprom_write_byte(0x50, page*64, 0);
+        /* Wire lib can't seemed to do acknowledged polling, so hard-coding for
+           max write time */
+        delay(5);
     }
-    Serial.println(".. Cleared");
+    Serial.print(".. Cleared in: ");
+    Serial.println(millis() - start);
+    for (int page=start_page; page*64<MAX_EEPROM_ADDR; page+=2) {
+        byte b = i2c_eeprom_read_byte(0x50, page*64);
+        /* TODO: remove this sanity check */
+        if (b!=0xFF) {
+            Serial.print(b);
+            Serial.print(" Warning: bad erase at addr: ");
+            Serial.println(page*64);
+        }
+    }
 }
 
 void generate_random_writes(int cycle_id)
@@ -337,20 +365,25 @@ void setup()
 void loop()
 {
     static byte cycle_id = 0;
+    static int read_page = 0;
     if (IS_CORE) {
         cycle_id++;
         Serial.print("-------- Starting new data write cycle: ");
         Serial.println(cycle_id, DEC);
-        generate_random_writes(cycle_id);
+        clear_cycle_data(cycle_id);
         i2c_eeprom_write_byte(0x50, 0, cycle_id);
+        generate_random_writes(cycle_id);
         delay(5000);
     } else {
         static long rec[CYCLE_SIZE/sizeof(long)] = {};
         int current_cycle_id = i2c_eeprom_read_byte(0x50, 0);
-        if (!current_cycle_id) {
+        if (current_cycle_id == 0xFF) {
+            Serial.println("Waiting for data ...");
             delay(1000);
             return;
         }
+        read_page = read_available_data(cycle_id, read_page);
+        /*
         read_cycle_data(cycle_id, rec);
         if (current_cycle_id != cycle_id) {
             cycle_id = current_cycle_id;
@@ -359,6 +392,7 @@ void loop()
             Serial.print(" Reading data from cycle: ");
             Serial.println(cycle_id, DEC);
         }
+        */
         delay(1000);
     }
 }
