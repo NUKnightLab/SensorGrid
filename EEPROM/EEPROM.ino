@@ -9,7 +9,7 @@
   */
 #include <time.h>
 #include <Wire.h>
-
+#include <RTClib.h>
 
 /* http://www.mathcs.emory.edu/~cheung/Courses/255/Syllabus/1-C-intro/bit-array.html */
 #define SetBit(A,k)     ( A[(k/32)] |= (1 << (k%32)) )
@@ -17,6 +17,7 @@
 #define TestBit(A,k)    ( A[(k/32)] & (1 << (k%32)) )
 
 #define IS_CORE 1
+#define RESET_RTC 0
 
 #define MAX_EEPROM_ADDR 0x7FFF
 //#define MAX_EEPROM_ADDR 2400
@@ -24,6 +25,26 @@ const int CYCLE_SIZE = MAX_EEPROM_ADDR / (64*2)  +  1;
 bool TEST_ODD_BITS = false;
 bool TEST_EVEN_BITS = false;
 bool TEST_RANDOM_CHECKSUMS = false;
+
+RTC_PCF8523 rtc;
+
+
+void print_current_datetime()
+{
+    DateTime now = rtc.now();
+    Serial.print(now.year(), DEC);
+    Serial.print("-");
+    Serial.print(now.month(), DEC);
+    Serial.print("-");
+    Serial.print(now.day(), DEC);
+    Serial.print("T");
+    Serial.print(now.hour(), DEC);
+    Serial.print(":");
+    Serial.print(now.minute(), DEC);
+    Serial.print(":");
+    Serial.print(now.second(), DEC);
+    Serial.println();
+}
 
 void i2c_eeprom_write_byte( int deviceaddress, unsigned int eeaddress, byte data ) {
     int rdata = data;
@@ -357,6 +378,11 @@ void setup()
         i2c_eeprom_write_byte(0x50, 0, 0);
     }
     //randomSeed(100);
+    if (RESET_RTC) {
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+    }
+    print_current_datetime();
+    delay(3000);
     Serial.print("Cycle size: ");
     Serial.println(CYCLE_SIZE, DEC);
     Serial.println("Ready ...");
@@ -364,6 +390,20 @@ void setup()
 
 void loop()
 {
+    delay(1000);
+    print_current_datetime();
+    if (!IS_CORE) {
+        static int count = 0;
+        if (++count == 30) {
+            long ts = random(1523284307);
+            rtc.adjust(ts);
+            Serial.print("Time adjusted to: ");
+            print_current_datetime();
+            count = 0;
+        }     
+    }
+    return;
+    
     static byte cycle_id = 0;
     static int read_page = 0;
     if (IS_CORE) {
