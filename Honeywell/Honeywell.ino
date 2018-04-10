@@ -1,11 +1,10 @@
 #include "Honeywell.h"
 #include <SD.h>
 #include <Adafruit_SleepyDog.h>
-#include <pt.h>
 
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 RTC_PCF8523 rtc;
-static bool USE_WATCHDOG = true;
+static bool USE_WATCHDOG = false;
 
 byte enable_autosend[] = {0x68, 0x01, 0x40, 0x57};
 byte stop_autosend[] = { 0x68, 0x01, 0x20, 0x77 };
@@ -230,10 +229,11 @@ static long last_data_sample = 0;
 
 void loop()
 {
+    static int sample_period = 30; //60 * 5;
     long diff = rtc.now().secondstime() - last_data_sample;
-    if (diff < 30) {
+    if (diff < sample_period) {
         /* Sleep up to remainder of period or max watchdog sleep time */
-        sleep(30000 - diff*1000);
+        sleep( (sample_period - diff) *1000 );
         return;
     }
     last_data_sample = rtc.now().secondstime();
@@ -254,6 +254,7 @@ void loop()
         }
         Serial.println("\n---");
         send_stop_pm();
+        delay(100);
     }
 
     File dataFile = SD.open("datalog.txt", FILE_WRITE);
