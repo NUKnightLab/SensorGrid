@@ -229,7 +229,7 @@ static long last_data_sample = 0;
 
 void loop()
 {
-    static int sample_period = 30; //60 * 5;
+    static int sample_period = 60 * 5;
     long diff = rtc.now().secondstime() - last_data_sample;
     if (diff < sample_period) {
         /* Sleep up to remainder of period or max watchdog sleep time */
