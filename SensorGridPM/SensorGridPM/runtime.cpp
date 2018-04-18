@@ -1,6 +1,8 @@
 #include "config.h"
 #include "runtime.h"
 #include "HONEYWELL_HPM.h"
+#include <ArduinoJson.h>
+
 
 
 /* local utils */
@@ -33,18 +35,26 @@ void writeToSD(char* filename, char* str)
     digitalWrite(8, LOW);
 }
 
-
-static void write_data()
+static void write_data(char* buf)
 {
-    char str[200];
-    DateTime t = rtc.now();
-    float bat = batteryLevel();
-    sprintf(str, "%i-%02d-%02dT%02d:%02d:%02d,%d.%02d",
-        t.year(), t.month(), t.day(), t.hour(), t.minute(), t.second(),
-        (int)bat, (int)(bat*100)%100);
-    writeToSD("datalog.txt", str)    ;
-    return;
-
+    StaticJsonBuffer<200> jsonBuffer;
+    JsonObject& root = jsonBuffer.parseObject(buf);
+    if (!root.success()) {
+        logln(F("Could not parse data from sensor"));
+    } else {
+        char str[100];
+        uint32_t ts = root["ts"];
+        DateTime t = DateTime(ts);
+        float bat = batteryLevel();
+        int pm25 = root["data"][0];
+        int pm10 = root["data"][1];
+        sprintf(str, "%i-%02d-%02dT%02d:%02d:%02d,%d.%02d,%d,%d",
+            t.year(), t.month(), t.day(), t.hour(), t.minute(), t.second(),
+            (int)bat, (int)(bat*100)%100, pm25, pm10);
+        writeToSD("datalog.txt", str);
+    }
+}
+    /*
     File dataFile = SD.open("datalog.txt", FILE_WRITE);
     if (dataFile) {
         Serial.println("Opening dataFile...");
@@ -71,7 +81,7 @@ static void write_data()
     //dataFile.println(uartbuf[5]*256+uartbuf[6]); // PM 10
     Serial.println("Closing dataFile");
     dataFile.close();
-}
+    */
 
 static uint32_t next_period_time(int period)
 {
@@ -198,11 +208,11 @@ void record_data_samples()
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     delay(1000);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
-    write_data();
     char buf[100];
     HONEYWELL_HPM::read(buf, 100);
     Serial.println(buf);
     HONEYWELL_HPM::stop();
+    write_data(buf);
 }
 
 void flash_heartbeat()
