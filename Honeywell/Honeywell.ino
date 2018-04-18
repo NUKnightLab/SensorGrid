@@ -4,7 +4,9 @@
 
 Adafruit_FeatherOLED display = Adafruit_FeatherOLED();
 RTC_PCF8523 rtc;
-static bool USE_WATCHDOG = false;
+static bool DEEP_SLEEP = false;
+static bool USE_WATCHDOG = true;
+static float BAT_THRESH = 3.7;
 
 byte enable_autosend[] = {0x68, 0x01, 0x40, 0x57};
 byte stop_autosend[] = { 0x68, 0x01, 0x20, 0x77 };
@@ -18,6 +20,7 @@ byte uartbuf[32];
 #define DEFAULT_SD_CHIP_SELECT_PIN 10 //4 for Uno
 #define ALTERNATE_RFM95_CS 19 //10 for Uno
 #define DEFAULT_RFM95_CS 8 //not needed for Uno
+#define MAX_WATCHDOG 16000
 
 /* real time clock */
 bool setClock = false;
@@ -27,7 +30,7 @@ int nodeId = 1;
 
 void sleep(int ms)
 {
-    if (USE_WATCHDOG) {
+    if (DEEP_SLEEP) {
         Watchdog.sleep(ms);
     } else {
         delay(ms);
@@ -194,12 +197,12 @@ void setup()
     setupDisplay();
     delay(5000);
     if (Serial) {
-        USE_WATCHDOG = false;
+        DEEP_SLEEP = false;
     }
     Serial.begin(115200);
     Serial1.begin(9600);
-    if (!USE_WATCHDOG) {
-        Serial.println("Continuing without watchdog");
+    if (!DEEP_SLEEP) {
+        Serial.println("Continuing without sleep enabled");
     }
     Serial.print("Initializing SD card...");
     digitalWrite(DEFAULT_SD_CHIP_SELECT_PIN, HIGH);
@@ -223,22 +226,42 @@ void setup()
     }
     displayCurrentRTCDateTime();
     delay(3000);
+    //int countdownMS = Watchdog.enable(MAX_WATCHDOG);
+    //Serial.print("Enabled the watchdog with max countdown of ");
+    //Serial.print(countdownMS, DEC);
+    //Serial.println(" milliseconds!");
+    //Serial.println();
 }
 
-static long last_data_sample = 0;
+static long sample_period = 60 * 10;
+static long heartbeat_period = 30;
+static long last_data_sample = 0 - sample_period;
+static long last_heartbeat = 0 - heartbeat_period;
 
 void loop()
 {
-    static int sample_period = 60 * 5;
+    Watchdog.reset();
+    float bat = batteryLevel();
+    long diff_h = rtc.now().secondstime() - last_heartbeat;
+    if (diff_h > heartbeat_period) {
+        digitalWrite(LED_BUILTIN, HIGH);
+        sleep(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        if (bat <= (BAT_THRESH + 0.1)) {
+            digitalWrite(LED_BUILTIN, HIGH);
+            sleep(500);
+            digitalWrite(LED_BUILTIN, LOW);
+        }
+        last_heartbeat = rtc.now().secondstime();
+    }
     long diff = rtc.now().secondstime() - last_data_sample;
     if (diff < sample_period) {
         /* Sleep up to remainder of period or max watchdog sleep time */
-        sleep( (sample_period - diff) *1000 );
+        //sleep( (sample_period - diff) *1000 );
+        sleep(1000);
         return;
     }
     last_data_sample = rtc.now().secondstime();
-    float BAT_THRESH = 3.7;
-    float bat = batteryLevel();
     if (bat >= BAT_THRESH) {
         send_start_pm();
         delay(100);
@@ -289,8 +312,5 @@ void loop()
 
     Serial.println("Closing dataFile");
     dataFile.close();
-    digitalWrite(LED_BUILTIN, HIGH);
-    sleep(500);
-    digitalWrite(LED_BUILTIN, LOW);
 
 }
