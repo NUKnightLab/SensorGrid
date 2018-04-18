@@ -5,7 +5,6 @@
  */
 #include "config.h"
 #include "lora.h"
-#include "timer.h"
 #include "runtime.h"
 
 enum Mode mode = WAIT;
