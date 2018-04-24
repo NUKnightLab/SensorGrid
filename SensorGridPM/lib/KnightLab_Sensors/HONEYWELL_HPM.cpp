@@ -95,7 +95,7 @@ bool send_start_pm()
 }
 
 
-void send_stop_pm()
+bool send_stop_pm()
 {
     Serial.print("SENDING: STOP_PARTICLE_MEASUREMENT ..");
     Serial1.write(stop_pm, 4);
@@ -110,16 +110,17 @@ void send_stop_pm()
     if (read_message(uartbuf)) {
         if(uartbuf[0] == 0xA5 && uartbuf[1] == 0xA5) {
             Serial.println(".. SENT");
-            return;
+            return true;
         } else if (uartbuf[0] == 0x40 && uartbuf[1] == 0x05) {
             if (read_message(uartbuf) && uartbuf[0] == 0xA5 && uartbuf[1] == 0xA5) {
                 Serial.println(".. SENT");
-                return;
+                return true;
             }
         }
     }
     Serial.println("\nTrouble sending: STOP_PARTICLE_MEASUREMENT");
     Serial.println("WARNING: Sensor fan may not have stopped");
+    return false;
 }
 
 void send_stop_autosend()
@@ -172,7 +173,13 @@ namespace HONEYWELL_HPM {
 
     bool stop()
     {
-        send_stop_pm();
-        return true;
+        /* Sensor tends to miss a lot of stop commands, so we retry several
+           times until we get a stop acknowledgment */
+        for (int i=0; i<10; i++) {
+            if (send_stop_pm())
+                return true;
+            delay(100);
+        }
+        return false;
     }
 }

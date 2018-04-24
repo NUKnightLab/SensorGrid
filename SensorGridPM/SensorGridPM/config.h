@@ -7,6 +7,7 @@
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
 #include "HONEYWELL_HPM.h"
+#include "oled.h"
 
 /**
  * SensorGrid will not print to serial if USB is not attached. This can be
@@ -14,7 +15,7 @@
  * ALWAYS_LOG to true
  */
 #define ALWAYS_LOG false
-#define DO_STANDBY 0
+#define DO_STANDBY 1
 
 enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
 extern enum Mode mode;
@@ -25,6 +26,7 @@ extern void _loop();
 extern RTCZero rtcz;
 extern RTC_PCF8523 rtc;
 extern uint32_t get_time();
+//extern OLED oled;
 
 #define FAIL_CODE_GENERAL 1
 #define FAIL_CODE_BAD_CONFIG 2
@@ -52,6 +54,7 @@ extern uint32_t get_time();
 #define DEFAULT_RFM95_RST "4"
 #define DEFAULT_RFM95_INT "3"
 #define DEFAULT_API_PORT "80"
+
 
 struct Config {
     uint32_t network_id;

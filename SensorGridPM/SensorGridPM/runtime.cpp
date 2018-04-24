@@ -211,7 +211,46 @@ void record_data_samples()
     char buf[100];
     HONEYWELL_HPM::read(buf, 100);
     Serial.println(buf);
-    HONEYWELL_HPM::stop();
+    delay(2000);
+    if (HONEYWELL_HPM::stop()) {
+        Serial.println("Sensor fan stopped");
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(1000);
+        digitalWrite(LED_BUILTIN, LOW);
+    } else {
+        Serial.println("Sensor fan did not stop");
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(1000);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+        delay(500);
+        digitalWrite(LED_BUILTIN, HIGH);
+        delay(500);
+        digitalWrite(LED_BUILTIN, LOW);
+    }
     write_data(buf);
 }
 
@@ -230,6 +269,7 @@ void flash_heartbeat()
 void communicate_data()
 {
     logln(F("Communicating"));
+    /*
     int limit = random(30, 90);
     uint32_t now = rtcz.getEpoch();
     while (rtcz.getEpoch() < now + limit) {
@@ -238,4 +278,5 @@ void communicate_data()
         digitalWrite(LED_BUILTIN, LOW);
         delay(50);
     }
+    */
 }
