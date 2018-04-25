@@ -1,3 +1,6 @@
+/**
+ * Copyright 2018 Northwestern University
+ */
 #include "config.h"
 #include "runtime.h"
 #include "HONEYWELL_HPM.h"

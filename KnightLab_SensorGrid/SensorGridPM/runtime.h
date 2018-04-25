@@ -1,5 +1,8 @@
-#ifndef __SENSORGRID_RUNTIME__
-#define __SENSORGRID_RUNTIME__
+/**
+ * Copyright 2018 Northwestern University
+ */
+#ifndef KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
+#define KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
 
 #include <SdFat.h>
 static SdFat SD;
@@ -12,4 +15,4 @@ extern void set_communicate_data_timeout();
 extern void communicate_data();
 extern void flash_heartbeat();
 
-#endif
+#endif  // KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
