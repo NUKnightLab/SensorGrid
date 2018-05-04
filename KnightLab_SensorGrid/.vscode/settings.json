@@ -1,6 +1,0 @@
-{
-    "terminal.integrated.env.osx": {
-        "PATH": "/Users/scott/.platformio/penv/bin:/Users/scott/.platformio/penv:/Users/scott/.cargo/bin:/Users/scott/.platformio/penv/bin/:/Users/scott/Downloads/google-cloud-sdk/bin:/Library/Frameworks/Python.framework/Versions/3.5/bin:/opt/local/bin:/opt/local/sbin:/Library/Frameworks/Python.framework/Versions/3.4/bin:/Library/Frameworks/Python.framework/Versions/2.7/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/Library/TeX/texbin:/Applications/Postgres.app/Contents/Versions/latest/bin",
-        "PLATFORMIO_CALLER": "vscode"
-    }
-}
