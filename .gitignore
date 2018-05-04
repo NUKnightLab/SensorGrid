@@ -8,5 +8,7 @@ __pycache__
 .clang_complete
 .gcc-flags.json
 
+.vscode/*
+
 # SensorGridPM
 SensorGridPM/lib/KnightLab_SDConfig/

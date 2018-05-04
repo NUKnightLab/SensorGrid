@@ -15,8 +15,6 @@
 #define ROUTER_TIMEOUT 2000
 #define USE_MESH_ROUTER 0
 #define USE_SLOW_RELIABLE_MODE 0
-#define RFM95_INT 3
-#define RFM95_CS 8
 
 /* LoRa */
 extern RH_RF95 *radio;
@@ -39,5 +37,15 @@ extern RHRouter* router;
 #endif
 
 extern void setup_radio(uint8_t cs_pint, uint8_t int_pin, uint8_t node_id);
+enum {
+    RECV_STATUS_SUCCESS = 0,
+    RECV_STATUS_WRONG_VERSION = -1,
+    RECV_STATUS_WRONG_NETWORK = -2,
+    RECV_STATUS_NO_MESSAGE = -3
+};
+
+extern void setup_radio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id);
+extern int receive(Message *msg, uint16_t timeout);
+extern uint8_t send_message(Message *msg, uint8_t len, uint8_t to_id);
 
 #endif
