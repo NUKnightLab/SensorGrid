@@ -6,6 +6,7 @@
 #include "config.h"
 #include "lora.h"
 #include "runtime.h"
+#include "oled.h"
 
 #define SET_CLOCK false
 
@@ -120,7 +121,7 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     loadConfig();
-    setup_radio();
+    setup_radio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     //startTimer(10);
     logln(F(".. setup complete"));
     current_time();

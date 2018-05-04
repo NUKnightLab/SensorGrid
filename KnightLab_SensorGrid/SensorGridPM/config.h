@@ -10,7 +10,6 @@
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
-#include "oled.h"
 
 /**
  * SensorGrid will not print to serial if USB is not attached. This can be
@@ -18,7 +17,7 @@
  * ALWAYS_LOG to true
  */
 #define ALWAYS_LOG false
-#define DO_STANDBY 1
+#define DO_STANDBY 0
 
 enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
 extern enum Mode mode;
@@ -63,6 +62,7 @@ extern uint32_t get_time();
 struct Config {
     uint32_t network_id;
     uint32_t node_id;
+    uint8_t collector_id;
     float rf95_freq;
     uint8_t tx_power;
     uint8_t sensorgrid_version;
@@ -87,5 +87,15 @@ struct Config {
 extern void loadConfig();
 extern struct Config config;
 extern int SAMPLE_PERIOD;
+
+typedef struct Message {
+    uint8_t sensorgrid_version;
+    uint8_t network_id;
+    uint8_t from_node;
+    uint8_t message_type;
+    uint8_t len;
+    uint8_t data[100];
+};
+
 
 #endif  // KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_

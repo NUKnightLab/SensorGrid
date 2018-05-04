@@ -5,8 +5,9 @@
 #include "runtime.h"
 #include "HONEYWELL_HPM.h"
 #include <ArduinoJson.h>
+#include "lora.h"
 
-
+static char data[100] = "somedata";
 
 /* local utils */
 void _writeToSD(char* filename, char* str)
@@ -272,6 +273,30 @@ void flash_heartbeat()
 void communicate_data()
 {
     logln(F("Communicating"));
+    static Message msg = {
+        .sensorgrid_version = config.sensorgrid_version,
+        .network_id = 4,
+        .from_node = 2,
+        .message_type = 2,
+        .len = 0
+    };
+    memcpy(msg.data, data, strlen(data));
+    send_message(&msg, sizeof(msg), config.collector_id);
+    /*
+    if (RECV_STATUS_SUCCESS == receive(msg, 60000)) {
+        Serial.println("Runtime received message");
+        Serial.print("VERSION: ");
+        Serial.println(msg->sensorgrid_version, DEC);
+        Serial.print("NEWORK ID: ");
+        Serial.println(msg->network_id, DEC);
+        Serial.print("FROM NODE: ");
+        Serial.println(msg->from_node, DEC);
+        Serial.print("MESSAGE TYPE: ");
+        Serial.println(msg->message_type, DEC);
+    } else {
+        Serial.println("Runtime did not receive message.");
+    }
+    */
     /*
     int limit = random(30, 90);
     uint32_t now = rtcz.getEpoch();

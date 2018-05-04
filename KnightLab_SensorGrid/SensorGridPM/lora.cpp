@@ -7,7 +7,7 @@ RHMesh* router;
 RHRouter* router;
 #endif
 
-void setup_radio()
+void setup_radio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
 {
     logln(F("Setting up radio with RadioHead Version: %d.%d"),
         RH_VERSION_MAJOR, RH_VERSION_MINOR);
@@ -19,9 +19,9 @@ void setup_radio()
         //log(F("RadioHead %s.%s is installed"), RH_VERSION_MAJOR, RH_VERSION_MINOR);
         while(1);
     }
-    radio = new RH_RF95(RFM95_CS, RFM95_INT);
+    radio = new RH_RF95(cs_pin, int_pin);
 #if defined(USE_MESH_ROUTER)
-    router = new RHMesh(*radio, NODE_ID);
+    router = new RHMesh(*radio, node_id);
 #else
     router = new RHRouter(*radio, NODE_ID);
     /* RadioHead sometimes continues retrying transmissions even after a
@@ -39,7 +39,7 @@ void setup_radio()
 #endif
     if (USE_SLOW_RELIABLE_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
-    logln(F("Node ID: %d"), NODE_ID);
+    logln(F("Node ID: %d"), node_id);
     if (!router->init()) {
         logln(F("Router init failed"));
         while(1);
@@ -60,4 +60,64 @@ time of the acknowledgement (preamble+6 octets) plus the latency/poll time of
 the receiver. */
     router->setTimeout(ROUTER_TIMEOUT);
     delay(100);
+}
+
+
+int receive(Message *msg, uint16_t timeout)
+{
+    //static uint8_t recv_buf[RH_ROUTER_MAX_MESSAGE_LEN];
+    static uint8_t len = RH_ROUTER_MAX_MESSAGE_LEN;
+    static uint8_t from;
+    static uint8_t to;
+    static uint8_t id;
+    logln("Listening for message ...");
+    if (router->recvfromAckTimeout((uint8_t*)msg, &len, timeout, &from, &to, &id)) {
+        //Message *_msg = (Message*)recv_buf;
+        if ( msg->sensorgrid_version != config.sensorgrid_version ) {
+            logln(F("WARNING: Received message with wrong firmware version: %d\n"),
+                msg->sensorgrid_version);
+            return RECV_STATUS_WRONG_VERSION;
+        }           
+        if ( msg->network_id != config.network_id ) {
+            logln(F(
+                "WARNING: Received message from wrong network: %d (expected: %d)\n"),
+                msg->network_id, config.network_id);
+            return RECV_STATUS_WRONG_NETWORK;
+        }
+        //validate_recv_buffer(*len);
+        logln(F("Received buffered message. len: %d; type: %d"), len,
+            msg->message_type);
+            // get_message_type(_msg->message_type));
+        logln(F("; from: %d; rssi: %d\n"), from, radio->lastRssi());
+        return RECV_STATUS_SUCCESS;
+        //memcpy(msg, recv_buf, len);
+        //last_rssi[*source] = radio->lastRssi();
+        //return _msg->message_type;
+    } else {
+        return RECV_STATUS_NO_MESSAGE;
+    }
+}
+
+/* **** SEND FUNCTIONS **** */
+uint8_t send_message(Message *msg, uint8_t len, uint8_t to_id)
+{
+    uint8_t err = router->sendtoWait((uint8_t*)msg, len, to_id);
+    if (err == RH_ROUTER_ERROR_NONE) {
+        return err;
+    } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
+        logln(F("ERROR sending message to node ID: %d. INVALID LENGTH"), to_id);
+        return err;
+    } else if (err == RH_ROUTER_ERROR_NO_ROUTE) {
+        logln(F("ERROR sending message to node ID: %d. NO ROUTE"), to_id);
+        return err;
+    } else if (err == RH_ROUTER_ERROR_TIMEOUT) {
+        logln(F("ERROR sending message to node ID: %d. TIMEOUT"), to_id);
+        return err;
+    } else if (err == RH_ROUTER_ERROR_NO_REPLY) {
+        logln(F("ERROR sending message to node ID: %d. NO REPLY"), to_id);
+        return err;
+    } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
+        logln(F("ERROR sending message to node ID: %d. UNABLE TO DELIVER"), to_id);
+        return err;
+    }
 }
