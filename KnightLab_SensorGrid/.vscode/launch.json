@@ -1,3 +1,10 @@
+// AUTOMATICALLY GENERATED FILE. PLEASE DO NOT MODIFY IT MANUALLY
+
+// PIO Unified Debugger
+//
+// http://docs.platformio.org/page/plus/debugging.html
+// http://docs.platformio.org/page/section_env_debug.html#projectconf-debug-tool
+
 {
     "version": "0.2.0",
     "configurations": [
@@ -10,6 +17,23 @@
             "gdbpath": "/Users/scott/.platformio/penv/bin/piodebuggdb",
             "autorun": [ "source .pioinit" ],
             "preLaunchTask": "PlatformIO: Pre-Debug",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PlatformIO Debugger (Dev)",
+            "executable": "/Users/scott/Documents/Arduino/SensorGrid/KnightLab_SensorGrid/.pioenvs/adafruit_feather_m0/firmware.elf",
+            "toolchainBinDir": "/Users/scott/.platformio/packages/toolchain-gccarmnoneeabi/bin",
+            "preLaunchTask": "PlatformIO: Pre-Debug",
+            "internalConsoleOptions": "openOnSessionStart"
+        },
+        {
+            "type": "platformio-debug",
+            "request": "launch",
+            "name": "PlatformIO Debugger (Dev) (Quick)",
+            "executable": "/Users/scott/Documents/Arduino/SensorGrid/KnightLab_SensorGrid/.pioenvs/adafruit_feather_m0/firmware.elf",
+            "toolchainBinDir": "/Users/scott/.platformio/packages/toolchain-gccarmnoneeabi/bin",
             "internalConsoleOptions": "openOnSessionStart"
         }
     ]

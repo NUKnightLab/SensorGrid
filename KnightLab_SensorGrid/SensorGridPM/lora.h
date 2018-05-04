@@ -38,6 +38,6 @@ extern RHMesh* router;
 extern RHRouter* router;
 #endif
 
-extern void setup_radio();
+extern void setup_radio(uint8_t cs_pint, uint8_t int_pin, uint8_t node_id);
 
 #endif
