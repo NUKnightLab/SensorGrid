@@ -8,7 +8,9 @@ __pycache__
 .clang_complete
 .gcc-flags.json
 
-.vscode/*
+KnightLab_SensorGrid/.vscode/*
+KnightLab_SensorGrid/.gitignore
+KnightLab_SensorGrid/lib/KnightLab_SDConfig/*
 
 # SensorGridPM
 SensorGridPM/lib/KnightLab_SDConfig/
