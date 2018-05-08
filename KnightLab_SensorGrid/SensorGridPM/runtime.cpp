@@ -7,7 +7,8 @@
 #include <ArduinoJson.h>
 #include "lora.h"
 
-static char data[100] = "somedata";
+static uint8_t msg_buf[140] = {0};
+static Message *msg = (Message*)msg_buf;
 
 /* local utils */
 void _writeToSD(char* filename, char* str)
@@ -39,7 +40,7 @@ void writeToSD(char* filename, char* str)
     digitalWrite(8, LOW);
 }
 
-static void write_data(char* buf)
+static void write_data(const char *buf)
 {
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.parseObject(buf);
@@ -212,9 +213,11 @@ void record_data_samples()
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     delay(1000);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
-    char buf[100];
-    HONEYWELL_HPM::read(buf, 100);
-    Serial.println(buf);
+    //char buf[100];
+    //HONEYWELL_HPM::read(buf, 100);
+    msg->len = HONEYWELL_HPM::read(msg->data, 100);
+    //Serial.println(msg->data);
+    logln(msg->data);
     delay(2000);
     if (HONEYWELL_HPM::stop()) {
         Serial.println("Sensor fan stopped");
@@ -255,7 +258,10 @@ void record_data_samples()
         delay(500);
         digitalWrite(LED_BUILTIN, LOW);
     }
-    write_data(buf);
+    log_("Writing data: "); println(msg->data);
+    write_data((const char*)msg->data);
+    log_("Data is written. Current msg data: ");
+    println(msg->data);
 }
 
 void flash_heartbeat()
@@ -273,15 +279,29 @@ void flash_heartbeat()
 void communicate_data()
 {
     logln(F("Communicating"));
-    static Message msg = {
-        .sensorgrid_version = config.sensorgrid_version,
-        .network_id = 4,
-        .from_node = 2,
-        .message_type = 2,
-        .len = 0
-    };
-    memcpy(msg.data, data, strlen(data));
-    send_message(&msg, sizeof(msg), config.collector_id);
+    //static char *data = "somedata";
+    //static uint8_t buf[140] = {0};
+    //static Message *msg = (Message*)buf;
+    msg->sensorgrid_version = config.sensorgrid_version;
+    msg->network_id = 4;
+    msg->from_node = 2;
+    msg->message_type = 2;
+    //msg->len = 0;
+    //const char *data = "somedata\0";
+    Serial.println("memcopying data");
+    //memcpy(&msg->data, &data, sizeof(data));
+    //strcpy(msg->data, data);
+    //Serial.print("Copied: "); Serial.println(msg->data);
+    //Serial.print("sizeof msg: "); Serial.println(sizeof(Message), DEC);
+    //Serial.print("sizeof data: "); Serial.println(sizeof(data), DEC);
+    //Serial.print("strlen data: "); Serial.println(strlen(data), DEC);
+    for (int i=0; i<(5 + msg->len); i++) {
+        Serial.print(msg_buf[i], HEX); Serial.print(" ");
+    }
+    Serial.println("");
+    //send_message(msg_buf, 5 + strlen(msg->data) + 1, config.collector_id);
+    send_message(msg_buf, 5 + msg->len, config.collector_id);
+    log_("Sent message: "); println(msg->data);
     /*
     if (RECV_STATUS_SUCCESS == receive(msg, 60000)) {
         Serial.println("Runtime received message");

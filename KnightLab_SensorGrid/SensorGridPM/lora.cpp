@@ -99,9 +99,12 @@ int receive(Message *msg, uint16_t timeout)
 }
 
 /* **** SEND FUNCTIONS **** */
-uint8_t send_message(Message *msg, uint8_t len, uint8_t to_id)
+uint8_t send_message(uint8_t *msg, uint8_t len, uint8_t to_id)
 {
-    uint8_t err = router->sendtoWait((uint8_t*)msg, len, to_id);
+    Message *_msg = (Message*)msg;
+    Serial.print("Sending data: "); Serial.println(_msg->data);
+    Serial.print("Message length: "); Serial.println(len, DEC);
+    uint8_t err = router->sendtoWait(msg, len, to_id);
     if (err == RH_ROUTER_ERROR_NONE) {
         return err;
     } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
