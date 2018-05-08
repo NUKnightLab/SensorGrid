@@ -82,8 +82,20 @@ int receive(Message *msg, uint16_t timeout)
                 msg->network_id, config.network_id);
             return RECV_STATUS_WRONG_NETWORK;
         }
-        logln(F("Received message. len: %d; type: %d; from: %d; rssi: %d"),
-            len, msg->message_type, from, radio->lastRssi());
+        Serial.print("Received message len: ");
+        Serial.println(len, DEC);
+        uint8_t* buf = (uint8_t*)msg;
+        for (int i=0; i<len; i++) {
+            Serial.print( buf[i], HEX); Serial.print(" ");
+        }
+        Serial.println("");
+        Serial.print("version: "); Serial.println(msg->sensorgrid_version);
+        Serial.print("nework: "); Serial.println(msg->network_id);
+        Serial.print("from: "); Serial.println(msg->from_node);
+        Serial.print("type: "); Serial.println(msg->message_type);
+        Serial.print("len (0): "); Serial.println(msg->len);
+        log_("data: ");
+        println(msg->data);
         return RECV_STATUS_SUCCESS;
     } else {
         return RECV_STATUS_NO_MESSAGE;

@@ -6,6 +6,7 @@
 #include <RH_RF95.h>
 #include "config.h"
 
+
 #define NODE_ID 1
 #define REQUIRED_RH_VERSION_MAJOR 1
 #define REQUIRED_RH_VERSION_MINOR 82
