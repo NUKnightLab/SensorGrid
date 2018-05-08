@@ -46,6 +46,6 @@ enum {
 
 extern void setup_radio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id);
 extern int receive(Message *msg, uint16_t timeout);
-extern uint8_t send_message(Message *msg, uint8_t len, uint8_t to_id);
+extern uint8_t send_message(uint8_t *msg, uint8_t len, uint8_t to_id);
 
 #endif

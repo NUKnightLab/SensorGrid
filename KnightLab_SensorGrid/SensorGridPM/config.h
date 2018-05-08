@@ -94,8 +94,8 @@ typedef struct Message {
     uint8_t from_node;
     uint8_t message_type;
     uint8_t len;
-    uint8_t data[100];
-};
+    char data[100];
+} __attribute__((packed));
 
 
 #endif  // KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_

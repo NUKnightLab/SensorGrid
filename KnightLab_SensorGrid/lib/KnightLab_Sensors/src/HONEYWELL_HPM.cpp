@@ -148,7 +148,7 @@ namespace HONEYWELL_HPM {
         return true;
     }
 
-    int32_t read(char* buf, int len)
+    size_t read(char* buf, int len)
     {
         StaticJsonBuffer<200> jsonBuffer;
         JsonObject& root = jsonBuffer.createObject();
@@ -162,8 +162,7 @@ namespace HONEYWELL_HPM {
         data.add(pm10);
         root.printTo(Serial);
         Serial.println();
-        root.printTo(buf, len);
-        return 0;
+        return root.printTo(buf, len);
     }
 
     bool stop()
