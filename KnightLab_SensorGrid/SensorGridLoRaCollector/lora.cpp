@@ -66,10 +66,11 @@ the receiver. */
 
 int receive(Message *msg, uint16_t timeout)
 {
-    static uint8_t len = RH_ROUTER_MAX_MESSAGE_LEN;
-    static uint8_t from;
-    static uint8_t to;
-    static uint8_t id;
+    uint8_t len = RH_ROUTER_MAX_MESSAGE_LEN;
+    uint8_t from;
+    uint8_t to;
+    uint8_t id;
+    memset(msg->data, 0, 100);
     logln(F("Listening for message ..."));
     if (router->recvfromAckTimeout((uint8_t*)msg, &len, timeout, &from, &to, &id)) {
         if (msg->sensorgrid_version != config.sensorgrid_version) {
