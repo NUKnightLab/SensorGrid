@@ -130,11 +130,13 @@ void send_stop_autosend()
 }
 
 static TimeFunction _time_fcn;
+static uint8_t _node_id;
 
 namespace HONEYWELL_HPM {
 
-    bool setup(uint8_t data_pin, TimeFunction time_fcn)
+    bool setup(uint8_t node_id, uint8_t data_pin, TimeFunction time_fcn)
     {
+        _node_id = node_id;
         Serial1.begin(9600);
         _time_fcn = time_fcn;
         return true;
@@ -154,6 +156,7 @@ namespace HONEYWELL_HPM {
         JsonObject& root = jsonBuffer.createObject();
         int pm25;
         int pm10;
+        root["node"] = _node_id;
         root["type"] = "HPM";
         root["ts"] = _time_fcn();
         read_pm_results_data(&pm25, &pm10);

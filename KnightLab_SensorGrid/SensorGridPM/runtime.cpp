@@ -9,6 +9,7 @@
 
 static uint8_t msg_buf[140] = {0};
 static Message *msg = (Message*)msg_buf;
+static char databuf[100] = {0};
 
 /* local utils */
 void _writeToSD(char* filename, char* str)
@@ -213,11 +214,16 @@ void record_data_samples()
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     delay(1000);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+    memset(databuf, 0, 100);
+    HONEYWELL_HPM::read(databuf, 100);
+    logln(databuf);
     //char buf[100];
     //HONEYWELL_HPM::read(buf, 100);
-    msg->len = HONEYWELL_HPM::read(msg->data, 100);
+    //memset(msg->data, 0, 100);
+    //msg->data[0] = '[';
+    //msg->len = HONEYWELL_HPM::read(&msg->data[1], 99) + 1;
     //Serial.println(msg->data);
-    logln(msg->data);
+    //logln(msg->data);
     delay(2000);
     if (HONEYWELL_HPM::stop()) {
         Serial.println("Sensor fan stopped");
@@ -283,8 +289,8 @@ void communicate_data()
     //static uint8_t buf[140] = {0};
     //static Message *msg = (Message*)buf;
     msg->sensorgrid_version = config.sensorgrid_version;
-    msg->network_id = 4;
-    msg->from_node = 2;
+    msg->network_id = config.network_id;
+    msg->from_node = config.node_id;
     msg->message_type = 2;
     //msg->len = 0;
     //const char *data = "somedata\0";
@@ -295,13 +301,21 @@ void communicate_data()
     //Serial.print("sizeof msg: "); Serial.println(sizeof(Message), DEC);
     //Serial.print("sizeof data: "); Serial.println(sizeof(data), DEC);
     //Serial.print("strlen data: "); Serial.println(strlen(data), DEC);
-    for (int i=0; i<(5 + msg->len); i++) {
-        Serial.print(msg_buf[i], HEX); Serial.print(" ");
-    }
+    //for (int i=0; i<(5 + msg->len); i++) {
+    //    Serial.print(msg_buf[i], HEX); Serial.print(" ");
+    //}
     Serial.println("");
     //send_message(msg_buf, 5 + strlen(msg->data) + 1, config.collector_id);
+    memset(msg->data, 0, 100);
+    sprintf(&msg->data[0], "[");
+    sprintf(&msg->data[1], databuf);
+    sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":\"%.2f\"}", config.node_id, batteryLevel());
+    sprintf(&msg->data[strlen(msg->data)], "]");
+    //sprintf(&msg->data[msg->len], ",{\"bat\":\"%.2f\"}]", batteryLevel());
+    msg->len = strlen(msg->data);
     send_message(msg_buf, 5 + msg->len, config.collector_id);
-    log_("Sent message: "); println(msg->data);
+    log_("Sent message: "); print(msg->data);
+    print(" len: "); println("%d", msg->len);
     /*
     if (RECV_STATUS_SUCCESS == receive(msg, 60000)) {
         Serial.println("Runtime received message");

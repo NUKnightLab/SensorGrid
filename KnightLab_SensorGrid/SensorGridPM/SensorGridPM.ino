@@ -109,9 +109,7 @@ void setup()
     //oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
     oled.displayDateTime();
     //displayDateTimeOLED();
-    HONEYWELL_HPM::setup(0, &get_time);
-    delay(2000);
-    HONEYWELL_HPM::stop();
+
     unsigned long _start = millis();
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT );
     if (ALWAYS_LOG || Serial) {
@@ -123,6 +121,9 @@ void setup()
     loadConfig();
     setup_radio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     //startTimer(10);
+    HONEYWELL_HPM::setup(config.node_id, 0, &get_time);
+    delay(2000);
+    HONEYWELL_HPM::stop();
     logln(F(".. setup complete"));
     current_time();
     digitalWrite(LED_BUILTIN, HIGH);
