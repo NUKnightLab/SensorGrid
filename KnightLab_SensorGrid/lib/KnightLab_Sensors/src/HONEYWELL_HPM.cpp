@@ -157,7 +157,6 @@ namespace HONEYWELL_HPM {
         int pm25;
         int pm10;
         root["node"] = _node_id;
-        root["type"] = "HPM";
         root["ts"] = _time_fcn();
         read_pm_results_data(&pm25, &pm10);
         JsonArray& data = root.createNestedArray("hpm");
