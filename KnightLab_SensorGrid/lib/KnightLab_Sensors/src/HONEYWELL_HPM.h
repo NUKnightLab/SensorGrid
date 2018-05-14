@@ -9,7 +9,7 @@
 typedef uint32_t (*TimeFunction)();
 
 namespace HONEYWELL_HPM {
-    bool setup(uint8_t data_pin, TimeFunction time_fcn);
+    bool setup(uint8_t node_id, uint8_t data_pin, TimeFunction time_fcn);
     bool start();
     size_t read(char* buf, int len);
     bool stop();
