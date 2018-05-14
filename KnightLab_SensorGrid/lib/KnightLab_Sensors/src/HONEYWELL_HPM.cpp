@@ -154,10 +154,9 @@ namespace HONEYWELL_HPM {
         JsonObject& root = jsonBuffer.createObject();
         int pm25;
         int pm10;
-        root["type"] = "HPM";
         root["ts"] = _time_fcn();
         read_pm_results_data(&pm25, &pm10);
-        JsonArray& data = root.createNestedArray("data");
+        JsonArray& data = root.createNestedArray("hpm");
         data.add(pm25);
         data.add(pm10);
         root.printTo(Serial);

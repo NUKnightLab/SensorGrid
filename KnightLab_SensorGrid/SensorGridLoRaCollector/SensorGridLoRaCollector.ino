@@ -72,9 +72,10 @@ void reconnectClient(WiFiClient &client, char* ssid)
 void postToAPI(WiFiClient& client, Message* msg)
 {
     char str[200];
-    sprintf(str,
-        "[{\"ver\":%i,\"net\":%i,\"node\":%i,\"data\":%s}]",
-        msg->sensorgrid_version, msg->network_id, msg->from_node, msg->data);
+    //sprintf(str,
+    //    "[{\"ver\":%i,\"net\":%i,\"node\":%i,\"data\":%s}]",
+    //    msg->sensorgrid_version, msg->network_id, msg->from_node, msg->data);
+    sprintf(str, "%s", msg->data);
     Serial.println(str);
     Serial.print("posting message len: ");
     Serial.println(strlen(str), DEC);
