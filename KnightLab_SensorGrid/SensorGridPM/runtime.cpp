@@ -309,7 +309,7 @@ void communicate_data()
     memset(msg->data, 0, 100);
     sprintf(&msg->data[0], "[");
     sprintf(&msg->data[1], databuf);
-    sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":\"%.2f\"}", config.node_id, batteryLevel());
+    sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":%.2f}", config.node_id, batteryLevel());
     sprintf(&msg->data[strlen(msg->data)], "]");
     //sprintf(&msg->data[msg->len], ",{\"bat\":\"%.2f\"}]", batteryLevel());
     msg->len = strlen(msg->data);

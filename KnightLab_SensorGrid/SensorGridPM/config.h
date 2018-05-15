@@ -17,7 +17,7 @@
  * ALWAYS_LOG to true
  */
 #define ALWAYS_LOG false
-#define DO_STANDBY 0
+#define DO_STANDBY 1
 
 enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
 extern enum Mode mode;
