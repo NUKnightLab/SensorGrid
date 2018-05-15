@@ -80,7 +80,10 @@ void postToAPI(WiFiClient& client, Message* msg)
     Serial.print("posting message len: ");
     Serial.println(strlen(str), DEC);
 
-    client.println("POST /data/ HTTP/1.1");
+    //client.println("POST /data/ HTTP/1.1");
+    client.print("POST /networks/");
+    client.print(config.network_id);
+    client.println("/data/ HTTP/1.1");
     client.println("Host: sensorgridapi.knightlab.com");
     client.println("Content-Type: application/json");
     client.print("Content-Length: ");
