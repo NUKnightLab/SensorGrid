@@ -8,7 +8,7 @@
 #include "runtime.h"
 #include "oled.h"
 
-#define SET_CLOCK false
+#define SET_CLOCK true
 
 enum Mode mode = WAIT;
 
@@ -133,6 +133,9 @@ void setup()
 
 void loop()
 {
+    static uint32_t start_time = millis();
+    if (start_time && millis() - start_time > 3 * 60 * 1000)
+        oled.off();
     if (mode == WAIT) {
         set_init_timeout();
     } else if (mode == INIT) {
