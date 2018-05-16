@@ -6,6 +6,7 @@
 #include "HONEYWELL_HPM.h"
 #include <ArduinoJson.h>
 #include "lora.h"
+#include <avr/dtostrf.h>
 
 static uint8_t msg_buf[140] = {0};
 static Message *msg = (Message*)msg_buf;
@@ -52,8 +53,8 @@ static void write_data(const char *buf)
         uint32_t ts = root["ts"];
         DateTime t = DateTime(ts);
         float bat = batteryLevel();
-        int pm25 = root["data"][0];
-        int pm10 = root["data"][1];
+        int pm25 = root["hpm"][0];
+        int pm10 = root["hpm"][1];
         sprintf(str, "%i-%02d-%02dT%02d:%02d:%02d,%d.%02d,%d,%d",
             t.year(), t.month(), t.day(), t.hour(), t.minute(), t.second(),
             (int)bat, (int)(bat*100)%100, pm25, pm10);
@@ -264,8 +265,10 @@ void record_data_samples()
         delay(500);
         digitalWrite(LED_BUILTIN, LOW);
     }
-    log_("Writing data: "); println(msg->data);
-    write_data((const char*)msg->data);
+    //log_("Writing data: "); println(msg->data);
+    //write_data((const char*)msg->data);
+    log_("Writing data: "); println(databuf);
+    write_data(databuf);
     log_("Data is written. Current msg data: ");
     println(msg->data);
 }
@@ -309,7 +312,11 @@ void communicate_data()
     memset(msg->data, 0, 100);
     sprintf(&msg->data[0], "[");
     sprintf(&msg->data[1], databuf);
-    sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":%.2f}", config.node_id, batteryLevel());
+    //float bat = batteryLevel();
+    char bat[4];
+    dtostrf(batteryLevel(),3, 2, bat);
+    Serial.print("bat: "); Serial.println(bat);
+    sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":%s}", config.node_id, bat);
     sprintf(&msg->data[strlen(msg->data)], "]");
     //sprintf(&msg->data[msg->len], ",{\"bat\":\"%.2f\"}]", batteryLevel());
     msg->len = strlen(msg->data);
