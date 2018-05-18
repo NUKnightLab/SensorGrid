@@ -22,7 +22,7 @@ int MAX_TIMEOUT = 10;
 unsigned long sample_period = 60 * 10;
 unsigned long heartbeat_period = 30;
 unsigned long next_sample;
-int sensor_init_time = 10;
+int sensor_init_time = 7;
 
 /* local utilities */
 
@@ -121,6 +121,7 @@ void setup()
     loadConfig();
     setup_radio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     //startTimer(10);
+    pinMode(12, OUTPUT); // enable pin to HPM boost
     HONEYWELL_HPM::setup(config.node_id, 0, &get_time);
     delay(2000);
     HONEYWELL_HPM::stop();

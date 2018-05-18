@@ -202,7 +202,22 @@ void init_sensors()
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     delay(1000);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+    digitalWrite(12, HIGH);
     HONEYWELL_HPM::start();
+}
+
+void throwawayHPMData()
+{
+    memset(databuf, 0, 100);
+    Serial.println("Reading throwaway HPM data");
+    digitalWrite(12, HIGH);
+    HONEYWELL_HPM::read(databuf, 100);
+    if (HONEYWELL_HPM::stop()) {
+        digitalWrite(12, LOW);
+        Serial.println("Sensor fan stopped");
+    } else {
+        Serial.println("Sensor fan did not stop");
+    }
 }
 
 void record_data_samples()
@@ -216,6 +231,7 @@ void record_data_samples()
     delay(1000);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
     memset(databuf, 0, 100);
+    digitalWrite(12, HIGH);
     HONEYWELL_HPM::read(databuf, 100);
     logln(databuf);
     //char buf[100];
@@ -227,7 +243,9 @@ void record_data_samples()
     //logln(msg->data);
     delay(2000);
     if (HONEYWELL_HPM::stop()) {
+        digitalWrite(12, LOW);
         Serial.println("Sensor fan stopped");
+        /*
         digitalWrite(LED_BUILTIN, HIGH);
         delay(500);
         digitalWrite(LED_BUILTIN, LOW);
@@ -239,8 +257,10 @@ void record_data_samples()
         digitalWrite(LED_BUILTIN, HIGH);
         delay(1000);
         digitalWrite(LED_BUILTIN, LOW);
+        */
     } else {
         Serial.println("Sensor fan did not stop");
+        /*
         digitalWrite(LED_BUILTIN, HIGH);
         delay(500);
         digitalWrite(LED_BUILTIN, LOW);
@@ -264,6 +284,7 @@ void record_data_samples()
         digitalWrite(LED_BUILTIN, HIGH);
         delay(500);
         digitalWrite(LED_BUILTIN, LOW);
+        */
     }
     //log_("Writing data: "); println(msg->data);
     //write_data((const char*)msg->data);
@@ -288,6 +309,13 @@ void flash_heartbeat()
 void communicate_data()
 {
     logln(F("Communicating"));
+    float battery = batteryLevel();
+    if (battery <= 3.6) {
+        Serial.println("Critical Battery Level. Not communicating data.");
+        return;
+    }
+    char bat[4];
+    dtostrf(battery, 3, 2, bat);
     //static char *data = "somedata";
     //static uint8_t buf[140] = {0};
     //static Message *msg = (Message*)buf;
@@ -313,14 +341,14 @@ void communicate_data()
     sprintf(&msg->data[0], "[");
     sprintf(&msg->data[1], databuf);
     //float bat = batteryLevel();
-    char bat[4];
-    dtostrf(batteryLevel(),3, 2, bat);
+ 
     Serial.print("bat: "); Serial.println(bat);
     sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":%s}", config.node_id, bat);
     sprintf(&msg->data[strlen(msg->data)], "]");
     //sprintf(&msg->data[msg->len], ",{\"bat\":\"%.2f\"}]", batteryLevel());
     msg->len = strlen(msg->data);
     send_message(msg_buf, 5 + msg->len, config.collector_id);
+    radio->sleep();
     log_("Sent message: "); print(msg->data);
     print(" len: "); println("%d", msg->len);
     /*
