@@ -17,6 +17,7 @@ RTC_PCF8523 rtc;
 OLED oled = OLED(rtc);
 
 
+
 uint32_t sampleRate = 10; //sample rate of the sine wave in Hertz, how many times per second the TC5_Handler() function gets called per second basically
 int MAX_TIMEOUT = 10;
 unsigned long sample_period = 60 * 10;
@@ -144,7 +145,11 @@ void loop()
         set_sample_timeout();
     } else if (mode == SAMPLE) {
         record_data_samples();
-        set_communicate_data_timeout();
+        if (DO_TRANSMIT_DATA) {
+            set_communicate_data_timeout();
+        } else {
+            mode = WAIT;
+        }
     } else if (mode == COMMUNICATE) {
         communicate_data();
         mode = WAIT;
