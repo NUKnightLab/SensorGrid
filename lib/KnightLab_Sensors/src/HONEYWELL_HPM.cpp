@@ -167,6 +167,44 @@ namespace HONEYWELL_HPM {
         return root.printTo(buf, len);
     }
 
+    void readData(JsonArray &data_array)
+    {
+        StaticJsonBuffer<200> jsonBuffer;
+        //JsonObject& root = jsonBuffer.createObject();
+        JsonObject& root = data_array.createNestedObject();
+        int pm25;
+        int pm10;
+        root["node"] = _node_id;
+        root["ts"] = _time_fcn();
+        read_pm_results_data(&pm25, &pm10);
+        JsonArray& data = root.createNestedArray("hpm");
+        data.add(pm25);
+        data.add(pm10);
+        root.printTo(Serial);
+        Serial.println();
+        //return root.printTo(buf, len);
+        //data_array.add(root);
+    }
+
+    size_t readDataSample(char* buf, int len)
+    {
+        StaticJsonBuffer<200> jsonBuffer;
+        JsonObject& root = jsonBuffer.createObject();
+        //JsonObject& root = data_array.createNestedObject();
+        int pm25;
+        int pm10;
+        root["node"] = _node_id;
+        root["ts"] = _time_fcn();
+        read_pm_results_data(&pm25, &pm10);
+        JsonArray& data = root.createNestedArray("hpm");
+        data.add(pm25);
+        data.add(pm10);
+        root.printTo(Serial);
+        Serial.println();
+        return root.printTo(buf, len);
+        //data_array.add(root);
+    }
+
     bool stop()
     {
         /* Sensor tends to miss a lot of stop commands, so we retry several

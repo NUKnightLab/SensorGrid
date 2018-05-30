@@ -11,6 +11,58 @@
 static uint8_t msg_buf[140] = {0};
 static Message *msg = (Message*)msg_buf;
 static char databuf[100] = {0};
+StaticJsonBuffer<200> json_buffer;
+JsonArray& data_array = json_buffer.createArray();
+
+/* data history */
+typedef struct DataSample {
+    char data[100];
+    struct DataSample *next;
+};
+
+
+DataSample *head = NULL;
+DataSample *tail = NULL;
+
+/*
+DataSample* createSample(DataSample* next)
+{
+    DataSample* new_sample = (DataSample*)malloc(sizeof(DataSample));
+    if (new_sample == NULL) {
+        logln("Error creating a new node.\n");
+        while(1);
+    }
+    new_node->next = next;
+    return new_sample;
+}
+
+DataSample *prepend(DataSample *head)
+{
+    DataSample *new_sample = createSample(head);
+    head = new_sample;
+    return head;
+}
+*/
+
+DataSample *appendData()
+{
+    DataSample *new_sample = (DataSample*)malloc(sizeof(DataSample));
+    if (new_sample == NULL) {
+        logln("Error creating new sample");
+        while(1);
+    }
+    if (head == NULL) {
+        head = new_sample;
+    }
+    if (tail != NULL) {
+        tail->next = new_sample;
+    }
+    tail = new_sample;
+    tail->next = NULL;
+    return tail;
+}
+
+/* -- end data history */
 
 /* local utils */
 void _writeToSD(char* filename, char* str)
@@ -97,6 +149,14 @@ static uint32_t next_period_time(int period)
     return (t + period - d);
 }
 
+uint32_t getNextCollectionTime()
+{
+    int period = 60 * 60;
+    uint32_t t = rtcz.getEpoch();
+    int d = t % period;
+    return (t + period - d);
+}
+
 static void standby()
 {
     mode = STANDBY;
@@ -140,7 +200,7 @@ void set_communicate_data_timeout()
 {
     logln(F("set_communicate_data_timeout"));
     uint32_t prev_sample = next_period_time(SAMPLE_PERIOD*60) - SAMPLE_PERIOD*60;
-    uint32_t com = prev_sample + 30;
+    uint32_t com = prev_sample + 10;
     DateTime dt = DateTime(com);
     rtcz.setAlarmSeconds(dt.second());
     rtcz.setAlarmMinutes(dt.minute());
@@ -152,7 +212,7 @@ void set_communicate_data_timeout()
 void set_init_timeout() {
     log_(F("Check set_init_timeout: "));
     uint32_t sample = next_period_time(SAMPLE_PERIOD*60);
-    uint32_t init = sample - 10;
+    uint32_t init = sample - 7;
     uint32_t heartbeat = next_period_time(30);
     logln(F("Next init time is %d"), init);
     logln(F("Next heartbeat time is %d"), heartbeat);
@@ -220,20 +280,59 @@ void throwawayHPMData()
     }
 }
 
+void logData(bool clear)
+{
+    Serial.println("LOGGING DATA: ------");
+    DataSample *cursor = head;
+    static SdFat sd;
+    Serial.print(F("Init SD card .."));
+    if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
+          Serial.println(F(" .. SD card init failed!"));
+          return;
+    }
+    if (false) {  // true to check available SD filespace
+        Serial.print(F("SD free: "));
+        uint32_t volFree = sd.vol()->freeClusterCount();
+        float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
+        Serial.println(fs);
+    }
+    File file;
+    Serial.print(F("Writing log lines to "));
+    Serial.println("datalog.txt");
+    file = sd.open("datalog.txt", O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
+    while (cursor != NULL) {
+        Serial.println(cursor->data);
+        file.println(cursor->data);
+        if (clear) {
+            DataSample *_cursor = cursor;
+            cursor = cursor->next;
+            head = cursor;
+            free(_cursor);
+        } else {
+            cursor = cursor->next;
+        }
+    }
+    char str[20];
+    float bat = batteryLevel();
+    sprintf(str, "{\"bat\":%d.%02d}", (int)bat, (int)(bat*100)%100);
+    file.println(str);
+    Serial.println("-------");
+    file.close();
+    Serial.println(F("File closed"));
+}
+
 void record_data_samples()
 {
     logln(F("Taking data sample"));
-    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
-    delay(1000);
-    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
-    delay(1000);
-    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
-    delay(1000);
-    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
     memset(databuf, 0, 100);
     digitalWrite(12, HIGH);
     HONEYWELL_HPM::read(databuf, 100);
-    logln(databuf);
+    Serial.println("Before readData:");
+    //data_array.printTo(Serial);
+    //logln(databuf);
+    DataSample *sample = appendData();
+    //HONEYWELL_HPM::readData(data_array);
+    HONEYWELL_HPM::readDataSample(sample->data, 100);
     //char buf[100];
     //HONEYWELL_HPM::read(buf, 100);
     //memset(msg->data, 0, 100);
@@ -245,53 +344,15 @@ void record_data_samples()
     if (HONEYWELL_HPM::stop()) {
         digitalWrite(12, LOW);
         Serial.println("Sensor fan stopped");
-        /*
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(500);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(500);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(1000);
-        digitalWrite(LED_BUILTIN, LOW);
-        */
     } else {
         Serial.println("Sensor fan did not stop");
-        /*
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(500);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(500);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(1000);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(500);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(500);
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(500);
-        digitalWrite(LED_BUILTIN, LOW);
-        */
     }
     //log_("Writing data: "); println(msg->data);
     //write_data((const char*)msg->data);
-    log_("Writing data: "); println(databuf);
-    write_data(databuf);
-    log_("Data is written. Current msg data: ");
-    println(msg->data);
+    //log_("Writing data: "); println(databuf);
+    //write_data(databuf);
+    //log_("Data is written. Current msg data: ");
+    //println(msg->data);
 }
 
 void flash_heartbeat()

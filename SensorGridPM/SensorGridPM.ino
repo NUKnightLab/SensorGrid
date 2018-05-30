@@ -136,6 +136,7 @@ void setup()
 void loop()
 {
     static uint32_t start_time = get_time();
+    static uint32_t next_collection_time = getNextCollectionTime();
     if (start_time && get_time() - start_time > 3 * 60)
         oled.off();
     if (mode == WAIT) {
@@ -145,13 +146,19 @@ void loop()
         set_sample_timeout();
     } else if (mode == SAMPLE) {
         record_data_samples();
-        if (DO_TRANSMIT_DATA) {
+        if (get_time() > next_collection_time) {
             set_communicate_data_timeout();
         } else {
             mode = WAIT;
         }
     } else if (mode == COMMUNICATE) {
-        communicate_data();
+        if (DO_LOG_DATA) {
+            logData(!DO_TRANSMIT_DATA);
+        }
+        if (DO_TRANSMIT_DATA) {
+            communicate_data();
+        }
+        next_collection_time = getNextCollectionTime();
         mode = WAIT;
     } else if (mode == HEARTBEAT) {
         flash_heartbeat();
