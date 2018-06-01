@@ -5,7 +5,9 @@
 
 struct Config config;
 
-int SAMPLE_PERIOD = 5;  // minutes
+//int HEARTBEAT_PERIOD = 60; // seconds
+//int SAMPLE_PERIOD = 10;  // minutes
+//int COLLECTION_PERIOD = 6 * 60;  // minutes
 
 /**
  * We pull both pins 8 and 19 HIGH during SD card read. The default configuration
@@ -34,6 +36,10 @@ void loadConfig() {
         config.display_timeout = (uint32_t)(atoi(
             getConfig("DISPLAY_TIMEOUT", DEFAULT_DISPLAY_TIMEOUT)));
         config.node_type = (uint8_t)(atoi(getConfig("NODE_TYPE")));
+        config.heartbeat_period = (uint32_t)(atoi(
+            getConfig("HEARTBEAT_PERIOD", DEFAULT_HEARTBEAT_PERIOD)));
+        config.sample_period = (uint32_t)(atoi(
+            getConfig("SAMPLE_PERIOD", DEFAULT_SAMPLE_PERIOD)));
         config.collection_period = (uint32_t)(atoi(
             getConfig("COLLECTION_PERIOD", DEFAULT_COLLECTION_PERIOD)));
 

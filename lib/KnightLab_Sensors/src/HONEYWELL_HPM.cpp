@@ -71,14 +71,20 @@ bool read_message(byte* buf)
 
 void read_pm_results_data(int* pm25, int* pm10)
 {
-    Serial.print("SENDING: READ_PARTICLE_MEASURING_RESULTS ..");
-    Serial1.write(read_pm_results, 4);
-    read_message(uartbuf);
-    Serial.println("");
-    *pm25 = uartbuf[3]*256 + uartbuf[4]; // PM 2.5
-    *pm10 = uartbuf[5]*256+uartbuf[6]; // PM 10
-    Serial.print("PM 2.5: "); Serial.println(*pm25);
-    Serial.print("PM 10: "); Serial.println(*pm10);
+    for (int i=0; i<10; i++) {    
+        Serial.print("Reading HPM data, attempt #");
+        Serial.println(i+1, DEC);
+        Serial.println("SENDING: READ_PARTICLE_MEASURING_RESULTS ..");
+        Serial1.write(read_pm_results, 4);
+        read_message(uartbuf);
+        Serial.println("");
+        *pm25 = uartbuf[3]*256 + uartbuf[4]; // PM 2.5
+        *pm10 = uartbuf[5]*256+uartbuf[6]; // PM 10
+        Serial.print("PM 2.5: "); Serial.println(*pm25);
+        Serial.print("PM 10: "); Serial.println(*pm10);
+        if (*pm25 != 7168) break;
+        delay(1000);
+    }
 }
 
 bool send_start_pm()
@@ -191,11 +197,23 @@ namespace HONEYWELL_HPM {
         StaticJsonBuffer<200> jsonBuffer;
         JsonObject& root = jsonBuffer.createObject();
         //JsonObject& root = data_array.createNestedObject();
-        int pm25;
-        int pm10;
         root["node"] = _node_id;
         root["ts"] = _time_fcn();
-        read_pm_results_data(&pm25, &pm10);
+        int pm25;
+        int pm10;
+        int count = 0;
+        int pm25total = 0;
+        int pm10total = 0;
+        for (int i=0; i<3; i++) {
+            read_pm_results_data(&pm25, &pm10);
+            if (pm25 != 7168) {
+                pm25total += pm25;
+                pm10total += pm10;
+                count++;
+            }
+        }
+        pm25 = pm25total / count;
+        pm10 = pm10total / count;
         JsonArray& data = root.createNestedArray("hpm");
         data.add(pm25);
         data.add(pm10);

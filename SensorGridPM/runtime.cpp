@@ -151,7 +151,7 @@ static uint32_t next_period_time(int period)
 
 uint32_t getNextCollectionTime()
 {
-    int period = 60 * 60;
+    int period = config.collection_period;
     uint32_t t = rtcz.getEpoch();
     int d = t % period;
     return (t + period - d);
@@ -199,8 +199,12 @@ void communicate_data_INT()
 void set_communicate_data_timeout()
 {
     logln(F("set_communicate_data_timeout"));
-    uint32_t prev_sample = next_period_time(SAMPLE_PERIOD*60) - SAMPLE_PERIOD*60;
-    uint32_t com = prev_sample + 10;
+    uint32_t prev_sample = next_period_time(config.sample_period) - config.sample_period;
+    /* TODO: we end up in a bad state if com time is not far enough out for data
+       sampling to complete. This is theoretically possible with the current HPM
+       collection scheme. How to handle this while still having predictable collection
+       times? */
+    uint32_t com = prev_sample + 30;
     DateTime dt = DateTime(com);
     rtcz.setAlarmSeconds(dt.second());
     rtcz.setAlarmMinutes(dt.minute());
@@ -211,9 +215,9 @@ void set_communicate_data_timeout()
 
 void set_init_timeout() {
     log_(F("Check set_init_timeout: "));
-    uint32_t sample = next_period_time(SAMPLE_PERIOD*60);
-    uint32_t init = sample - 7;
-    uint32_t heartbeat = next_period_time(30);
+    uint32_t sample = next_period_time(config.sample_period);
+    uint32_t init = sample - INIT_LEAD_TIME;
+    uint32_t heartbeat = next_period_time(config.heartbeat_period);
     logln(F("Next init time is %d"), init);
     logln(F("Next heartbeat time is %d"), heartbeat);
     if (heartbeat < init - 2) {
@@ -236,8 +240,8 @@ void set_init_timeout() {
 void set_sample_timeout()
 {
     logln(F("set_sample_timeout"));
-    uint32_t sample = next_period_time(SAMPLE_PERIOD*60);
-    uint32_t heartbeat = next_period_time(30);
+    uint32_t sample = next_period_time(config.sample_period);
+    uint32_t heartbeat = next_period_time(config.heartbeat_period);
     if (heartbeat < sample - 2) {
         rtcz.setAlarmSeconds(DateTime(heartbeat).second());
         rtcz.enableAlarm(rtcz.MATCH_SS);
@@ -314,7 +318,8 @@ void logData(bool clear)
     }
     char str[20];
     float bat = batteryLevel();
-    sprintf(str, "{\"bat\":%d.%02d}", (int)bat, (int)(bat*100)%100);
+    sprintf(str, "{\"bat\":%d.%02d,\"ts\":%d}", (int)bat, (int)(bat*100)%100,
+        rtcz.getEpoch());
     file.println(str);
     Serial.println("-------");
     file.close();
@@ -326,7 +331,7 @@ void record_data_samples()
     logln(F("Taking data sample"));
     memset(databuf, 0, 100);
     digitalWrite(12, HIGH);
-    HONEYWELL_HPM::read(databuf, 100);
+    //HONEYWELL_HPM::read(databuf, 100);
     Serial.println("Before readData:");
     //data_array.printTo(Serial);
     //logln(databuf);

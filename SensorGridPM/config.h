@@ -17,9 +17,10 @@
  * ALWAYS_LOG to true
  */
 #define ALWAYS_LOG false
-#define DO_STANDBY true
+#define DO_STANDBY false
 #define DO_TRANSMIT_DATA false
 #define DO_LOG_DATA true
+#define INIT_LEAD_TIME 10
 
 enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
 extern enum Mode mode;
@@ -52,7 +53,9 @@ extern uint32_t get_time();
 #define DEFAULT_SENSORGRID_VERSION "1"
 #define DEFAULT_DISPLAY_TIMEOUT "60"
 #define DEFAULT_LOG_FILE "sensorgrid.log"
-#define DEFAULT_COLLECTION_PERIOD "60"  // defaults to 60 sec
+#define DEFAULT_HEARTBEAT_PERIOD "30"  // defaults to 30 seconds
+#define DEFAULT_SAMPLE_PERIOD "600"  // defaults to 10 minutes
+#define DEFAULT_COLLECTION_PERIOD "3600"  // defaults to 60 minutes
 #define DEFAULT_SD_CHIP_SELECT_PIN "10"
 #define DEFAULT_RFM95_CS "8"
 #define ALTERNATE_RFM95_CS "19"
@@ -73,7 +76,9 @@ struct Config {
     uint32_t display_timeout;
     uint8_t node_type;
     int node_ids[255];
-    uint32_t collection_period;  // in seconds
+    uint32_t heartbeat_period;  // in seconds
+    uint32_t sample_period;  // in minutes
+    uint32_t collection_period;  // in minutes
     uint32_t SD_CHIP_SELECT_PIN;
     uint32_t RFM95_CS;
     uint32_t RFM95_RST;
@@ -88,7 +93,9 @@ struct Config {
 
 extern void loadConfig();
 extern struct Config config;
-extern int SAMPLE_PERIOD;
+//extern int SAMPLE_PERIOD;
+//extern int HEARTBEAT_PERIOD;
+//extern int COLLECTION_PERIOD;
 
 typedef struct Message {
     uint8_t sensorgrid_version;

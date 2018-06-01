@@ -7,6 +7,7 @@
 #include <SdFat.h>
 static SdFat SD;
 
+
 extern void set_init_timeout();
 extern void init_sensors();
 extern void set_sample_timeout();
