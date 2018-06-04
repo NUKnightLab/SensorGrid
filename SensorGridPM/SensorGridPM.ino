@@ -196,7 +196,7 @@ void loop()
     if (mode == WAIT) {
         setInitTimeout();
     } else if (mode == INIT) {
-        init_sensors();
+        initSensors();
         setSampleTimeout();
     } else if (mode == SAMPLE) {
         record_data_samples();

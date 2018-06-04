@@ -214,7 +214,7 @@ void setSampleTimeout()
 
 /* runtime mode handlers */
 
-void init_sensors()
+void initSensors()
 {
     logln(F("Init sensor for data sampling"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
