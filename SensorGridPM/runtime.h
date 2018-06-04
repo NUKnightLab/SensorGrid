@@ -11,7 +11,7 @@ static SdFat SD;
 extern void setInitTimeout();
 extern void initSensors();
 extern void setSampleTimeout();
-extern void record_data_samples();
+extern void recordDataSamples();
 extern void setCommunicateDataTimeout();
 extern void communicate_data();
 extern void flash_heartbeat();

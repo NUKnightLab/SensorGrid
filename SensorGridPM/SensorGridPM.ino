@@ -199,7 +199,7 @@ void loop()
         initSensors();
         setSampleTimeout();
     } else if (mode == SAMPLE) {
-        record_data_samples();
+        recordDataSamples();
         if (get_time() > next_collection_time) {
             setCommunicateDataTimeout();
         } else {

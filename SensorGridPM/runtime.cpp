@@ -280,7 +280,7 @@ void logData(bool clear)
     Serial.println(F("File closed"));
 }
 
-void record_data_samples()
+void recordDataSamples()
 {
     logln(F("Taking data sample"));
     memset(databuf, 0, 100);
