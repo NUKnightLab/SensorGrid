@@ -191,9 +191,9 @@ void setInitTimeout() {
     standby();
 }
 
-void set_sample_timeout()
+void setSampleTimeout()
 {
-    logln(F("set_sample_timeout"));
+    logln(F("setSampleTimeout"));
     uint32_t sample = getNextPeriodTime(config.sample_period);
     uint32_t heartbeat = getNextPeriodTime(config.heartbeat_period);
     if (heartbeat < sample - 2) {

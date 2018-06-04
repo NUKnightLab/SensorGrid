@@ -197,7 +197,7 @@ void loop()
         setInitTimeout();
     } else if (mode == INIT) {
         init_sensors();
-        set_sample_timeout();
+        setSampleTimeout();
     } else if (mode == SAMPLE) {
         record_data_samples();
         if (get_time() > next_collection_time) {
