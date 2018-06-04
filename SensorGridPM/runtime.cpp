@@ -314,7 +314,7 @@ void recordDataSamples()
     //println(msg->data);
 }
 
-void flash_heartbeat()
+void flashHeartbeat()
 {
     logln(F("Heartbeat"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on

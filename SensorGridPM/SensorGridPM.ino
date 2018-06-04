@@ -215,7 +215,7 @@ void loop()
         next_collection_time = getNextCollectionTime();
         mode = WAIT;
     } else if (mode == HEARTBEAT) {
-        flash_heartbeat();
+        flashHeartbeat();
         mode = WAIT;
     }
     oled.displayDateTime();

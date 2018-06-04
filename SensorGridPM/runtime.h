@@ -14,7 +14,7 @@ extern void setSampleTimeout();
 extern void recordDataSamples();
 extern void setCommunicateDataTimeout();
 extern void communicate_data();
-extern void flash_heartbeat();
+extern void flashHeartbeat();
 extern void logData(bool clear);
 extern uint32_t getNextCollectionTime();
 
