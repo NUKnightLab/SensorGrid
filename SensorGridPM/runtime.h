@@ -8,7 +8,7 @@
 static SdFat SD;
 
 
-extern void set_init_timeout();
+extern void setInitTimeout();
 extern void init_sensors();
 extern void set_sample_timeout();
 extern void record_data_samples();

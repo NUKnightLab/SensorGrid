@@ -167,8 +167,8 @@ void setCommunicateDataTimeout()
     standby();
 }
 
-void set_init_timeout() {
-    log_(F("Check set_init_timeout: "));
+void setInitTimeout() {
+    log_(F("Check setInitTimeout: "));
     uint32_t sample = getNextPeriodTime(config.sample_period);
     uint32_t init = sample - INIT_LEAD_TIME;
     uint32_t heartbeat = getNextPeriodTime(config.heartbeat_period);

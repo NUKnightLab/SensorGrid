@@ -194,7 +194,7 @@ void loop()
     if (start_time && get_time() - start_time > 3 * 60)
         oled.off();
     if (mode == WAIT) {
-        set_init_timeout();
+        setInitTimeout();
     } else if (mode == INIT) {
         init_sensors();
         set_sample_timeout();
