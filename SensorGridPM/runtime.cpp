@@ -113,36 +113,8 @@ static void write_data(const char *buf)
         writeToSD("datalog.txt", str);
     }
 }
-    /*
-    File dataFile = SD.open("datalog.txt", FILE_WRITE);
-    if (dataFile) {
-        Serial.println("Opening dataFile...");
-    } else {
-        Serial.println("error opening datalog.txt");
-    }
-    DateTime now = rtc.now();
-    dataFile.print(now.year());
-    dataFile.print("-");
-    dataFile.print(now.month());
-    dataFile.print("-");
-    dataFile.print(now.day());
-    dataFile.print("T");
-    dataFile.print(now.hour());
-    dataFile.print(":");
-    dataFile.print(now.minute());
-    dataFile.print(":");
-    dataFile.print(now.second());
-    dataFile.print(",");
-    dataFile.print(batteryLevel());
-    //dataFile.print(",");
-    //dataFile.print(uartbuf[3]*256 + uartbuf[4]); // PM 2.5
-    //dataFile.print(",");
-    //dataFile.println(uartbuf[5]*256+uartbuf[6]); // PM 10
-    Serial.println("Closing dataFile");
-    dataFile.close();
-    */
 
-static uint32_t next_period_time(int period)
+static uint32_t getNextPeriodTime(int period)
 {
     uint32_t t = rtcz.getEpoch();
     int d = t % period;
@@ -199,7 +171,7 @@ void communicate_data_INT()
 void set_communicate_data_timeout()
 {
     logln(F("set_communicate_data_timeout"));
-    uint32_t prev_sample = next_period_time(config.sample_period) - config.sample_period;
+    uint32_t prev_sample = getNextPeriodTime(config.sample_period) - config.sample_period;
     /* TODO: we end up in a bad state if com time is not far enough out for data
        sampling to complete. This is theoretically possible with the current HPM
        collection scheme. How to handle this while still having predictable collection
@@ -215,9 +187,9 @@ void set_communicate_data_timeout()
 
 void set_init_timeout() {
     log_(F("Check set_init_timeout: "));
-    uint32_t sample = next_period_time(config.sample_period);
+    uint32_t sample = getNextPeriodTime(config.sample_period);
     uint32_t init = sample - INIT_LEAD_TIME;
-    uint32_t heartbeat = next_period_time(config.heartbeat_period);
+    uint32_t heartbeat = getNextPeriodTime(config.heartbeat_period);
     logln(F("Next init time is %d"), init);
     logln(F("Next heartbeat time is %d"), heartbeat);
     if (heartbeat < init - 2) {
@@ -240,8 +212,8 @@ void set_init_timeout() {
 void set_sample_timeout()
 {
     logln(F("set_sample_timeout"));
-    uint32_t sample = next_period_time(config.sample_period);
-    uint32_t heartbeat = next_period_time(config.heartbeat_period);
+    uint32_t sample = getNextPeriodTime(config.sample_period);
+    uint32_t heartbeat = getNextPeriodTime(config.heartbeat_period);
     if (heartbeat < sample - 2) {
         rtcz.setAlarmSeconds(DateTime(heartbeat).second());
         rtcz.enableAlarm(rtcz.MATCH_SS);
