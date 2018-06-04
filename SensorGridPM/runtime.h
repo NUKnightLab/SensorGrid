@@ -13,7 +13,7 @@ extern void initSensors();
 extern void setSampleTimeout();
 extern void recordDataSamples();
 extern void setCommunicateDataTimeout();
-extern void communicate_data();
+extern void communicateData();
 extern void flashHeartbeat();
 extern void logData(bool clear);
 extern uint32_t getNextCollectionTime();

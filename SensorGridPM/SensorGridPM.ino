@@ -210,7 +210,7 @@ void loop()
             logData(!DO_TRANSMIT_DATA);
         }
         if (DO_TRANSMIT_DATA) {
-            communicate_data();
+            communicateData();
         }
         next_collection_time = getNextCollectionTime();
         mode = WAIT;

@@ -326,7 +326,7 @@ void flashHeartbeat()
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
 }
 
-void communicate_data()
+void communicateData()
 {
     logln(F("Communicating"));
     float battery = batteryLevel();
