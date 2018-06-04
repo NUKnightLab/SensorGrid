@@ -24,26 +24,6 @@ typedef struct DataSample {
 DataSample *head = NULL;
 DataSample *tail = NULL;
 
-/*
-DataSample* createSample(DataSample* next)
-{
-    DataSample* new_sample = (DataSample*)malloc(sizeof(DataSample));
-    if (new_sample == NULL) {
-        logln("Error creating a new node.\n");
-        while(1);
-    }
-    new_node->next = next;
-    return new_sample;
-}
-
-DataSample *prepend(DataSample *head)
-{
-    DataSample *new_sample = createSample(head);
-    head = new_sample;
-    return head;
-}
-*/
-
 DataSample *appendData()
 {
     DataSample *new_sample = (DataSample*)malloc(sizeof(DataSample));
@@ -94,6 +74,7 @@ void writeToSD(char* filename, char* str)
     digitalWrite(8, LOW);
 }
 
+/*
 static void write_data(const char *buf)
 {
     StaticJsonBuffer<200> jsonBuffer;
@@ -113,6 +94,7 @@ static void write_data(const char *buf)
         writeToSD("datalog.txt", str);
     }
 }
+*/
 
 static uint32_t getNextPeriodTime(int period)
 {
@@ -168,9 +150,9 @@ void communicate_data_INT()
 
 /* runtime mode timeouts */
 
-void set_communicate_data_timeout()
+void setCommunicateDataTimeout()
 {
-    logln(F("set_communicate_data_timeout"));
+    logln(F("setCommunicateDataTimeout"));
     uint32_t prev_sample = getNextPeriodTime(config.sample_period) - config.sample_period;
     /* TODO: we end up in a bad state if com time is not far enough out for data
        sampling to complete. This is theoretically possible with the current HPM

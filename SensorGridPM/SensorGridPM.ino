@@ -201,7 +201,7 @@ void loop()
     } else if (mode == SAMPLE) {
         record_data_samples();
         if (get_time() > next_collection_time) {
-            set_communicate_data_timeout();
+            setCommunicateDataTimeout();
         } else {
             mode = WAIT;
         }
