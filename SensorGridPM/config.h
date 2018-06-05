@@ -97,7 +97,7 @@ extern struct Config config;
 //extern int HEARTBEAT_PERIOD;
 //extern int COLLECTION_PERIOD;
 
-typedef struct Message {
+struct Message {
     uint8_t sensorgrid_version;
     uint8_t network_id;
     uint8_t from_node;

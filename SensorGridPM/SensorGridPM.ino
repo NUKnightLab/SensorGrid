@@ -3,6 +3,7 @@
  *
  * Wireless air pollution (Particulate Matter PM2.5 & PM10) monitoring over LoRa radio
  */
+#include <KnightLab_GPS.h>
 #include "config.h"
 #include "lora.h"
 #include "runtime.h"
@@ -139,10 +140,24 @@ void Low_Power_Config(void)
 }
 */
 
+void updateClock()
+{
+    int gps_year = GPS.year;
+    if (gps_year != 0 && gps_year != 80) {
+        uint32_t gps_time = DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds).unixtime();
+        uint32_t rtc_time = rtc.now().unixtime();
+        if (rtc_time - gps_time > 1 || gps_time - rtc_time > 1) {
+            rtc.adjust(DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds));
+        }
+    }
+    set_rtcz();
+}
+
 /* setup and loop */
 
 void setup()
 {
+    setupGPS();
     rtc.begin();
     if (SET_CLOCK) {
         Serial.print("Printing initial DateTime: ");
@@ -218,5 +233,8 @@ void loop()
         flashHeartbeat();
         mode = WAIT;
     }
-    oled.displayDateTime();
+    if (oled.isOn()) {
+        updateClock();
+        oled.displayDateTime();
+    }
 }

@@ -77,6 +77,11 @@ OLED::OLED(RTC_PCF8523 &rtc)
     //displayID();
 }
 
+bool OLED::isOn()
+{
+    return _on;
+}
+
 void OLED::displayDateTime(bool force_refresh)
 {
     if (!_on) return;

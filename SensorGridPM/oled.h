@@ -29,6 +29,7 @@ public:
     void setButtonFunction(uint32_t pin, voidFuncPtr fcn, uint32_t mode);
     void on();
     void off();
+    bool isOn();
     void toggleDisplayState();
 };
 

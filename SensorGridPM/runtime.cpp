@@ -15,7 +15,7 @@ StaticJsonBuffer<200> json_buffer;
 JsonArray& data_array = json_buffer.createArray();
 
 /* data history */
-typedef struct DataSample {
+struct DataSample {
     char data[100];
     struct DataSample *next;
 };
@@ -28,7 +28,7 @@ DataSample *appendData()
 {
     DataSample *new_sample = (DataSample*)malloc(sizeof(DataSample));
     if (new_sample == NULL) {
-        logln("Error creating new sample");
+        logln(F("Error creating new sample"));
         while(1);
     }
     if (head == NULL) {
@@ -272,7 +272,7 @@ void logData(bool clear)
     }
     char str[20];
     float bat = batteryLevel();
-    sprintf(str, "{\"bat\":%d.%02d,\"ts\":%d}", (int)bat, (int)(bat*100)%100,
+    sprintf(str, "{\"bat\":%d.%02d,\"ts\":%ld}", (int)bat, (int)(bat*100)%100,
         rtcz.getEpoch());
     file.println(str);
     Serial.println("-------");
