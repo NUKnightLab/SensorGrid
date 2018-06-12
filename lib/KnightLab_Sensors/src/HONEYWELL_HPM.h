@@ -4,7 +4,8 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 
-#define UART_TIMEOUT 1000
+// don't set this to < 2000 w/o testing valid results from sensor
+#define UART_TIMEOUT 500
 
 typedef uint32_t (*TimeFunction)();
 

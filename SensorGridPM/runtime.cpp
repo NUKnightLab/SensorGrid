@@ -238,26 +238,18 @@ void throwawayHPMData()
     }
 }
 
-void logData(bool clear)
+void recordBatteryLevel()
 {
-    msg->sensorgrid_version = config.sensorgrid_version;
-    msg->network_id = config.network_id;
-    msg->from_node = config.node_id;
-    msg->message_type = 2;
-    Serial.println("");
-    memset(msg->data, 0, 100);
-    sprintf(&msg->data[0], "[");
-    int data_index = 1;
     float bat = batteryLevel();
     DataSample *batSample = appendData();
     sprintf(batSample->data, "{\"node\":%d,\"bat\":%d.%02d,\"ts\":%ld}",
-            config.node_id, (int)bat, (int)(bat*100)%100,
-        rtcz.getEpoch());
+        config.node_id, (int)bat, (int)(bat*100)%100, rtcz.getEpoch());
+}
 
-    //sprintf(&msg->data[1], databuf);
-    //sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":%s}", config.node_id, bat);
-    //sprintf(&msg->data[strlen(msg->data)], "]");
-
+void logData(bool clear)
+{
+    Serial.println("");
+    int data_index = 1;
     Serial.println("LOGGING DATA: ------");
     DataSample *cursor = head;
     static SdFat sd;
@@ -279,6 +271,56 @@ void logData(bool clear)
     while (cursor != NULL) {
         Serial.println(cursor->data);
         file.println(cursor->data);
+        if (clear) {
+            DataSample *_cursor = cursor;
+            cursor = cursor->next;
+            head = cursor;
+            free(_cursor);
+        } else {
+            cursor = cursor->next;
+        }
+    }
+    Serial.println("-------");
+    file.close();
+    Serial.println(F("File closed"));
+}
+
+void transmitData(bool clear)
+{
+    msg->sensorgrid_version = config.sensorgrid_version;
+    msg->network_id = config.network_id;
+    msg->from_node = config.node_id;
+    msg->message_type = 2;
+    Serial.println("");
+    memset(msg->data, 0, 100);
+    sprintf(&msg->data[0], "[");
+    int data_index = 1;
+    //float bat = batteryLevel();
+    //DataSample *batSample = appendData();
+    //sprintf(batSample->data, "{\"node\":%d,\"bat\":%d.%02d,\"ts\":%ld}",
+    //        config.node_id, (int)bat, (int)(bat*100)%100,
+    //    rtcz.getEpoch());
+    Serial.println("LOGGING DATA: ------");
+    DataSample *cursor = head;
+    //static SdFat sd;
+    //Serial.print(F("Init SD card .."));
+    //if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
+    //      Serial.println(F(" .. SD card init failed!"));
+    //      return;
+    //}
+    //if (false) {  // true to check available SD filespace
+    //    Serial.print(F("SD free: "));
+    //    uint32_t volFree = sd.vol()->freeClusterCount();
+    //    float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
+    //    Serial.println(fs);
+    //}
+    //File file;
+    //Serial.print(F("Writing log lines to "));
+    //Serial.println("datalog.txt");
+    //file = sd.open("datalog.txt", O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
+    while (cursor != NULL) {
+        Serial.println(cursor->data);
+        //file.println(cursor->data);
         if (data_index + strlen(cursor->data) > 100) { // TODO: what is the real length we need to check?
             logln("Sending partial data history: ");
             msg->data[data_index-1] = ']';
@@ -302,14 +344,9 @@ void logData(bool clear)
             cursor = cursor->next;
         }
     }
-    //char str[20];
-    //sprintf(str, "{\"bat\":%d.%02d,\"ts\":%ld}", (int)bat, (int)(bat*100)%100,
-    //    rtcz.getEpoch());
-    //file.println(str);
     Serial.println("-------");
-    file.close();
-    Serial.println(F("File closed"));
-
+    //file.close();
+    //Serial.println(F("File closed"));
     msg->data[data_index-1] = ']';
     msg->len = strlen(msg->data);
     logln("Sending message remainder");
@@ -365,6 +402,7 @@ void flashHeartbeat()
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
 }
 
+/* remove this */
 void communicateData()
 {
     logln(F("Communicating"));

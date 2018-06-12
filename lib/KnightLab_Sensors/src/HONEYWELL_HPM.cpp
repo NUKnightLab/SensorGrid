@@ -13,17 +13,21 @@ byte uartbuf[32];
  */
 bool read_message(byte* buf)
 {
+    memset(buf, 0, 32);
     uint8_t i = 0;
     uint8_t len = 32;
-    unsigned long activity_time = millis();
-    while (i < len && (millis() - activity_time) < UART_TIMEOUT) {
+    unsigned long activity_time;
+    //while (i < len && (millis() - activity_time) < UART_TIMEOUT) {
+    while (i < len) {
+        activity_time = millis();
         while (!Serial1.available()) {
-            if ( (millis() - activity_time) > UART_TIMEOUT);
-            return false;
+            if ( (millis() - activity_time) > UART_TIMEOUT) {
+                return false;
+            }
         }
         byte b = Serial1.read();
         Serial.print(b, HEX);
-        activity_time = millis();
+        //activity_time = millis();
         Serial.print(" ");
         if (i == 0) {
             if (b == 0x40 || b == 0xA5 || b == 0x96 || b == 0x42) {
@@ -71,7 +75,8 @@ bool read_message(byte* buf)
 
 void read_pm_results_data(int* pm25, int* pm10)
 {
-    for (int i=0; i<10; i++) {    
+    int retries = 4;
+    for (int i=0; i<retries; i++) {    
         Serial.print("Reading HPM data, attempt #");
         Serial.println(i+1, DEC);
         Serial.println("SENDING: READ_PARTICLE_MEASURING_RESULTS ..");
@@ -83,7 +88,7 @@ void read_pm_results_data(int* pm25, int* pm10)
         Serial.print("PM 2.5: "); Serial.println(*pm25);
         Serial.print("PM 10: "); Serial.println(*pm10);
         if (*pm25 != 7168) break;
-        delay(1000);
+        delay(250);
     }
 }
 
@@ -201,19 +206,17 @@ namespace HONEYWELL_HPM {
         root["ts"] = _time_fcn();
         int pm25;
         int pm10;
-        int count = 0;
-        int pm25total = 0;
-        int pm10total = 0;
-        for (int i=0; i<3; i++) {
-            read_pm_results_data(&pm25, &pm10);
-            if (pm25 != 7168) {
-                pm25total += pm25;
-                pm10total += pm10;
-                count++;
-            }
-        }
-        pm25 = pm25total / count;
-        pm10 = pm10total / count;
+        //int count = 0;
+        //int pm25total = 0;
+        //int pm10total = 0;
+        read_pm_results_data(&pm25, &pm10);
+        //if (pm25 != 7168) {
+        //    pm25total += pm25;
+        //    pm10total += pm10;
+        //    count++;
+        //}
+        //pm25 = pm25total / count;
+        //pm10 = pm10total / count;
         JsonArray& data = root.createNestedArray("hpm");
         data.add(pm25);
         data.add(pm10);

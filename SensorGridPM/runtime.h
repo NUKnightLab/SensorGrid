@@ -13,9 +13,10 @@ extern void initSensors();
 extern void setSampleTimeout();
 extern void recordDataSamples();
 extern void setCommunicateDataTimeout();
-extern void communicateData();
 extern void flashHeartbeat();
+extern void recordBatteryLevel();
 extern void logData(bool clear);
+extern void transmitData(bool clear);
 extern uint32_t getNextCollectionTime();
 
 #endif  // KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_

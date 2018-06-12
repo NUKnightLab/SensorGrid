@@ -4,6 +4,7 @@
 #ifndef KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
 #define KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
 
+#include <Adafruit_SleepyDog.h>
 #include <RTCZero.h>
 #include <RTClib.h>
 #include <KnightLab_ArduinoUtils.h>
@@ -17,7 +18,7 @@
  * ALWAYS_LOG to true
  */
 #define ALWAYS_LOG false
-#define DO_STANDBY true
+#define DO_STANDBY false
 #define DO_TRANSMIT_DATA false
 #define DO_LOG_DATA true
 #define INIT_LEAD_TIME 10

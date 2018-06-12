@@ -200,10 +200,16 @@ void setup()
     // This is done in RTCZero::standbyMode
     // https://github.com/arduino-libraries/RTCZero/blob/master/src/RTCZero.cpp
     // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+
+    // Watchdog will not currently work b/c we have states that take longer than 16 seconds
+    //int countdownMS = Watchdog.enable();
+    //Serial.print("Watchdog timer: ");
+    //Serial.println(countdownMS, DEC);
 }
 
 void loop()
 {
+    //Watchdog.reset(); // Must be called < every 16sec
     static uint32_t start_time = get_time();
     static uint32_t next_collection_time = getNextCollectionTime();
     if (start_time && get_time() - start_time > 3 * 60)
@@ -221,11 +227,12 @@ void loop()
             mode = WAIT;
         }
     } else if (mode == COMMUNICATE) {
+        recordBatteryLevel();
         if (DO_LOG_DATA) {
             logData(!DO_TRANSMIT_DATA);
         }
         if (DO_TRANSMIT_DATA) {
-            communicateData();
+            transmitData(true);
         }
         next_collection_time = getNextCollectionTime();
         mode = WAIT;
