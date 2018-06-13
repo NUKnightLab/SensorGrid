@@ -18,5 +18,6 @@ extern void recordBatteryLevel();
 extern void logData(bool clear);
 extern void transmitData(bool clear);
 extern uint32_t getNextCollectionTime();
+static uint32_t getNextPeriodTime(int period);
 
 #endif  // KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
