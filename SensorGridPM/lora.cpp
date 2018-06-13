@@ -70,7 +70,7 @@ int receive(Message *msg, uint16_t timeout)
     static uint8_t from;
     static uint8_t to;
     static uint8_t id;
-    logln("Listening for message ...");
+    logln(F("Listening for message ..."));
     if (router->recvfromAckTimeout((uint8_t*)msg, &len, timeout, &from, &to, &id)) {
         //Message *_msg = (Message*)recv_buf;
         if ( msg->sensorgrid_version != config.sensorgrid_version ) {
@@ -121,6 +121,9 @@ uint8_t send_message(uint8_t *msg, uint8_t len, uint8_t to_id)
         return err;
     } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
         logln(F("ERROR sending message to node ID: %d. UNABLE TO DELIVER"), to_id);
+        return err;
+    } else {
+        logln(F("ERROR sending message to node ID: %d. UNKNOWN ERROR"), to_id);
         return err;
     }
 }

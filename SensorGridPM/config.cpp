@@ -26,7 +26,7 @@ void loadConfig() {
         digitalWrite(default_rfm_cs, LOW);
         digitalWrite(alt_rfm_cs, LOW);
         config.network_id = (uint32_t)(atoi(getConfig("NETWORK_ID")));
-        config.node_id = (uint32_t)(atoi(getConfig("NODE_ID")));
+        config.node_id = (uint8_t)(atoi(getConfig("NODE_ID")));
         config.collector_id = (uint8_t)(atoi(getConfig("COLLECTOR_ID")));
         config.rf95_freq = static_cast<float>(atof(getConfig("RF95_FREQ")));
         config.tx_power = (uint8_t)(atoi(getConfig("TX_POWER")));

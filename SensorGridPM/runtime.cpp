@@ -48,23 +48,23 @@ DataSample *appendData()
 void _writeToSD(char* filename, char* str)
 {
     static SdFat sd;
-    Serial.print(F("Init SD card .."));
+    log_(F("Init SD card .."));
     if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
-          Serial.println(F(" .. SD card init failed!"));
+          println(F(" .. SD card init failed!"));
           return;
     }
     if (false) {  // true to check available SD filespace
-        Serial.print(F("SD free: "));
+        log_(F("SD free: "));
         uint32_t volFree = sd.vol()->freeClusterCount();
         float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
-        Serial.println(fs);
+        println(F("%.2f"), fs);
     }
     File file;
-    Serial.print(F("Writing log line to ")); Serial.println(filename);
+    logln(F("Writing log line to %s"), filename);
     file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
     file.println(str);
     file.close();
-    Serial.println(F("File closed"));
+    logln(F("File closed"));
 }
 
 void writeToSD(char* filename, char* str)
@@ -73,28 +73,6 @@ void writeToSD(char* filename, char* str)
     _writeToSD(filename, str);
     digitalWrite(8, LOW);
 }
-
-/*
-static void write_data(const char *buf)
-{
-    StaticJsonBuffer<200> jsonBuffer;
-    JsonObject& root = jsonBuffer.parseObject(buf);
-    if (!root.success()) {
-        logln(F("Could not parse data from sensor"));
-    } else {
-        char str[100];
-        uint32_t ts = root["ts"];
-        DateTime t = DateTime(ts);
-        float bat = batteryLevel();
-        int pm25 = root["hpm"][0];
-        int pm10 = root["hpm"][1];
-        sprintf(str, "%i-%02d-%02dT%02d:%02d:%02d,%d.%02d,%d,%d",
-            t.year(), t.month(), t.day(), t.hour(), t.minute(), t.second(),
-            (int)bat, (int)(bat*100)%100, pm25, pm10);
-        writeToSD("datalog.txt", str);
-    }
-}
-*/
 
 static uint32_t getNextPeriodTime(int period)
 {
@@ -227,14 +205,14 @@ void initSensors()
 void throwawayHPMData()
 {
     memset(databuf, 0, 100);
-    Serial.println("Reading throwaway HPM data");
+    logln(F("Reading throwaway HPM data"));
     digitalWrite(12, HIGH);
     HONEYWELL_HPM::read(databuf, 100);
     if (HONEYWELL_HPM::stop()) {
         digitalWrite(12, LOW);
-        Serial.println("Sensor fan stopped");
+        logln(F("Sensor fan stopped"));
     } else {
-        Serial.println("Sensor fan did not stop");
+        logln(F("Sensor fan did not stop"));
     }
 }
 
@@ -248,28 +226,26 @@ void recordBatteryLevel()
 
 void logData(bool clear)
 {
-    Serial.println("");
-    int data_index = 1;
-    Serial.println("LOGGING DATA: ------");
+    //int data_index = 1;
+    logln(F("\nLOGGING DATA: ------"));
     DataSample *cursor = head;
     static SdFat sd;
-    Serial.print(F("Init SD card .."));
+    log_(F("Init SD card .."));
     if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
-          Serial.println(F(" .. SD card init failed!"));
+          println(F(" .. SD card init failed!"));
           return;
     }
     if (false) {  // true to check available SD filespace
-        Serial.print(F("SD free: "));
+        log_(F("SD free: "));
         uint32_t volFree = sd.vol()->freeClusterCount();
         float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
-        Serial.println(fs);
+        println(F("%.2f"), fs);
     }
     File file;
-    Serial.print(F("Writing log lines to "));
-    Serial.println("datalog.txt");
+    logln(F("Writing log lines to datalog.txt"));
     file = sd.open("datalog.txt", O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
     while (cursor != NULL) {
-        Serial.println(cursor->data);
+        logln(cursor->data);
         file.println(cursor->data);
         if (clear) {
             DataSample *_cursor = cursor;
@@ -280,9 +256,9 @@ void logData(bool clear)
             cursor = cursor->next;
         }
     }
-    Serial.println("-------");
+    logln("-------");
     file.close();
-    Serial.println(F("File closed"));
+    logln(F("File closed"));
 }
 
 void transmitData(bool clear)
@@ -291,38 +267,15 @@ void transmitData(bool clear)
     msg->network_id = config.network_id;
     msg->from_node = config.node_id;
     msg->message_type = 2;
-    Serial.println("");
     memset(msg->data, 0, 100);
     sprintf(&msg->data[0], "[");
     int data_index = 1;
-    //float bat = batteryLevel();
-    //DataSample *batSample = appendData();
-    //sprintf(batSample->data, "{\"node\":%d,\"bat\":%d.%02d,\"ts\":%ld}",
-    //        config.node_id, (int)bat, (int)(bat*100)%100,
-    //    rtcz.getEpoch());
-    Serial.println("LOGGING DATA: ------");
+    logln("TRANSMITTING DATA: ------");
     DataSample *cursor = head;
-    //static SdFat sd;
-    //Serial.print(F("Init SD card .."));
-    //if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
-    //      Serial.println(F(" .. SD card init failed!"));
-    //      return;
-    //}
-    //if (false) {  // true to check available SD filespace
-    //    Serial.print(F("SD free: "));
-    //    uint32_t volFree = sd.vol()->freeClusterCount();
-    //    float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
-    //    Serial.println(fs);
-    //}
-    //File file;
-    //Serial.print(F("Writing log lines to "));
-    //Serial.println("datalog.txt");
-    //file = sd.open("datalog.txt", O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
     while (cursor != NULL) {
-        Serial.println(cursor->data);
-        //file.println(cursor->data);
+        logln(cursor->data);
         if (data_index + strlen(cursor->data) > 100) { // TODO: what is the real length we need to check?
-            logln("Sending partial data history: ");
+            logln(F("Sending partial data history: "));
             msg->data[data_index-1] = ']';
             logln(msg->data);
             msg->len = strlen(msg->data);
@@ -344,16 +297,14 @@ void transmitData(bool clear)
             cursor = cursor->next;
         }
     }
-    Serial.println("-------");
-    //file.close();
-    //Serial.println(F("File closed"));
+    logln("-------");
     msg->data[data_index-1] = ']';
     msg->len = strlen(msg->data);
-    logln("Sending message remainder");
+    logln(F("Sending message remainder"));
     send_message(msg_buf, 5 + msg->len, config.collector_id);
     radio->sleep();
-    log_("Sent message: "); print(msg->data);
-    print(" len: "); println("%d", msg->len);
+    log_(F("Sent message: ")); print(msg->data);
+    print(F(" len: ")); println(F("%d"), msg->len);
 }
 
 void recordDataSamples()
@@ -361,33 +312,16 @@ void recordDataSamples()
     logln(F("Taking data sample"));
     memset(databuf, 0, 100);
     digitalWrite(12, HIGH);
-    //HONEYWELL_HPM::read(databuf, 100);
-    Serial.println("Before readData:");
-    //data_array.printTo(Serial);
-    //logln(databuf);
+    logln("Before readData:");
     DataSample *sample = appendData();
-    //HONEYWELL_HPM::readData(data_array);
     HONEYWELL_HPM::readDataSample(sample->data, 100);
-    //char buf[100];
-    //HONEYWELL_HPM::read(buf, 100);
-    //memset(msg->data, 0, 100);
-    //msg->data[0] = '[';
-    //msg->len = HONEYWELL_HPM::read(&msg->data[1], 99) + 1;
-    //Serial.println(msg->data);
-    //logln(msg->data);
     delay(2000);
     if (HONEYWELL_HPM::stop()) {
         digitalWrite(12, LOW);
-        Serial.println("Sensor fan stopped");
+        logln("Sensor fan stopped");
     } else {
-        Serial.println("Sensor fan did not stop");
+        logln("Sensor fan did not stop");
     }
-    //log_("Writing data: "); println(msg->data);
-    //write_data((const char*)msg->data);
-    //log_("Writing data: "); println(databuf);
-    //write_data(databuf);
-    //log_("Data is written. Current msg data: ");
-    //println(msg->data);
 }
 
 void flashHeartbeat()
@@ -402,7 +336,7 @@ void flashHeartbeat()
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
 }
 
-/* remove this */
+/*
 void communicateData()
 {
     logln(F("Communicating"));
@@ -438,7 +372,6 @@ void communicateData()
     sprintf(&msg->data[0], "[");
     sprintf(&msg->data[1], databuf);
     //float bat = batteryLevel();
- 
     Serial.print("bat: "); Serial.println(bat);
     sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":%s}", config.node_id, bat);
     sprintf(&msg->data[strlen(msg->data)], "]");
@@ -448,29 +381,5 @@ void communicateData()
     radio->sleep();
     log_("Sent message: "); print(msg->data);
     print(" len: "); println("%d", msg->len);
-    /*
-    if (RECV_STATUS_SUCCESS == receive(msg, 60000)) {
-        Serial.println("Runtime received message");
-        Serial.print("VERSION: ");
-        Serial.println(msg->sensorgrid_version, DEC);
-        Serial.print("NEWORK ID: ");
-        Serial.println(msg->network_id, DEC);
-        Serial.print("FROM NODE: ");
-        Serial.println(msg->from_node, DEC);
-        Serial.print("MESSAGE TYPE: ");
-        Serial.println(msg->message_type, DEC);
-    } else {
-        Serial.println("Runtime did not receive message.");
-    }
-    */
-    /*
-    int limit = random(30, 90);
-    uint32_t now = rtcz.getEpoch();
-    while (rtcz.getEpoch() < now + limit) {
-        digitalWrite(LED_BUILTIN, HIGH);
-        delay(50);
-        digitalWrite(LED_BUILTIN, LOW);
-        delay(50);
-    }
-    */
 }
+*/
