@@ -36,7 +36,7 @@ extern RHMesh* router;
 extern RHRouter* router;
 #endif
 
-extern void setup_radio(uint8_t cs_pint, uint8_t int_pin, uint8_t node_id);
+extern void setupRadio(uint8_t cs_pint, uint8_t int_pin, uint8_t node_id);
 enum {
     RECV_STATUS_SUCCESS = 0,
     RECV_STATUS_WRONG_VERSION = -1,

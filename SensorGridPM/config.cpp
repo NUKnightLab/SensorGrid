@@ -5,10 +5,6 @@
 
 struct Config config;
 
-//int HEARTBEAT_PERIOD = 60; // seconds
-//int SAMPLE_PERIOD = 10;  // minutes
-//int COLLECTION_PERIOD = 6 * 60;  // minutes
-
 /**
  * We pull both pins 8 and 19 HIGH during SD card read. The default configuration
  * on the integrated LoRa M0 uses pin 8 for RFM95 chip select, but the WiFi

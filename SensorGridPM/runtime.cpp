@@ -45,6 +45,7 @@ DataSample *appendData()
 /* -- end data history */
 
 /* local utils */
+
 void _writeToSD(char* filename, char* str)
 {
     static SdFat sd;
@@ -92,21 +93,33 @@ uint32_t getNextCollectionTime()
 static void standby()
 {
     mode = STANDBY;
-    if (DO_STANDBY)
+    if (DO_STANDBY) {
+        Watchdog.disable();
         rtcz.standbyMode();
+    }
+}
+
+typedef void (*InterruptFunction)();
+
+void setInterruptTimeout(DateTime &datetime, InterruptFunction fcn)
+{
+    rtcz.setAlarmSeconds(datetime.second());
+    rtcz.setAlarmMinutes(datetime.minute());
+    rtcz.enableAlarm(rtcz.MATCH_MMSS);
+    rtcz.attachInterrupt(fcn);
 }
 
 /* end local utils */
 
 /* runtime mode interrupts */
 
-void init_sensors_INT()
+void initSensors_INT()
 {
     logln(F("Setting Mode: INIT"));
     mode = INIT;
 }
 
-void record_data_samples_INT()
+void recordDataSamples_INT()
 {
     logln(F("Setting Mode: SAMPLE"));
     mode = SAMPLE;
@@ -118,7 +131,7 @@ void heartbeat_INT()
     mode = HEARTBEAT;
 }
 
-void communicate_data_INT()
+void communicateData_INT()
 {
     logln(F("Setting Mode: COMMUNICATE"));
     mode = COMMUNICATE;
@@ -138,10 +151,11 @@ void setCommunicateDataTimeout()
        times? */
     uint32_t com = prev_sample + 30;
     DateTime dt = DateTime(com);
-    rtcz.setAlarmSeconds(dt.second());
-    rtcz.setAlarmMinutes(dt.minute());
-    rtcz.enableAlarm(rtcz.MATCH_MMSS);
-    rtcz.attachInterrupt(communicate_data_INT);
+    setInterruptTimeout(dt, communicateData_INT);
+    //rtcz.setAlarmSeconds(dt.second());
+    //rtcz.setAlarmMinutes(dt.minute());
+    //rtcz.enableAlarm(rtcz.MATCH_MMSS);
+    //rtcz.attachInterrupt(communicate_data_INT);
     standby();
 }
 
@@ -154,16 +168,18 @@ void setInitTimeout() {
     logln(F("Next heartbeat time is %d"), heartbeat);
     if (heartbeat < init - 2) {
         DateTime dt = DateTime(heartbeat);
-        rtcz.setAlarmSeconds(dt.second());
-        rtcz.enableAlarm(rtcz.MATCH_SS);
-        rtcz.attachInterrupt(heartbeat_INT);
+        setInterruptTimeout(dt, heartbeat_INT);
+        //rtcz.setAlarmSeconds(dt.second());
+        //rtcz.enableAlarm(rtcz.MATCH_SS);
+        //rtcz.attachInterrupt(heartbeat_INT);
         println(F("heartbeat %02d:%02d"), dt.minute(), dt.second());
     } else {
         DateTime dt = DateTime(init);
-        rtcz.setAlarmSeconds(dt.second());
-        rtcz.setAlarmMinutes(dt.minute());
-        rtcz.enableAlarm(rtcz.MATCH_MMSS);
-        rtcz.attachInterrupt(init_sensors_INT);
+        setInterruptTimeout(dt, initSensors_INT);
+        //rtcz.setAlarmSeconds(dt.second());
+        //rtcz.setAlarmMinutes(dt.minute());
+        //rtcz.enableAlarm(rtcz.MATCH_MMSS);
+        //rtcz.attachInterrupt(init_sensors_INT);
         println(F("init %02d:%02d"), dt.minute(), dt.second());
     }
     standby();
@@ -175,15 +191,18 @@ void setSampleTimeout()
     uint32_t sample = getNextPeriodTime(config.sample_period);
     uint32_t heartbeat = getNextPeriodTime(config.heartbeat_period);
     if (heartbeat < sample - 2) {
-        rtcz.setAlarmSeconds(DateTime(heartbeat).second());
-        rtcz.enableAlarm(rtcz.MATCH_SS);
-        rtcz.attachInterrupt(heartbeat_INT);
+        DateTime dt = DateTime(heartbeat);
+        setInterruptTimeout(dt, heartbeat_INT);
+        //rtcz.setAlarmSeconds(DateTime(heartbeat).second());
+        //rtcz.enableAlarm(rtcz.MATCH_SS);
+        //rtcz.attachInterrupt(heartbeat_INT);
     } else {
         DateTime dt = DateTime(sample);
-        rtcz.setAlarmSeconds(dt.second());
-        rtcz.setAlarmMinutes(dt.minute());
-        rtcz.enableAlarm(rtcz.MATCH_MMSS);
-        rtcz.attachInterrupt(record_data_samples_INT);
+        setInterruptTimeout(dt, recordDataSamples_INT);
+        //rtcz.setAlarmSeconds(dt.second());
+        //rtcz.setAlarmMinutes(dt.minute());
+        //rtcz.enableAlarm(rtcz.MATCH_MMSS);
+        //rtcz.attachInterrupt(record_data_samples_INT);
     }
     standby();
 }
@@ -196,12 +215,14 @@ void initSensors()
 {
     logln(F("Init sensor for data sampling"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
-    delay(1000);
-    digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+    //delay(1000);
+    //digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
     digitalWrite(12, HIGH);
+    Watchdog.reset();
     HONEYWELL_HPM::start();
 }
 
+/*
 void throwawayHPMData()
 {
     memset(databuf, 0, 100);
@@ -215,6 +236,7 @@ void throwawayHPMData()
         logln(F("Sensor fan did not stop"));
     }
 }
+*/
 
 void recordBatteryLevel()
 {
@@ -224,9 +246,15 @@ void recordBatteryLevel()
         config.node_id, (int)bat, (int)(bat*100)%100, rtcz.getEpoch());
 }
 
+void recordUptime(uint32_t uptime)
+{
+    DataSample *sample = appendData();
+    sprintf(sample->data, "{\"node\":%d,\"uptime\":%ld,\"ts\":%ld}",
+        config.node_id, uptime, rtcz.getEpoch());
+}
+
 void logData(bool clear)
 {
-    //int data_index = 1;
     logln(F("\nLOGGING DATA: ------"));
     DataSample *cursor = head;
     static SdFat sd;
@@ -236,6 +264,7 @@ void logData(bool clear)
           return;
     }
     if (false) {  // true to check available SD filespace
+        /* TODO: does this work? */
         log_(F("SD free: "));
         uint32_t volFree = sd.vol()->freeClusterCount();
         float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
@@ -256,7 +285,7 @@ void logData(bool clear)
             cursor = cursor->next;
         }
     }
-    logln("-------");
+    logln(F("-------"));
     file.close();
     logln(F("File closed"));
 }
@@ -270,9 +299,10 @@ void transmitData(bool clear)
     memset(msg->data, 0, 100);
     sprintf(&msg->data[0], "[");
     int data_index = 1;
-    logln("TRANSMITTING DATA: ------");
+    logln(F("TRANSMITTING DATA: ------"));
     DataSample *cursor = head;
     while (cursor != NULL) {
+        Watchdog.reset();
         logln(cursor->data);
         if (data_index + strlen(cursor->data) > 100) { // TODO: what is the real length we need to check?
             logln(F("Sending partial data history: "));
@@ -297,10 +327,11 @@ void transmitData(bool clear)
             cursor = cursor->next;
         }
     }
-    logln("-------");
+    logln(F("-------"));
     msg->data[data_index-1] = ']';
     msg->len = strlen(msg->data);
     logln(F("Sending message remainder"));
+    Watchdog.reset();
     send_message(msg_buf, 5 + msg->len, config.collector_id);
     radio->sleep();
     log_(F("Sent message: ")); print(msg->data);
@@ -312,15 +343,18 @@ void recordDataSamples()
     logln(F("Taking data sample"));
     memset(databuf, 0, 100);
     digitalWrite(12, HIGH);
-    logln("Before readData:");
+    logln(F("Before readData:"));
     DataSample *sample = appendData();
+    Watchdog.reset();
     HONEYWELL_HPM::readDataSample(sample->data, 100);
-    delay(2000);
+    //delay(2000);
+    Watchdog.reset();
     if (HONEYWELL_HPM::stop()) {
         digitalWrite(12, LOW);
-        logln("Sensor fan stopped");
+        digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+        logln(F("Sensor fan stopped"));
     } else {
-        logln("Sensor fan did not stop");
+        logln(F("Sensor fan did not stop"));
     }
 }
 

@@ -7,7 +7,7 @@ RHMesh* router;
 RHRouter* router;
 #endif
 
-void setup_radio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
+void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
 {
     logln(F("Setting up radio with RadioHead Version: %d.%d"),
         RH_VERSION_MAJOR, RH_VERSION_MINOR);

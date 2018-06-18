@@ -17,12 +17,12 @@ RTCZero rtcz;
 RTC_PCF8523 rtc;
 OLED oled = OLED(rtc);
 
-uint32_t sampleRate = 10; //sample rate of the sine wave in Hertz, how many times per second the TC5_Handler() function gets called per second basically
-int MAX_TIMEOUT = 10;
+//uint32_t sampleRate = 10; //sample rate of the sine wave in Hertz, how many times per second the TC5_Handler() function gets called per second basically
+//int MAX_TIMEOUT = 10;
 //unsigned long sample_period = 60 * 10;
 //unsigned long heartbeat_period = 30;
-unsigned long next_sample;
-int sensor_init_time = 7;
+//unsigned long next_sample;
+//int sensor_init_time = 7;
 
 /* local utilities */
 
@@ -102,6 +102,29 @@ void updateClock()
     setRTCz();
 }
 
+void setupHoneywell()
+{
+    pinMode(12, OUTPUT); // enable pin to HPM boost
+    HONEYWELL_HPM::setup(config.node_id, 0, &getTime);
+    delay(2000);
+    HONEYWELL_HPM::stop();
+}
+
+void setupClocks()
+{
+    rtc.begin();
+    /* In general, we no longer use SET_CLOCK. Instead use a GPS module to set the time */
+    if (SET_CLOCK) {
+        Serial.print("Printing initial DateTime: ");
+        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+        Serial.print(F(__DATE__));
+        Serial.print(' ');
+        Serial.println(F(__TIME__));
+    }
+    rtcz.begin();
+    setRTCz();
+}
+
 /* hard fault handler */
 
 /* see Segger debug manual: https://www.segger.com/downloads/application-notes/AN00016 */
@@ -121,23 +144,12 @@ void HardFault_Handler(void) {
 void setup()
 {
     setupGPS();
-    rtc.begin();
-    if (SET_CLOCK) {
-        Serial.print("Printing initial DateTime: ");
-        rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-        Serial.print(F(__DATE__));
-        Serial.print(' ');
-        Serial.println(F(__TIME__));
-    }
-    rtcz.begin();
-    setRTCz();
-    //initOLED(rtc);
+    setupClocks();
     oled.init();
     /* This is causing lock-up. Need to do further research into low power modes
        on the Cortex M0 */
     //oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
-    oled.displayDateTime();
-    //displayDateTimeOLED();
+    //oled.displayDateTime();
     unsigned long _start = millis();
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT );
     if (ALWAYS_LOG || Serial) {
@@ -147,29 +159,34 @@ void setup()
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     loadConfig();
-    setup_radio(config.RFM95_CS, config.RFM95_INT, config.node_id);
+    setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     radio->sleep();
-    //startTimer(10);
-    pinMode(12, OUTPUT); // enable pin to HPM boost
-    HONEYWELL_HPM::setup(config.node_id, 0, &getTime);
-    delay(2000);
-    HONEYWELL_HPM::stop();
-    logln(F(".. setup complete"));
-    printCurrentTime();
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(500);
-    digitalWrite(LED_BUILTIN, LOW);
+    setupHoneywell();
     // This is done in RTCZero::standbyMode
     // https://github.com/arduino-libraries/RTCZero/blob/master/src/RTCZero.cpp
     // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
+    digitalWrite(LED_BUILTIN, HIGH);
+    delay(500);
+    digitalWrite(LED_BUILTIN, LOW);
+    logln(F(".. setup complete"));
+    printCurrentTime();
 }
 
 void loop()
 {
+    // enable (instead of reset) Watchdog every loop because we disable during standby
+    Watchdog.enable();
     static uint32_t start_time = getTime();
+    static uint32_t uptime;
+    uptime = millis();
     static uint32_t next_collection_time = getNextCollectionTime();
-    if (start_time && getTime() - start_time > 3 * 60)
+    if (start_time && getTime() - start_time > 3 * 60) {
         oled.off();
+    }
+    if (oled.isOn()) {
+        updateClock();
+        oled.displayDateTime();
+    }
     if (mode == WAIT) {
         setInitTimeout();
     } else if (mode == INIT) {
@@ -184,6 +201,7 @@ void loop()
         }
     } else if (mode == COMMUNICATE) {
         recordBatteryLevel();
+        recordUptime(uptime);
         if (DO_LOG_DATA) {
             logData(!DO_TRANSMIT_DATA);
         }
@@ -195,9 +213,5 @@ void loop()
     } else if (mode == HEARTBEAT) {
         flashHeartbeat();
         mode = WAIT;
-    }
-    if (oled.isOn()) {
-        updateClock();
-        oled.displayDateTime();
     }
 }

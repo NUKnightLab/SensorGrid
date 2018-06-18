@@ -19,9 +19,9 @@
  */
 #define ALWAYS_LOG false
 #define DO_STANDBY true
-#define DO_TRANSMIT_DATA true
-#define DO_LOG_DATA false
-#define INIT_LEAD_TIME 10
+#define DO_TRANSMIT_DATA false
+#define DO_LOG_DATA true
+#define INIT_LEAD_TIME 7
 
 enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
 extern enum Mode mode;
@@ -94,9 +94,6 @@ struct Config {
 
 extern void loadConfig();
 extern struct Config config;
-//extern int SAMPLE_PERIOD;
-//extern int HEARTBEAT_PERIOD;
-//extern int COLLECTION_PERIOD;
 
 struct Message {
     uint8_t sensorgrid_version;
