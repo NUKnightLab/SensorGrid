@@ -73,7 +73,7 @@ bool read_message(byte* buf)
     }
 }
 
-void read_pm_results_data(int* pm25, int* pm10)
+void _read_pm_results_data(int* pm25, int* pm10)
 {
     int retries = 4;
     for (int i=0; i<retries; i++) {    
@@ -90,6 +90,57 @@ void read_pm_results_data(int* pm25, int* pm10)
         if (*pm25 != 7168) break;
         delay(250);
     }
+}
+
+void read_pm_results_data(int* pm25, int* pm10)
+{
+    int pm25_1, pm25_2, pm25_3, pm10_1, pm10_2, pm10_3;
+    _read_pm_results_data(&pm25_1, &pm10_1);
+    delay(250);
+    _read_pm_results_data(&pm25_2, &pm10_2);
+    delay(250);
+    _read_pm_results_data(&pm25_3, &pm10_3);
+    int pm25_mean = (pm25_1 + pm25_2 + pm25_3) / 3;
+    int pm10_mean = (pm10_1 + pm10_2 + pm10_3) / 3;
+    int pm25_std = sqrt( 
+        (pow((pm25_1 - pm25_mean), 2) +
+        pow((pm25_2 - pm25_mean), 2) +
+        pow((pm25_3 - pm25_mean), 2)) / 3);
+    int pm10_std = sqrt( 
+        (pow((pm25_1 - pm25_mean), 2) +
+        pow((pm25_2 - pm25_mean), 2) +
+        pow((pm25_3 - pm25_mean), 2)) / 3);
+    int total = 0;
+    int count = 0;
+    if (abs(pm25_1 - pm25_mean) <= 0.5 * pm25_std) {
+        total += pm25_1;
+        count++;
+    }
+    if (abs(pm25_2 - pm25_mean) <= 0.5 * pm25_std) {
+        total += pm25_2;
+        count++;
+    }
+    if (abs(pm25_3 - pm25_mean) <= 0.5 * pm25_std) {
+        total += pm25_3;
+        count++;
+    }
+    int val = total / count;
+    *pm25 = total / count;
+    total = 0;
+    count = 0;
+    if (abs(pm10_1 - pm10_mean) <= 0.5 * pm10_std) {
+        total += pm10_1;
+        count++;
+    }
+    if (abs(pm10_2 - pm10_mean) <= 0.5 * pm10_std) {
+        total += pm10_2;
+        count++;
+    }
+    if (abs(pm10_3 - pm10_mean) <= 0.5 * pm10_std) {
+        total += pm10_3;
+        count++;
+    }
+    *pm10 = total / count;
 }
 
 bool send_start_pm()
