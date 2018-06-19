@@ -146,6 +146,7 @@ void setup()
     setupGPS();
     setupClocks();
     oled.init();
+    oled.displayStartup();
     /* This is causing lock-up. Need to do further research into low power modes
        on the Cortex M0 */
     //oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
@@ -170,6 +171,7 @@ void setup()
     digitalWrite(LED_BUILTIN, LOW);
     logln(F(".. setup complete"));
     printCurrentTime();
+    oled.endDisplayStartup();
 }
 
 void loop()

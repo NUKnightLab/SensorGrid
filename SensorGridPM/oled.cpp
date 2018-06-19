@@ -144,3 +144,18 @@ void OLED::toggleDisplayState()
         off();
     }
 }
+
+void OLED::displayStartup()
+{
+    _oled.clearDisplay();
+    _oled.setTextSize(2);
+    _oled.print("KnightLab SensorGrid");
+    _oled.display();
+}
+
+void OLED::endDisplayStartup()
+{
+    _oled.clearDisplay();
+    _oled.setTextSize(1);
+    _oled.display();
+}

@@ -31,6 +31,8 @@ public:
     void off();
     bool isOn();
     void toggleDisplayState();
+    void displayStartup();
+    void endDisplayStartup();
 };
 
 
