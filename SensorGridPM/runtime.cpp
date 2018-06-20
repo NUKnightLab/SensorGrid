@@ -3,7 +3,6 @@
  */
 #include "config.h"
 #include "runtime.h"
-#include "HONEYWELL_HPM.h"
 #include <ArduinoJson.h>
 #include "lora.h"
 #include <avr/dtostrf.h>
@@ -246,6 +245,18 @@ void recordBatteryLevel()
         config.node_id, (int)bat, (int)(bat*100)%100, rtcz.getEpoch());
 }
 
+void recordTempAndHumidity()
+{
+    DataSample *dataSample = appendData();
+    float temp = ADAFRUIT_SI7021::readTemperature();
+    float humid = ADAFRUIT_SI7021::readHumidity();
+    sprintf(dataSample->data,
+        "{\"node\":%d,\"tmp\":%d.%02d,\"hmd\":%d.%02d,\"ts\":%ld}",
+        config.node_id, (int)temp, (int)(temp*100)%100,
+        (int)humid, (int)(temp*100)%100, rtcz.getEpoch());
+    Serial.println(dataSample->data);
+}
+
 void recordUptime(uint32_t uptime)
 {
     DataSample *sample = appendData();
@@ -356,6 +367,7 @@ void recordDataSamples()
     } else {
         logln(F("Sensor fan did not stop"));
     }
+    recordTempAndHumidity();
 }
 
 void flashHeartbeat()

@@ -163,6 +163,7 @@ void setup()
     setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     radio->sleep();
     setupHoneywell();
+    ADAFRUIT_SI7021::setup();
     // This is done in RTCZero::standbyMode
     // https://github.com/arduino-libraries/RTCZero/blob/master/src/RTCZero.cpp
     // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
