@@ -9,6 +9,9 @@
 #include "runtime.h"
 #include "oled.h"
 
+
+WatchdogSAMD Watchdog;
+
 #define SET_CLOCK false
 
 enum Mode mode = WAIT;
@@ -17,12 +20,12 @@ RTCZero rtcz;
 RTC_PCF8523 rtc;
 OLED oled = OLED(rtc);
 
-//uint32_t sampleRate = 10; //sample rate of the sine wave in Hertz, how many times per second the TC5_Handler() function gets called per second basically
-//int MAX_TIMEOUT = 10;
-//unsigned long sample_period = 60 * 10;
-//unsigned long heartbeat_period = 30;
-//unsigned long next_sample;
-//int sensor_init_time = 7;
+// uint32_t sampleRate = 10; // sample rate of the sine wave in Hertz, how many times per second the TC5_Handler() function gets called per second basically
+// int MAX_TIMEOUT = 10;
+// unsigned long sample_period = 60 * 10;
+// unsigned long heartbeat_period = 30;
+// unsigned long next_sample;
+// int sensor_init_time = 7;
 
 /* local utilities */
 
@@ -74,7 +77,7 @@ void aButton_ISR()
         oled.toggleDisplayState();
     }
     busy = false;
-    //rtcz.disableAlarm();
+    // rtcz.disableAlarm();
     /*
     aButtonState = !digitalRead(BUTTON_A);
     if (aButtonState) {
@@ -93,10 +96,10 @@ void updateClock()
 {
     int gps_year = GPS.year;
     if (gps_year != 0 && gps_year != 80) {
-        uint32_t gps_time = DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds).unixtime();
+        uint32_t gps_time = DateTime(GPS.year, GPS.month, GPS.day, GPS.hour, GPS.minute, GPS.seconds).unixtime();
         uint32_t rtc_time = rtc.now().unixtime();
         if (rtc_time - gps_time > 1 || gps_time - rtc_time > 1) {
-            rtc.adjust(DateTime(GPS.year,GPS.month,GPS.day,GPS.hour,GPS.minute,GPS.seconds));
+            rtc.adjust(DateTime(GPS.year, GPS.month, GPS.day, GPS.hour, GPS.minute, GPS.seconds));
         }
     }
     setRTCz();
@@ -104,7 +107,7 @@ void updateClock()
 
 void setupHoneywell()
 {
-    pinMode(12, OUTPUT); // enable pin to HPM boost
+    pinMode(12, OUTPUT);  // enable pin to HPM boost
     HONEYWELL_HPM::setup(config.node_id, 0, &getTime);
     delay(2000);
     HONEYWELL_HPM::stop();
@@ -135,8 +138,8 @@ void HardFault_Handler(void) {
     // When stuck here, change the variable value to != 0 in order to step out
     //
     Serial.println("!!!!**** HARD FAULT -- REQUESTING RESET *****!!!!");
-    SCB->AIRCR = 0x05FA0004; //System reset
-    while (_Continue == 0u);
+    SCB->AIRCR = 0x05FA0004;  // System reset
+    while (_Continue == 0u){};
 }
 
 /* setup and loop */
@@ -149,10 +152,10 @@ void setup()
     oled.displayStartup();
     /* This is causing lock-up. Need to do further research into low power modes
        on the Cortex M0 */
-    //oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
-    //oled.displayDateTime();
+    // oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
+    // oled.displayDateTime();
     unsigned long _start = millis();
-    while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT );
+    while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ){};
     if (ALWAYS_LOG || Serial) {
         setupLogging();
     }

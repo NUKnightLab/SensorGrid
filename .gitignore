@@ -11,7 +11,7 @@ __pycache__
 KnightLab_SensorGrid/.vscode/*
 KnightLab_SensorGrid/.gitignore
 KnightLab_SensorGrid/lib/KnightLab_SDConfig/*
-
+resources/RadioHead.1.8.2/
 # SensorGridPM
 SensorGridPM/lib/KnightLab_SDConfig/
 .vscode/*

@@ -14,10 +14,10 @@ void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
     /* TODO: Can RH version check be done at compile time? */
     if (RH_VERSION_MAJOR != REQUIRED_RH_VERSION_MAJOR
             || RH_VERSION_MINOR != REQUIRED_RH_VERSION_MINOR) {
-        //log(F("ABORTING: SensorGrid requires RadioHead version %s.%s"),
+        // log(F("ABORTING: SensorGrid requires RadioHead version %s.%s"),
         //    REQUIRED_RH_VERSION_MAJOR, REQUIRED_RH_VERSION_MINOR);
-        //log(F("RadioHead %s.%s is installed"), RH_VERSION_MAJOR, RH_VERSION_MINOR);
-        while(1);
+        // log(F("RadioHead %s.%s is installed"), RH_VERSION_MAJOR, RH_VERSION_MINOR);
+        while (1){};
     }
     radio = new RH_RF95(cs_pin, int_pin);
 #if defined(USE_MESH_ROUTER)
@@ -30,24 +30,24 @@ void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
        air space while trying to listen for new messages. As a result, don't
        do any retries in the router. Instead, we will pick up missed messages
        in the application layer. */
-    //router->setRetries(0);
+    // router->setRetries(0);
     router->clearRoutingTable();
-    //router->addRouteTo(1, 1);
-    //router->addRouteTo(2, 2);
-    //router->addRouteTo(3, 3);
-    //router->addRouteTo(4, 4);
+    // router->addRouteTo(1, 1);
+    // router->addRouteTo(2, 2);
+    // router->addRouteTo(3, 3);
+    // router->addRouteTo(4, 4);
 #endif
     if (USE_SLOW_RELIABLE_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     logln(F("Node ID: %d"), node_id);
     if (!router->init()) {
         logln(F("Router init failed"));
-        while(1);
+        while (1){};
     }
     logln(F("FREQ: %s"), FREQ);
         if (!radio->setFrequency(FREQ)) {
         logln(F("Radio frequency set failed"));
-        while(1);
+        while (1){};
     }
     radio->setTxPower(TX, false);
     radio->setCADTimeout(CAD_TIMEOUT);
@@ -72,27 +72,27 @@ int receive(Message *msg, uint16_t timeout)
     static uint8_t id;
     logln(F("Listening for message ..."));
     if (router->recvfromAckTimeout((uint8_t*)msg, &len, timeout, &from, &to, &id)) {
-        //Message *_msg = (Message*)recv_buf;
+        // Message *_msg = (Message*)recv_buf;
         if ( msg->sensorgrid_version != config.sensorgrid_version ) {
             logln(F("WARNING: Received message with wrong firmware version: %d\n"),
                 msg->sensorgrid_version);
             return RECV_STATUS_WRONG_VERSION;
-        }           
+        }       
         if ( msg->network_id != config.network_id ) {
             logln(F(
                 "WARNING: Received message from wrong network: %d (expected: %d)\n"),
                 msg->network_id, config.network_id);
             return RECV_STATUS_WRONG_NETWORK;
         }
-        //validate_recv_buffer(*len);
+        // validate_recv_buffer(*len);
         logln(F("Received buffered message. len: %d; type: %d"), len,
             msg->message_type);
             // get_message_type(_msg->message_type));
         logln(F("; from: %d; rssi: %d\n"), from, radio->lastRssi());
         return RECV_STATUS_SUCCESS;
-        //memcpy(msg, recv_buf, len);
-        //last_rssi[*source] = radio->lastRssi();
-        //return _msg->message_type;
+        // memcpy(msg, recv_buf, len);
+        // last_rssi[*source] = radio->lastRssi();
+        // return _msg->message_type;
     } else {
         return RECV_STATUS_NO_MESSAGE;
     }

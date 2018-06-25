@@ -28,7 +28,7 @@ DataSample *appendData()
     DataSample *new_sample = (DataSample*)malloc(sizeof(DataSample));
     if (new_sample == NULL) {
         logln(F("Error creating new sample"));
-        while(1);
+        while (1){};
     }
     if (head == NULL) {
         head = new_sample;
@@ -61,7 +61,7 @@ void _writeToSD(char* filename, char* str)
     }
     File file;
     logln(F("Writing log line to %s"), filename);
-    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
+    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
     file.println(str);
     file.close();
     logln(F("File closed"));
@@ -151,10 +151,10 @@ void setCommunicateDataTimeout()
     uint32_t com = prev_sample + 30;
     DateTime dt = DateTime(com);
     setInterruptTimeout(dt, communicateData_INT);
-    //rtcz.setAlarmSeconds(dt.second());
-    //rtcz.setAlarmMinutes(dt.minute());
-    //rtcz.enableAlarm(rtcz.MATCH_MMSS);
-    //rtcz.attachInterrupt(communicate_data_INT);
+    // rtcz.setAlarmSeconds(dt.second());
+    // rtcz.setAlarmMinutes(dt.minute());
+    // rtcz.enableAlarm(rtcz.MATCH_MMSS);
+    // rtcz.attachInterrupt(communicate_data_INT);
     standby();
 }
 
@@ -168,17 +168,17 @@ void setInitTimeout() {
     if (heartbeat < init - 2) {
         DateTime dt = DateTime(heartbeat);
         setInterruptTimeout(dt, heartbeat_INT);
-        //rtcz.setAlarmSeconds(dt.second());
-        //rtcz.enableAlarm(rtcz.MATCH_SS);
-        //rtcz.attachInterrupt(heartbeat_INT);
+        // rtcz.setAlarmSeconds(dt.second());
+        // rtcz.enableAlarm(rtcz.MATCH_SS);
+        // rtcz.attachInterrupt(heartbeat_INT);
         println(F("heartbeat %02d:%02d"), dt.minute(), dt.second());
     } else {
         DateTime dt = DateTime(init);
         setInterruptTimeout(dt, initSensors_INT);
-        //rtcz.setAlarmSeconds(dt.second());
-        //rtcz.setAlarmMinutes(dt.minute());
-        //rtcz.enableAlarm(rtcz.MATCH_MMSS);
-        //rtcz.attachInterrupt(init_sensors_INT);
+        // rtcz.setAlarmSeconds(dt.second());
+        // rtcz.setAlarmMinutes(dt.minute());
+        // rtcz.enableAlarm(rtcz.MATCH_MMSS);
+        // rtcz.attachInterrupt(init_sensors_INT);
         println(F("init %02d:%02d"), dt.minute(), dt.second());
     }
     standby();
@@ -192,16 +192,16 @@ void setSampleTimeout()
     if (heartbeat < sample - 2) {
         DateTime dt = DateTime(heartbeat);
         setInterruptTimeout(dt, heartbeat_INT);
-        //rtcz.setAlarmSeconds(DateTime(heartbeat).second());
-        //rtcz.enableAlarm(rtcz.MATCH_SS);
-        //rtcz.attachInterrupt(heartbeat_INT);
+        // rtcz.setAlarmSeconds(DateTime(heartbeat).second());
+        // rtcz.enableAlarm(rtcz.MATCH_SS);
+        // rtcz.attachInterrupt(heartbeat_INT);
     } else {
         DateTime dt = DateTime(sample);
         setInterruptTimeout(dt, recordDataSamples_INT);
-        //rtcz.setAlarmSeconds(dt.second());
-        //rtcz.setAlarmMinutes(dt.minute());
-        //rtcz.enableAlarm(rtcz.MATCH_MMSS);
-        //rtcz.attachInterrupt(record_data_samples_INT);
+        // rtcz.setAlarmSeconds(dt.second());
+        // rtcz.setAlarmMinutes(dt.minute());
+        // rtcz.enableAlarm(rtcz.MATCH_MMSS);
+        // rtcz.attachInterrupt(record_data_samples_INT);
     }
     standby();
 }
@@ -214,8 +214,8 @@ void initSensors()
 {
     logln(F("Init sensor for data sampling"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
-    //delay(1000);
-    //digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+    // delay(1000);
+    // digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
     digitalWrite(12, HIGH);
     Watchdog.reset();
     HONEYWELL_HPM::start();
@@ -283,7 +283,7 @@ void logData(bool clear)
     }
     File file;
     logln(F("Writing log lines to datalog.txt"));
-    file = sd.open("datalog.txt", O_WRITE|O_APPEND|O_CREAT); //will create file if it doesn't exist
+    file = sd.open("datalog.txt", O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
     while (cursor != NULL) {
         logln(cursor->data);
         file.println(cursor->data);
@@ -315,13 +315,13 @@ void transmitData(bool clear)
     while (cursor != NULL) {
         Watchdog.reset();
         logln(cursor->data);
-        if (data_index + strlen(cursor->data) > 100) { // TODO: what is the real length we need to check?
+        if (data_index + strlen(cursor->data) > 100) {  // TODO: what is the real length we need to check?
             logln(F("Sending partial data history: "));
             msg->data[data_index-1] = ']';
             logln(msg->data);
             msg->len = strlen(msg->data);
             send_message(msg_buf, 5 + msg->len, config.collector_id);
-            delay(5000); // TODO: better handling on the collector side?
+            delay(5000);  // TODO: better handling on the collector side?
             memset(msg->data, 0, 100);
             sprintf(&msg->data[0], "[");
             data_index = 1;
@@ -358,7 +358,7 @@ void recordDataSamples()
     DataSample *sample = appendData();
     Watchdog.reset();
     HONEYWELL_HPM::readDataSample(sample->data, 100);
-    //delay(2000);
+    // delay(2000);
     Watchdog.reset();
     if (HONEYWELL_HPM::stop()) {
         digitalWrite(12, LOW);

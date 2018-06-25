@@ -67,14 +67,14 @@ OLED::OLED(RTC_PCF8523 &rtc)
     Adafruit_FeatherOLED _oled = Adafruit_FeatherOLED();
     _on = false;
     aButtonState = 0;
-    //_oled.init();
-    //pinMode(BUTTON_A, INPUT_PULLUP); // we may be having conflicts with this button
-    //pinMode(BUTTON_C, INPUT_PULLUP);
-    //display.setBatteryIcon(true);
-    //display.setBattery(batteryLevel());
-    //display.renderBattery();
-    //displayCurrentRTCDateTime();
-    //displayID();
+    // _oled.init();
+    // pinMode(BUTTON_A, INPUT_PULLUP); // we may be having conflicts with this button
+    // pinMode(BUTTON_C, INPUT_PULLUP);
+    // display.setBatteryIcon(true);
+    // display.setBattery(batteryLevel());
+    // display.renderBattery();
+    // displayCurrentRTCDateTime();
+    // displayID();
 }
 
 bool OLED::isOn()
@@ -91,7 +91,7 @@ void OLED::displayDateTime(bool force_refresh)
         _oled.setTextColor(WHITE);
         sprintf(last_datestring, "%d-%02d-%02d %02d:%02d", now.year(), now.month(),
             now.day(), now.hour(), now.minute());
-        _oled.setCursor(0,8);
+        _oled.setCursor(0, 8);
         _oled.print(last_datestring);
         _oled.display();
         last_minute = now.minute();
@@ -103,7 +103,7 @@ void OLED::init()
     _oled.init();
     clear();
     _on = true;
-    //attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
+    // attachInterrupt(BUTTON_A, aButton_ISR, CHANGE);
     _activated_time = millis();
 }
 
@@ -119,7 +119,7 @@ void OLED::standby()
     _on = false;
 }
 
-//void OLED::setButtonFunction(uint32_t pin, void (*fcn)(void), int state)
+// void OLED::setButtonFunction(uint32_t pin, void (*fcn)(void), int state)
 void OLED::setButtonFunction(uint32_t pin, voidFuncPtr fcn, uint32_t mode)
 {
     attachInterrupt(pin, fcn, mode);
