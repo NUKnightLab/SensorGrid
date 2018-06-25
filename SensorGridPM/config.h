@@ -23,6 +23,7 @@
 #define DO_TRANSMIT_DATA false
 #define DO_LOG_DATA true
 #define INIT_LEAD_TIME 7
+// comment
 
 enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
 extern enum Mode mode;
