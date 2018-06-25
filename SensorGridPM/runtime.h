@@ -4,7 +4,7 @@
 #ifndef KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
 #define KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
 
-#include <Adafruit_SleepyDog.h>
+// #include <Adafruit_SleepyDog.h>
 #include <SdFat.h>
 #include "HONEYWELL_HPM.h"
 #include "KL_ADAFRUIT_SI7021.h"

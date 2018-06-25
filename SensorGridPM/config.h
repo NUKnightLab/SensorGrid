@@ -4,13 +4,14 @@
 #ifndef KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
 #define KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
 
-#include <Adafruit_SleepyDog.h>
+// #include <Adafruit_SleepyDog.h>
 #include <RTCZero.h>
 #include <RTClib.h>
 #include <KnightLab_ArduinoUtils.h>
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
+#include "WatchdogSAMD.h"
 
 /**
  * SensorGrid will not print to serial if USB is not attached. This can be
@@ -22,6 +23,7 @@
 #define DO_TRANSMIT_DATA false
 #define DO_LOG_DATA true
 #define INIT_LEAD_TIME 7
+// comment
 
 enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
 extern enum Mode mode;
@@ -33,6 +35,8 @@ extern RTCZero rtcz;
 extern RTC_PCF8523 rtc;
 extern uint32_t get_time();
 // extern OLED oled;
+
+extern WatchdogSAMD Watchdog;
 
 #define FAIL_CODE_GENERAL 1
 #define FAIL_CODE_BAD_CONFIG 2

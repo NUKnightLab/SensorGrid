@@ -6,10 +6,10 @@
 #include <Adafruit_FeatherOLED.h>
 #define BUTTON_A 9
 
-//extern void initOLED(RTC_PCF8523 &rtc);
-//extern void displayDateTimeOLED();
-//extern void clear();
-//extern void standby();
+// extern void initOLED(RTC_PCF8523 &rtc);
+// extern void displayDateTimeOLED();
+// extern void clear();
+// extern void standby();
 
 class OLED
 {
@@ -19,13 +19,13 @@ class OLED
     uint32_t _activated_time;
     volatile int aButtonState;
 
-public:
+  public:
     OLED(RTC_PCF8523 &rtc);
-    void displayDateTime(bool force_refresh=false);
+    void displayDateTime(bool force_refresh = false);
     void init();
     void clear();
     void standby();
-    //void setButtonFunction(int button, void (*fcn)(void), int state);
+    // void setButtonFunction(int button, void (*fcn)(void), int state);
     void setButtonFunction(uint32_t pin, voidFuncPtr fcn, uint32_t mode);
     void on();
     void off();
