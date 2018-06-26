@@ -1,5 +1,5 @@
-#ifndef __OLED__
-#define __OLED__
+#ifndef SENSORGRIDPM_OLED_H_
+#define SENSORGRIDPM_OLED_H_
 
 #include <RTClib.h>
 #include <Adafruit_SSD1306.h>
@@ -11,15 +11,14 @@
 // extern void clear();
 // extern void standby();
 
-class OLED
-{
+class OLED {
     RTC_PCF8523 _rtc;
     Adafruit_FeatherOLED _oled;
     bool _on;
     uint32_t _activated_time;
     volatile int aButtonState;
 
-  public:
+ public:
     OLED(RTC_PCF8523 &rtc);
     void displayDateTime(bool force_refresh = false);
     void init();
@@ -36,4 +35,4 @@ class OLED
 };
 
 
-#endif
+#endif  // SENSORGRIDPM_OLED_H_

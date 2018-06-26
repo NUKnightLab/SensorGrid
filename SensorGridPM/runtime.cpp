@@ -8,14 +8,14 @@
 #include <avr/dtostrf.h>
 
 static uint8_t msg_buf[140] = {0};
-static Message *msg = (Message*)msg_buf;
+static Message *msg = reinterpret_cast<Message*>(msg_buf);
 static char databuf[100] = {0};
 StaticJsonBuffer<200> json_buffer;
 JsonArray& data_array = json_buffer.createArray();
 
 /* data history */
 struct DataSample {
-    char data[100];
+    char data[DATASAMPLE_DATASIZE];
     struct DataSample *next;
 };
 
@@ -23,12 +23,11 @@ struct DataSample {
 DataSample *head = NULL;
 DataSample *tail = NULL;
 
-DataSample *appendData()
-{
-    DataSample *new_sample = (DataSample*)malloc(sizeof(DataSample));
+DataSample *appendData() {
+    DataSample *new_sample = reinterpret_cast<DataSample*>(malloc(sizeof(DataSample)));
     if (new_sample == NULL) {
         logln(F("Error creating new sample"));
-        while (1){};
+        while (1) {}
     }
     if (head == NULL) {
         head = new_sample;
@@ -45,8 +44,7 @@ DataSample *appendData()
 
 /* local utils */
 
-void _writeToSD(char* filename, char* str)
-{
+void _writeToSD(char* filename, char* str) {
     static SdFat sd;
     log_(F("Init SD card .."));
     if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
@@ -67,30 +65,26 @@ void _writeToSD(char* filename, char* str)
     logln(F("File closed"));
 }
 
-void writeToSD(char* filename, char* str)
-{
+void writeToSD(char* filename, char* str) {
     digitalWrite(8, HIGH);
     _writeToSD(filename, str);
     digitalWrite(8, LOW);
 }
 
-static uint32_t getNextPeriodTime(int period)
-{
+static uint32_t getNextPeriodTime(int period) {
     uint32_t t = rtcz.getEpoch();
     int d = t % period;
     return (t + period - d);
 }
 
-uint32_t getNextCollectionTime()
-{
+uint32_t getNextCollectionTime() {
     int period = config.collection_period;
     uint32_t t = rtcz.getEpoch();
     int d = t % period;
     return (t + period - d);
 }
 
-static void standby()
-{
+static void standby() {
     mode = STANDBY;
     if (DO_STANDBY) {
         Watchdog.disable();
@@ -100,8 +94,7 @@ static void standby()
 
 typedef void (*InterruptFunction)();
 
-void setInterruptTimeout(DateTime &datetime, InterruptFunction fcn)
-{
+void setInterruptTimeout(DateTime &datetime, InterruptFunction fcn) {
     rtcz.setAlarmSeconds(datetime.second());
     rtcz.setAlarmMinutes(datetime.minute());
     rtcz.enableAlarm(rtcz.MATCH_MMSS);
@@ -112,26 +105,22 @@ void setInterruptTimeout(DateTime &datetime, InterruptFunction fcn)
 
 /* runtime mode interrupts */
 
-void initSensors_INT()
-{
+void initSensors_INT() {
     logln(F("Setting Mode: INIT"));
     mode = INIT;
 }
 
-void recordDataSamples_INT()
-{
+void recordDataSamples_INT() {
     logln(F("Setting Mode: SAMPLE"));
     mode = SAMPLE;
 }
 
-void heartbeat_INT()
-{
+void heartbeat_INT() {
     logln(F("Setting Mode: HEARTBEAT"));
     mode = HEARTBEAT;
 }
 
-void communicateData_INT()
-{
+void communicateData_INT() {
     logln(F("Setting Mode: COMMUNICATE"));
     mode = COMMUNICATE;
 }
@@ -140,8 +129,7 @@ void communicateData_INT()
 
 /* runtime mode timeouts */
 
-void setCommunicateDataTimeout()
-{
+void setCommunicateDataTimeout() {
     logln(F("setCommunicateDataTimeout"));
     uint32_t prev_sample = getNextPeriodTime(config.sample_period) - config.sample_period;
     /* TODO: we end up in a bad state if com time is not far enough out for data
@@ -184,8 +172,7 @@ void setInitTimeout() {
     standby();
 }
 
-void setSampleTimeout()
-{
+void setSampleTimeout() {
     logln(F("setSampleTimeout"));
     uint32_t sample = getNextPeriodTime(config.sample_period);
     uint32_t heartbeat = getNextPeriodTime(config.heartbeat_period);
@@ -210,8 +197,7 @@ void setSampleTimeout()
 
 /* runtime mode handlers */
 
-void initSensors()
-{
+void initSensors() {
     logln(F("Init sensor for data sampling"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     // delay(1000);
@@ -237,35 +223,31 @@ void throwawayHPMData()
 }
 */
 
-void recordBatteryLevel()
-{
+void recordBatteryLevel() {
     float bat = batteryLevel();
     DataSample *batSample = appendData();
-    sprintf(batSample->data, "{\"node\":%d,\"bat\":%d.%02d,\"ts\":%ld}",
-        config.node_id, (int)bat, (int)(bat*100)%100, rtcz.getEpoch());
+    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%d.%02d,\"ts\":%ld}",
+        config.node_id, static_cast<int>(bat), static_cast<int>((bat*100)%100), rtcz.getEpoch());
 }
 
-void recordTempAndHumidity()
-{
+void recordTempAndHumidity() {
     DataSample *dataSample = appendData();
     float temp = ADAFRUIT_SI7021::readTemperature();
     float humid = ADAFRUIT_SI7021::readHumidity();
-    sprintf(dataSample->data,
+    snprintf(dataSample->data, DATASAMPLE_DATASIZE,
         "{\"node\":%d,\"tmp\":%d.%02d,\"hmd\":%d.%02d,\"ts\":%ld}",
-        config.node_id, (int)temp, (int)(temp*100)%100,
-        (int)humid, (int)(temp*100)%100, rtcz.getEpoch());
+        config.node_id, static_cast<int>(temp), static_cast<int>((temp*100)%100),
+        static_cast<int>(humid), static_cast<int>((temp*100)%100), rtcz.getEpoch());  // datasamplesize as buffer
     Serial.println(dataSample->data);
 }
 
-void recordUptime(uint32_t uptime)
-{
+void recordUptime(uint32_t uptime) {
     DataSample *sample = appendData();
-    sprintf(sample->data, "{\"node\":%d,\"uptime\":%ld,\"ts\":%ld}",
+    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%ld,\"ts\":%ld}",
         config.node_id, uptime, rtcz.getEpoch());
 }
 
-void logData(bool clear)
-{
+void logData(bool clear) {
     logln(F("\nLOGGING DATA: ------"));
     DataSample *cursor = head;
     static SdFat sd;
@@ -301,32 +283,31 @@ void logData(bool clear)
     logln(F("File closed"));
 }
 
-void transmitData(bool clear)
-{
+void transmitData(bool clear) {
     msg->sensorgrid_version = config.sensorgrid_version;
     msg->network_id = config.network_id;
     msg->from_node = config.node_id;
     msg->message_type = 2;
     memset(msg->data, 0, 100);
-    sprintf(&msg->data[0], "[");
+    snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
     int data_index = 1;
     logln(F("TRANSMITTING DATA: ------"));
     DataSample *cursor = head;
     while (cursor != NULL) {
         Watchdog.reset();
         logln(cursor->data);
-        if (data_index + strlen(cursor->data) > 100) {  // TODO: what is the real length we need to check?
+        if (data_index + strlen(cursor->data) >= MESSAGE_DATA_SIZE - 1) {  // TODO(Anyone): what is the real length we need to check?
             logln(F("Sending partial data history: "));
             msg->data[data_index-1] = ']';
             logln(msg->data);
             msg->len = strlen(msg->data);
             send_message(msg_buf, 5 + msg->len, config.collector_id);
-            delay(5000);  // TODO: better handling on the collector side?
+            delay(5000);  // TODO(Anyone): better handling on the collector side?
             memset(msg->data, 0, 100);
-            sprintf(&msg->data[0], "[");
+            snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
             data_index = 1;
         }
-        sprintf(&msg->data[data_index], cursor->data);
+        snprintf(&msg->data[data_index], MESSAGE_DATA_SIZE - data_index, cursor->data);  // data sample size - index
         data_index += strlen(cursor->data);
         msg->data[data_index++] = ',';
         if (clear) {
@@ -349,8 +330,7 @@ void transmitData(bool clear)
     print(F(" len: ")); println(F("%d"), msg->len);
 }
 
-void recordDataSamples()
-{
+void recordDataSamples() {
     logln(F("Taking data sample"));
     memset(databuf, 0, 100);
     digitalWrite(12, HIGH);
@@ -370,8 +350,7 @@ void recordDataSamples()
     recordTempAndHumidity();
 }
 
-void flashHeartbeat()
-{
+void flashHeartbeat() {
     logln(F("Heartbeat"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     delay(100);

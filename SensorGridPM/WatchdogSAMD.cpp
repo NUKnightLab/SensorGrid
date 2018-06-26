@@ -6,8 +6,8 @@
 #if defined(ARDUINO_ARCH_SAMD)
 
 #include <sam.h>
-//#include <Adafruit_ASFcore.h>
-//#include <power.h>
+// #include <Adafruit_ASFcore.h>
+// #include <power.h>
 #include "WatchdogSAMD.h"
 
 int WatchdogSAMD::enable(int maxPeriodMS, bool isForSleep) {
@@ -20,49 +20,49 @@ int WatchdogSAMD::enable(int maxPeriodMS, bool isForSleep) {
     int     cycles, actualMS;
     uint8_t bits;
 
-    if(!_initialized) _initialize_wdt();
+    if (!_initialized) _initialize_wdt();
 
-    WDT->CTRL.reg = 0; // Disable watchdog for config
-    while(WDT->STATUS.bit.SYNCBUSY);
+    WDT->CTRL.reg = 0;  // Disable watchdog for config
+    while (WDT->STATUS.bit.SYNCBUSY) {}
 
     // You'll see some occasional conversion here compensating between
     // milliseconds (1000 Hz) and WDT clock cycles (~1024 Hz).  The low-
     // power oscillator used by the WDT ostensibly runs at 32,768 Hz with
     // a 1:32 prescale, thus 1024 Hz, though probably not super precise.
 
-    if((maxPeriodMS >= 16000) || !maxPeriodMS) {
+    if ((maxPeriodMS >= 16000) || !maxPeriodMS) {
         cycles = 16384;
         bits   = 0xB;
     } else {
-        cycles = (maxPeriodMS * 1024L + 500) / 1000; // ms -> WDT cycles
-        if(cycles >= 8192) {
+        cycles = (maxPeriodMS * 1024L + 500) / 1000;  // ms -> WDT cycles
+        if (cycles >= 8192) {
             cycles = 8192;
             bits   = 0xA;
-        } else if(cycles >= 4096) {
+        } else if (cycles >= 4096) {
             cycles = 4096;
             bits   = 0x9;
-        } else if(cycles >= 2048) {
+        } else if (cycles >= 2048) {
             cycles = 2048;
             bits   = 0x8;
-        } else if(cycles >= 1024) {
+        } else if (cycles >= 1024) {
             cycles = 1024;
             bits   = 0x7;
-        } else if(cycles >= 512) {
+        } else if (cycles >= 512) {
             cycles = 512;
             bits   = 0x6;
-        } else if(cycles >= 256) {
+        } else if (cycles >= 256) {
             cycles = 256;
             bits   = 0x5;
-        } else if(cycles >= 128) {
+        } else if (cycles >= 128) {
             cycles = 128;
             bits   = 0x4;
-        } else if(cycles >= 64) {
+        } else if (cycles >= 64) {
             cycles = 64;
             bits   = 0x3;
-        } else if(cycles >= 32) {
+        } else if (cycles >= 32) {
             cycles = 32;
             bits   = 0x2;
-        } else if(cycles >= 16) {
+        } else if (cycles >= 16) {
             cycles = 16;
             bits   = 0x1;
         } else {
@@ -93,24 +93,24 @@ int WatchdogSAMD::enable(int maxPeriodMS, bool isForSleep) {
     // function (later in this file) explicitly passes 'true' to get the
     // alternate behavior.
 
-    if(isForSleep) {
+    if (isForSleep) {
         WDT->INTENSET.bit.EW   = 1;      // Enable early warning interrupt
         WDT->CONFIG.bit.PER    = 0xB;    // Period = max
         WDT->CONFIG.bit.WINDOW = bits;   // Set time of interrupt
         WDT->CTRL.bit.WEN      = 1;      // Enable window mode
-        while(WDT->STATUS.bit.SYNCBUSY); // Sync CTRL write
+        while (WDT->STATUS.bit.SYNCBUSY) {}  // Sync CTRL write
     } else {
         WDT->INTENCLR.bit.EW   = 1;      // Disable early warning interrupt
         WDT->CONFIG.bit.PER    = bits;   // Set period for chip reset
         WDT->CTRL.bit.WEN      = 0;      // Disable window mode
-        while(WDT->STATUS.bit.SYNCBUSY); // Sync CTRL write
+        while (WDT->STATUS.bit.SYNCBUSY) {}  // Sync CTRL write
     }
 
-    actualMS = (cycles * 1000L + 512) / 1024; // WDT cycles -> ms
+    actualMS = (cycles * 1000L + 512) / 1024;  // WDT cycles -> ms
 
-    reset();                  // Clear watchdog interval
-    WDT->CTRL.bit.ENABLE = 1; // Start watchdog now!
-    while(WDT->STATUS.bit.SYNCBUSY);
+    reset();                   // Clear watchdog interval
+    WDT->CTRL.bit.ENABLE = 1;  // Start watchdog now!
+    while (WDT->STATUS.bit.SYNCBUSY) {}
 
     return actualMS;
 }
@@ -119,31 +119,31 @@ void WatchdogSAMD::reset() {
     // Write the watchdog clear key value (0xA5) to the watchdog
     // clear register to clear the watchdog timer and reset it.
     WDT->CLEAR.reg = WDT_CLEAR_CLEAR_KEY;
-    while(WDT->STATUS.bit.SYNCBUSY);
+    while (WDT->STATUS.bit.SYNCBUSY) {}
 }
 
 void WatchdogSAMD::disable() {
     WDT->CTRL.bit.ENABLE = 0;
-    while(WDT->STATUS.bit.SYNCBUSY);
+    while (WDT->STATUS.bit.SYNCBUSY) {}
 }
 
 void WDT_Handler(void) {
     // ISR for watchdog early warning, DO NOT RENAME!
     WDT->CTRL.bit.ENABLE = 0;        // Disable watchdog
-    while(WDT->STATUS.bit.SYNCBUSY); // Sync CTRL write
+    while (WDT->STATUS.bit.SYNCBUSY) {}  // Sync CTRL write
     WDT->INTFLAG.bit.EW  = 1;        // Clear interrupt flag
 }
 
-//int WatchdogSAMD::sleep(int maxPeriodMS) {
+//  int WatchdogSAMD::sleep(int maxPeriodMS) {
 //
   //  int actualPeriodMS = enable(maxPeriodMS, true); // true = for sleep
 
-    //system_set_sleepmode(SYSTEM_SLEEPMODE_STANDBY); // Deepest sleep
-    //system_sleep();
-    // Code resumes here on wake (WDT early warning interrupt)
+    //  system_set_sleepmode(SYSTEM_SLEEPMODE_STANDBY); // Deepest sleep
+    //  system_sleep();
+    //  Code resumes here on wake (WDT early warning interrupt)
 
-    //return actualPeriodMS;
-//}
+    //  return actualPeriodMS;
+//  }
 
 void WatchdogSAMD::_initialize_wdt() {
     // One-time initialization of watchdog timer.
@@ -157,7 +157,7 @@ void WatchdogSAMD::_initialize_wdt() {
                         GCLK_GENCTRL_GENEN |
                         GCLK_GENCTRL_SRC_OSCULP32K |
                         GCLK_GENCTRL_DIVSEL;
-    while(GCLK->STATUS.bit.SYNCBUSY);
+    while (GCLK->STATUS.bit.SYNCBUSY) {}
     // WDT clock = clock gen 2
     GCLK->CLKCTRL.reg = GCLK_CLKCTRL_ID_WDT |
                         GCLK_CLKCTRL_CLKEN |
@@ -166,7 +166,7 @@ void WatchdogSAMD::_initialize_wdt() {
     // Enable WDT early-warning interrupt
     NVIC_DisableIRQ(WDT_IRQn);
     NVIC_ClearPendingIRQ(WDT_IRQn);
-    NVIC_SetPriority(WDT_IRQn, 0); // Top priority
+    NVIC_SetPriority(WDT_IRQn, 0);  // Top priority
     NVIC_EnableIRQ(WDT_IRQn);
 
     _initialized = true;

@@ -1,8 +1,8 @@
-#ifndef WATCHDOGSAMD_H
-#define WATCHDOGSAMD_H
+#ifndef SENSORGRIDPM_WATCHDOGSAMD_H_
+#define SENSORGRIDPM_WATCHDOGSAMD_H_
 
 class WatchdogSAMD {
-public:
+ public:
     WatchdogSAMD():
       _initialized(false)
     {}
@@ -34,10 +34,10 @@ public:
     // returned.
     int sleep(int maxPeriodMS = 0);
 
-private:
+ private:
     void _initialize_wdt();
 
     bool _initialized;
 };
 
-#endif
+#endif  // SENSORGRIDPM_WATCHDOGSAMD_H_
