@@ -10,11 +10,11 @@
 #include "oled.h"
 #include "tests.h"
 
+#define SET_CLOCK false
+#define TEST
+
 
 WatchdogSAMD Watchdog;
-
-#define SET_CLOCK false
-#define NOTEST
 
 enum Mode mode = WAIT;
 
@@ -139,16 +139,23 @@ void HardFault_Handler(void) {
 /* setup and loop */
 
 void setup() {
-    setupGPS();
-    setupClocks();
-    oled.init();
-    oled.displayStartup();
+
     /* This is causing lock-up. Need to do further research into low power modes
        on the Cortex M0 */
     // oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
     // oled.displayDateTime();
     unsigned long _start = millis();
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
+
+    #ifdef TEST
+    aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
+    return;
+    #endif
+
+    setupGPS();
+    setupClocks();
+    oled.init();
+    oled.displayStartup();
     if (ALWAYS_LOG || Serial) {
         setupLogging();
     }
@@ -169,7 +176,6 @@ void setup() {
     logln(F(".. setup complete"));
     printCurrentTime();
     oled.endDisplayStartup();
-    aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
 }
 
 void loop() {
