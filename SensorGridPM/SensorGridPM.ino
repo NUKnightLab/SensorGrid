@@ -11,10 +11,10 @@
 #include "tests.h"
 
 #define SET_CLOCK false
-#define TEST
+#define NOTEST
 
 
-WatchdogSAMD Watchdog;
+WatchdogType Watchdog;
 
 enum Mode mode = WAIT;
 
@@ -66,12 +66,18 @@ void aButton_ISR() {
     static bool busy = false;
     if (busy) return;
     busy = true;
-    rtcz.disableAlarm();
+   // rtcz.disableAlarm();
     static volatile int state = 0;
-    state = !digitalRead(BUTTON_A);\
+    state = !digitalRead(BUTTON_A);
     if (state) {
         Serial.println("A-Button pushed");
         oled.toggleDisplayState();
+    }
+    if (oled.isOn()){
+      updateClock();
+      oled.displayDateTime();
+    } else {
+      oled.clear();
     }
     busy = false;
     // rtcz.disableAlarm();

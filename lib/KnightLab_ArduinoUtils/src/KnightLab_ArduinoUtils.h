@@ -15,6 +15,16 @@ extern void set_logging(bool b);
 extern bool is_logging();
 extern void fail(int code);
 
+#if defined(ARDUINO_ARCH_SAMD)
+  // Arduino Zero / ATSAMD series CPU watchdog support.
+  #include "arch/WatchdogSAMD.h"
+  typedef WatchdogSAMD WatchdogType;
+
+#else 
+  serial.println("Arch type other than SAMD")
+  while (1) {}
+#endif
+
 class __FlashStringHelper;
 //#define F(string_literal) (reinterpret_cast<const __FlashStringHelper*>(PSTR(string_literal)))
 

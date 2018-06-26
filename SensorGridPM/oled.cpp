@@ -131,6 +131,7 @@ void OLED::toggleDisplayState() {
     _on = !_on;
     if (_on) {
         on();
+        
     } else {
         off();
     }
