@@ -7,8 +7,7 @@ RHMesh* router;
 RHRouter* router;
 #endif
 
-void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
-{
+void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id) {
     logln(F("Setting up radio with RadioHead Version: %d.%d"),
         RH_VERSION_MAJOR, RH_VERSION_MINOR);
     /* TODO: Can RH version check be done at compile time? */
@@ -17,7 +16,7 @@ void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
         // log(F("ABORTING: SensorGrid requires RadioHead version %s.%s"),
         //    REQUIRED_RH_VERSION_MAJOR, REQUIRED_RH_VERSION_MINOR);
         // log(F("RadioHead %s.%s is installed"), RH_VERSION_MAJOR, RH_VERSION_MINOR);
-        while (1){};
+        while (1) {}
     }
     radio = new RH_RF95(cs_pin, int_pin);
 #if defined(USE_MESH_ROUTER)
@@ -42,12 +41,12 @@ void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
     logln(F("Node ID: %d"), node_id);
     if (!router->init()) {
         logln(F("Router init failed"));
-        while (1){};
+        while (1) {}
     }
     logln(F("FREQ: %s"), FREQ);
         if (!radio->setFrequency(FREQ)) {
         logln(F("Radio frequency set failed"));
-        while (1){};
+        while (1) {}
     }
     radio->setTxPower(TX, false);
     radio->setCADTimeout(CAD_TIMEOUT);
@@ -63,21 +62,20 @@ the receiver. */
 }
 
 
-int receive(Message *msg, uint16_t timeout)
-{
-    //static uint8_t recv_buf[RH_ROUTER_MAX_MESSAGE_LEN];
+int receive(Message *msg, uint16_t timeout) {
+    // static uint8_t recv_buf[RH_ROUTER_MAX_MESSAGE_LEN];
     static uint8_t len = RH_ROUTER_MAX_MESSAGE_LEN;
     static uint8_t from;
     static uint8_t to;
     static uint8_t id;
     logln(F("Listening for message ..."));
-    if (router->recvfromAckTimeout((uint8_t*)msg, &len, timeout, &from, &to, &id)) {
+    if (router->recvfromAckTimeout(reinterpret_cast<uint8_t*>(msg), &len, timeout, &from, &to, &id)) {
         // Message *_msg = (Message*)recv_buf;
         if ( msg->sensorgrid_version != config.sensorgrid_version ) {
             logln(F("WARNING: Received message with wrong firmware version: %d\n"),
                 msg->sensorgrid_version);
             return RECV_STATUS_WRONG_VERSION;
-        }       
+        }
         if ( msg->network_id != config.network_id ) {
             logln(F(
                 "WARNING: Received message from wrong network: %d (expected: %d)\n"),
@@ -99,9 +97,8 @@ int receive(Message *msg, uint16_t timeout)
 }
 
 /* **** SEND FUNCTIONS **** */
-uint8_t send_message(uint8_t *msg, uint8_t len, uint8_t to_id)
-{
-    Message *_msg = (Message*)msg;
+uint8_t send_message(uint8_t *msg, uint8_t len, uint8_t to_id) {
+    Message *_msg = reinterpret_cast<Message*>(msg);
     Serial.print("Sending data: "); Serial.println(_msg->data);
     Serial.print("Message length: "); Serial.println(len, DEC);
     uint8_t err = router->sendtoWait(msg, len, to_id);

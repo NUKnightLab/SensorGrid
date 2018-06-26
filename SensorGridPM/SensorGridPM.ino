@@ -31,21 +31,18 @@ OLED oled = OLED(rtc);
 
 /* local utilities */
 
-static void setupLogging()
-{
+static void setupLogging() {
     Serial.begin(115200);
     set_logging(true);
 }
 
-static void setRTCz()
-{
+static void setRTCz() {
     DateTime dt = rtc.now();
     rtcz.setDate(dt.day(), dt.month(), dt.year());
     rtcz.setTime(dt.hour(), dt.minute(), dt.second());
 }
 
-static void printCurrentTime()
-{
+static void printCurrentTime() {
     Serial.print("Current time: ");
     Serial.print(rtcz.getHours());
     Serial.print(":");
@@ -55,8 +52,7 @@ static void printCurrentTime()
     Serial.println(rtcz.getEpoch());
 }
 
-uint32_t getTime()
-{
+uint32_t getTime() {
     return rtcz.getEpoch();
 }
 
@@ -66,8 +62,7 @@ uint32_t getTime()
  * interrupts
  */
 
-void aButton_ISR()
-{
+void aButton_ISR() {
     static bool busy = false;
     if (busy) return;
     busy = true;
@@ -94,8 +89,7 @@ void aButton_ISR()
     */
 }
 
-void updateClock()
-{
+void updateClock() {
     int gps_year = GPS.year;
     if (gps_year != 0 && gps_year != 80) {
         uint32_t gps_time = DateTime(GPS.year, GPS.month, GPS.day, GPS.hour, GPS.minute, GPS.seconds).unixtime();
@@ -107,16 +101,14 @@ void updateClock()
     setRTCz();
 }
 
-void setupHoneywell()
-{
+void setupHoneywell() {
     pinMode(12, OUTPUT);  // enable pin to HPM boost
     HONEYWELL_HPM::setup(config.node_id, 0, &getTime);
     delay(2000);
     HONEYWELL_HPM::stop();
 }
 
-void setupClocks()
-{
+void setupClocks() {
     rtc.begin();
     /* In general, we no longer use SET_CLOCK. Instead use a GPS module to set the time */
     if (SET_CLOCK) {
@@ -141,13 +133,12 @@ void HardFault_Handler(void) {
     //
     Serial.println("!!!!**** HARD FAULT -- REQUESTING RESET *****!!!!");
     SCB->AIRCR = 0x05FA0004;  // System reset
-    while (_Continue == 0u){};
+    while (_Continue == 0u) {}
 }
 
 /* setup and loop */
 
-void setup()
-{
+void setup() {
     setupGPS();
     setupClocks();
     oled.init();
@@ -157,7 +148,7 @@ void setup()
     // oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
     // oled.displayDateTime();
     unsigned long _start = millis();
-    while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ){};
+    while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
     if (ALWAYS_LOG || Serial) {
         setupLogging();
     }
@@ -181,8 +172,8 @@ void setup()
     aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
 }
 
-void loop()
-{
+void loop() {
+
     #ifdef TEST
     aunit::TestRunner::run();
     return;

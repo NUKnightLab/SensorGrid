@@ -14,10 +14,10 @@ void setup_radio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
     /* TODO: Can RH version check be done at compile time? */
     if (RH_VERSION_MAJOR != REQUIRED_RH_VERSION_MAJOR
             || RH_VERSION_MINOR != REQUIRED_RH_VERSION_MINOR) {
-        //log(F("ABORTING: SensorGrid requires RadioHead version %s.%s"),
+        // log(F("ABORTING: SensorGrid requires RadioHead version %s.%s"),
         //    REQUIRED_RH_VERSION_MAJOR, REQUIRED_RH_VERSION_MINOR);
-        //log(F("RadioHead %s.%s is installed"), RH_VERSION_MAJOR, RH_VERSION_MINOR);
-        while(1);
+        // log(F("RadioHead %s.%s is installed"), RH_VERSION_MAJOR, RH_VERSION_MINOR);
+        while (1) {}
     }
     radio = new RH_RF95(cs_pin, int_pin);
 #if defined(USE_MESH_ROUTER)
@@ -30,24 +30,24 @@ void setup_radio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id)
        air space while trying to listen for new messages. As a result, don't
        do any retries in the router. Instead, we will pick up missed messages
        in the application layer. */
-    //router->setRetries(0);
+    // router->setRetries(0);
     router->clearRoutingTable();
-    //router->addRouteTo(1, 1);
-    //router->addRouteTo(2, 2);
-    //router->addRouteTo(3, 3);
-    //router->addRouteTo(4, 4);
+    // router->addRouteTo(1, 1);
+    // router->addRouteTo(2, 2);
+    // router->addRouteTo(3, 3);
+    // router->addRouteTo(4, 4);
 #endif
     if (USE_SLOW_RELIABLE_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
     logln(F("Node ID: %d"), node_id);
     if (!router->init()) {
         logln(F("Router init failed"));
-        while(1);
+        while (1) {}
     }
     logln(F("FREQ: %s"), FREQ);
         if (!radio->setFrequency(FREQ)) {
         logln(F("Radio frequency set failed"));
-        while(1);
+        while (1) {}
     }
     radio->setTxPower(TX, false);
     radio->setCADTimeout(CAD_TIMEOUT);
@@ -86,8 +86,8 @@ int receive(Message *msg, uint16_t timeout)
         Serial.print("Received message len: ");
         Serial.println(len, DEC);
         uint8_t* buf = (uint8_t*)msg;
-        for (int i=0; i<len; i++) {
-            Serial.print( buf[i], HEX); Serial.print(" ");
+        for (int i=0; i < len; i++) {
+            Serial.print(buf[i], HEX); Serial.print(" ");
         }
         Serial.println("");
         Serial.print("version: "); Serial.println(msg->sensorgrid_version);
@@ -107,9 +107,9 @@ int receive(Message *msg, uint16_t timeout)
 
 uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
 {
-    //log_(F("Sending message type: "));
-    //print_message_type(((Message*)msg)->message_type);
-    //p(F("; length: %d\n"), len);
+    // log_(F("Sending message type: "));
+    // print_message_type(((Message*)msg)->message_type);
+    // p(F("; length: %d\n"), len);
     unsigned long start = millis();
     uint8_t err = router->sendtoWait(msg, len, toID);
 
@@ -120,7 +120,7 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
     }
     */
 
-    //p(F("Time to send: %d\n"), millis() - start);
+    // p(F("Time to send: %d\n"), millis() - start);
     if (err == RH_ROUTER_ERROR_NONE) {
         return err;
     } else if (err == RH_ROUTER_ERROR_INVALID_LENGTH) {
@@ -137,7 +137,7 @@ uint8_t send_message(uint8_t* msg, uint8_t len, uint8_t toID)
         return err;
     } else if (err == RH_ROUTER_ERROR_UNABLE_TO_DELIVER) {
         logln(F("ERROR sending message to Node ID: %d. UNABLE TO DELIVER"), toID);
-        return err;   
+        return err;
     } else {
         logln(F("ERROR sending message to Node ID: %d. UNKOWN ERROR CODE: %d"), toID, err);
         return err;

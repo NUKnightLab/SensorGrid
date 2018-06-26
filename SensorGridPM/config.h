@@ -1,8 +1,8 @@
 /**
  * Copyright 2018 Northwestern University
  */
-#ifndef KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
-#define KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
+#ifndef SENSORGRIDPM_CONFIG_H_
+#define SENSORGRIDPM_CONFIG_H_
 
 // #include <Adafruit_SleepyDog.h>
 #include <RTCZero.h>
@@ -23,6 +23,9 @@
 #define DO_TRANSMIT_DATA false
 #define DO_LOG_DATA true
 #define INIT_LEAD_TIME 7
+#define MESSAGE_DATA_SIZE 100
+#define DATASAMPLE_DATASIZE MESSAGE_DATA_SIZE - 2
+
 // comment
 
 enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
@@ -109,4 +112,4 @@ struct Message {
 } __attribute__((packed));
 
 
-#endif  // KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
+#endif  // SENSORGRIDPM_CONFIG_H_
