@@ -226,8 +226,8 @@ void throwawayHPMData()
 void recordBatteryLevel() {
     float bat = batteryLevel();
     DataSample *batSample = appendData();
-    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%d.%02d,\"ts\":%ld}",
-        config.node_id, static_cast<int>(bat), static_cast<int>((bat*100)%100), rtcz.getEpoch());
+    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%.2f,\"ts\":%ld}",
+        config.node_id, bat, rtcz.getEpoch());
 }
 
 void recordTempAndHumidity() {
@@ -235,9 +235,8 @@ void recordTempAndHumidity() {
     float temp = ADAFRUIT_SI7021::readTemperature();
     float humid = ADAFRUIT_SI7021::readHumidity();
     snprintf(dataSample->data, DATASAMPLE_DATASIZE,
-        "{\"node\":%d,\"tmp\":%d.%02d,\"hmd\":%d.%02d,\"ts\":%ld}",
-        config.node_id, static_cast<int>(temp), static_cast<int>((temp*100)%100),
-        static_cast<int>(humid), static_cast<int>((temp*100)%100), rtcz.getEpoch());  // datasamplesize as buffer
+        "{\"node\":%d,\"tmp\":%.2f,\"hmd\":%.2f,\"ts\":%ld}",
+        config.node_id, temp, humid, rtcz.getEpoch());
     Serial.println(dataSample->data);
 }
 
