@@ -8,11 +8,13 @@
 #include "lora.h"
 #include "runtime.h"
 #include "oled.h"
+#include "tests.h"
 
 
 WatchdogSAMD Watchdog;
 
 #define SET_CLOCK false
+#define NOTEST
 
 enum Mode mode = WAIT;
 
@@ -176,10 +178,16 @@ void setup()
     logln(F(".. setup complete"));
     printCurrentTime();
     oled.endDisplayStartup();
+    aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
 }
 
 void loop()
 {
+    #ifdef TEST
+    aunit::TestRunner::run();
+    return;
+    #endif
+
     // enable (instead of reset) Watchdog every loop because we disable during standby
     Watchdog.enable();
     static uint32_t start_time = getTime();
