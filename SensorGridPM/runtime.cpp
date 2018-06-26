@@ -15,7 +15,7 @@ JsonArray& data_array = json_buffer.createArray();
 
 /* data history */
 struct DataSample {
-    char data[DATASAMPLESIZE_DATASIZE];
+    char data[DATASAMPLE_DATASIZE];
     struct DataSample *next;
 };
 
@@ -226,7 +226,7 @@ void throwawayHPMData()
 void recordBatteryLevel() {
     float bat = batteryLevel();
     DataSample *batSample = appendData();
-    snprintf(batSample->data, DATASAMPLESIZE_DATASIZE, "{\"node\":%d,\"bat\":%d.%02d,\"ts\":%ld}",
+    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%d.%02d,\"ts\":%ld}",
         config.node_id, static_cast<int>(bat), static_cast<int>((bat*100)%100), rtcz.getEpoch());
 }
 
@@ -234,7 +234,7 @@ void recordTempAndHumidity() {
     DataSample *dataSample = appendData();
     float temp = ADAFRUIT_SI7021::readTemperature();
     float humid = ADAFRUIT_SI7021::readHumidity();
-    snprintf(dataSample->data, DATASAMPLESIZE_DATASIZE,
+    snprintf(dataSample->data, DATASAMPLE_DATASIZE,
         "{\"node\":%d,\"tmp\":%d.%02d,\"hmd\":%d.%02d,\"ts\":%ld}",
         config.node_id, static_cast<int>(temp), static_cast<int>((temp*100)%100),
         static_cast<int>(humid), static_cast<int>((temp*100)%100), rtcz.getEpoch());  // datasamplesize as buffer
@@ -243,7 +243,7 @@ void recordTempAndHumidity() {
 
 void recordUptime(uint32_t uptime) {
     DataSample *sample = appendData();
-    snprintf(sample->data, DATASAMPLESIZE_DATASIZE, "{\"node\":%d,\"uptime\":%ld,\"ts\":%ld}",
+    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%ld,\"ts\":%ld}",
         config.node_id, uptime, rtcz.getEpoch());
 }
 
