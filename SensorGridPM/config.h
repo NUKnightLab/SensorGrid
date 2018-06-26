@@ -11,7 +11,7 @@
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
-#include "WatchdogSAMD.h"
+//#include "WatchdogSAMD.h"
 
 /**
  * SensorGrid will not print to serial if USB is not attached. This can be
