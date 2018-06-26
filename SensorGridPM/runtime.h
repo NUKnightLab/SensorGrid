@@ -1,8 +1,8 @@
 /**
  * Copyright 2018 Northwestern University
  */
-#ifndef KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
-#define KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
+#ifndef SENSORGRIDPM_RUNTIME_H_
+#define SENSORGRIDPM_RUNTIME_H_
 
 // #include <Adafruit_SleepyDog.h>
 #include <SdFat.h>
@@ -25,4 +25,4 @@ extern void logData(bool clear);
 extern void transmitData(bool clear);
 extern uint32_t getNextCollectionTime();
 
-#endif  // KNIGHTLAB_SENSORGRID_SENSORGRIDPM_RUNTIME_H_
+#endif  // SENSORGRIDPM_RUNTIME_H_
