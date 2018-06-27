@@ -11,6 +11,7 @@
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
+#include <KL_ADAFRUIT_SI7021.h>
 //#include "WatchdogSAMD.h"
 
 /**
@@ -102,6 +103,7 @@ struct Config {
     uint16_t api_port;
 };
 
+extern uint32_t getTime();
 extern void loadConfig();
 extern void loadSensorConfig();
 extern struct Config config;
@@ -115,9 +117,9 @@ struct Message {
     char data[100];
 } __attribute__((packed));
 
-typedef int32_t (*SensorStartFunction)();
-typedef int32_t (*SensorReadFunction)();
-typedef int32_t (*SensorStopFunction)();
+typedef bool (*SensorStartFunction)();
+typedef size_t (*SensorReadFunction)(char *buf, int len);
+typedef bool (*SensorStopFunction)();
 
 struct SensorConfig {
     uint8_t id;
@@ -127,7 +129,7 @@ struct SensorConfig {
     SensorStopFunction stop_function;
     struct SensorConfig *next;
 
-}
+};
 
 
 #endif  // SENSORGRIDPM_CONFIG_H_
