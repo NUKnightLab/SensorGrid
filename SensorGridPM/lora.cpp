@@ -1,3 +1,6 @@
+/**
+ * Copyright 2018 Northwestern University
+ */
 #include "lora.h"
 
 RH_RF95 *radio;

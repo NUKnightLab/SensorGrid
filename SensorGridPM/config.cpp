@@ -69,3 +69,30 @@ void loadConfig() {
         fail(FAIL_CODE_BAD_CONFIG);
     }
 }
+
+loadSensorConfig(){
+    struct SensorConfig *sensor_config = new SensorConfig();
+    sensor_config_head = sensor_config;
+
+    /* Adafruit Si7021 temperature/humidity breakout */
+    if (ADAFRUIT_SI7021::setup()) { 
+      sensor_config->next = new SensorConfig();
+      sensor_config = sensor_config->next;
+      sensor_config->id = TYPE_SI7021_TEMP_HUMIDITY;
+      sensor_config->id_str = "SI7021_TEMP_HUMIDITY";
+      sensor_config->read_function = &(ADAFRUIT_SI7021::start);
+      sensor_config->read_function = &(ADAFRUIT_SI7021::read);
+      sensor_config->read_function = &(ADAFRUIT_SI7021::stop);
+    }
+
+    if (HONEYWELL_HPM::setup()){
+      sensor_config->next = new SensorConfig();
+      sensor_config = sensor_config->next;
+      sensor_config->id = TTYPE_HONEYWELL_HPM;
+      sensor_config->id_str = "HONEYWELL_PM";
+      sensor_config->read_function = &(HONEYWELL_HPM::start);
+      sensor_config->read_function = &(HONEYWELL_HPM::read);
+      sensor_config->read_function = &(HONEYWELL_HPM::stop);
+    }
+}
+
