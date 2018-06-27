@@ -220,7 +220,7 @@ void loop() {
         initSensors();
         setSampleTimeout();
     } else if (mode == SAMPLE) {
-        recordDataSamples();
+        readDataSamples();
         if (getTime() > next_collection_time) {
             setCommunicateDataTimeout();
         } else {

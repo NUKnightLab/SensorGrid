@@ -4,7 +4,7 @@
 #include "config.h"
 
 struct Config config;
-struct SensorConfig *sensor_config_head;
+
 
 uint32_t getTime() {
     return rtcz.getEpoch();
@@ -18,6 +18,8 @@ uint32_t getTime() {
  *
  * No other RFM95 CS alternates are supported at this time
  */
+
+
 void loadConfig() {
     int default_rfm_cs = atoi(DEFAULT_RFM95_CS);
     int alt_rfm_cs = atoi(ALTERNATE_RFM95_CS);
@@ -74,6 +76,8 @@ void loadConfig() {
         fail(FAIL_CODE_BAD_CONFIG);
     }
 }
+
+
 
 void loadSensorConfig(){
     struct SensorConfig *sensor_config = new SensorConfig();

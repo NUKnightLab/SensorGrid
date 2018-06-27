@@ -75,6 +75,8 @@ extern WatchdogSAMD Watchdog;
 #define DEFAULT_RFM95_INT "3"
 #define DEFAULT_API_PORT "80"
 
+struct SensorConfig *sensor_config_head;
+
 
 struct Config {
     uint32_t network_id;
