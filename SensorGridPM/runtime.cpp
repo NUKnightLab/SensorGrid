@@ -232,12 +232,13 @@ void recordBatteryLevel() {
 
 void recordTempAndHumidity() {
     DataSample *dataSample = appendData();
-    float temp = ADAFRUIT_SI7021::readTemperature();
-    float humid = ADAFRUIT_SI7021::readHumidity();
-    snprintf(dataSample->data, DATASAMPLE_DATASIZE,
-        "{\"node\":%d,\"tmp\":%.2f,\"hmd\":%.2f,\"ts\":%ld}",
-        config.node_id, temp, humid, rtcz.getEpoch());
-    Serial.println(dataSample->data);
+    ADAFRUIT_SI7021::read(dataSample->data, DATASAMPLE_DATASIZE);
+//    float temp = ADAFRUIT_SI7021::readTemperature();
+//    float humid = ADAFRUIT_SI7021::readHumidity();
+//    snprintf(dataSample->data, DATASAMPLE_DATASIZE,
+//        "{\"node\":%d,\"tmp\":%.2f,\"hmd\":%.2f,\"ts\":%ld}",
+//        config.node_id, temp, humid, rtcz.getEpoch());
+//    Serial.println(dataSample->data);
 }
 
 void recordUptime(uint32_t uptime) {
@@ -331,12 +332,12 @@ void transmitData(bool clear) {
 
 void recordDataSamples() {
     logln(F("Taking data sample"));
-    memset(databuf, 0, 100);
+    memset(databuf, 0, 100);  // TODO Should this be taken out?
     digitalWrite(12, HIGH);
     logln(F("Before readData:"));
     DataSample *sample = appendData();
     Watchdog.reset();
-    HONEYWELL_HPM::readDataSample(sample->data, 100);
+    HONEYWELL_HPM::read(sample->data, DATASAMPLE_DATASIZE);
     // delay(2000);
     Watchdog.reset();
     if (HONEYWELL_HPM::stop()) {
