@@ -54,9 +54,11 @@ static void printCurrentTime() {
     Serial.println(rtcz.getEpoch());
 }
 
+/* moved to config.cpp
 uint32_t getTime() {
     return rtcz.getEpoch();
 }
+*/
 
 /* end local utilities */
 
@@ -111,8 +113,9 @@ void updateClock() {
 
 void setupSensors() {
     pinMode(12, OUTPUT);  // enable pin to HPM boost
-    HONEYWELL_HPM::setup(config.node_id, &getTime);
-    ADAFRUIT_SI7021::setup(config.node_id, &getTime);
+    loadSensorConfig();
+    //HONEYWELL_HPM::setup(config.node_id, &getTime);
+    //ADAFRUIT_SI7021::setup(config.node_id, &getTime);
 }
 
 //   void setupHoneywell() {

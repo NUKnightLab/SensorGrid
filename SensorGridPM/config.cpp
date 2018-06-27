@@ -4,6 +4,11 @@
 #include "config.h"
 
 struct Config config;
+struct SensorConfig *sensor_config_head;
+
+uint32_t getTime() {
+    return rtcz.getEpoch();
+}
 
 /**
  * We pull both pins 8 and 19 HIGH during SD card read. The default configuration
@@ -70,29 +75,29 @@ void loadConfig() {
     }
 }
 
-loadSensorConfig(){
+void loadSensorConfig(){
     struct SensorConfig *sensor_config = new SensorConfig();
     sensor_config_head = sensor_config;
 
     /* Adafruit Si7021 temperature/humidity breakout */
-    if (ADAFRUIT_SI7021::setup()) { 
+    if (ADAFRUIT_SI7021::setup(config.node_id, getTime)) { 
       sensor_config->next = new SensorConfig();
       sensor_config = sensor_config->next;
       sensor_config->id = TYPE_SI7021_TEMP_HUMIDITY;
       sensor_config->id_str = "SI7021_TEMP_HUMIDITY";
-      sensor_config->read_function = &(ADAFRUIT_SI7021::start);
+      sensor_config->start_function = &(ADAFRUIT_SI7021::start);
       sensor_config->read_function = &(ADAFRUIT_SI7021::read);
-      sensor_config->read_function = &(ADAFRUIT_SI7021::stop);
+      sensor_config->stop_function = &(ADAFRUIT_SI7021::stop);
     }
 
-    if (HONEYWELL_HPM::setup()){
+    if (HONEYWELL_HPM::setup(config.node_id, getTime)){
       sensor_config->next = new SensorConfig();
       sensor_config = sensor_config->next;
-      sensor_config->id = TTYPE_HONEYWELL_HPM;
+      sensor_config->id = TYPE_HONEYWELL_HPM;
       sensor_config->id_str = "HONEYWELL_PM";
-      sensor_config->read_function = &(HONEYWELL_HPM::start);
+      sensor_config->start_function = &(HONEYWELL_HPM::start);
       sensor_config->read_function = &(HONEYWELL_HPM::read);
-      sensor_config->read_function = &(HONEYWELL_HPM::stop);
+      sensor_config->stop_function = &(HONEYWELL_HPM::stop);
     }
 }
 
