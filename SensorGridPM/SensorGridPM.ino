@@ -107,12 +107,16 @@ void updateClock() {
     setRTCz();
 }
 
-void setupHoneywell() {
+void setupSensors(){
     pinMode(12, OUTPUT);  // enable pin to HPM boost
-    HONEYWELL_HPM::setup(config.node_id, 0, &getTime);
-    delay(2000);
-    HONEYWELL_HPM::stop();
+    HONEYWELL_HPM::setup(config.node_id, &getTime);
+    ADAFRUIT_SI7021::setup(config.node_id, &getTime);
 }
+
+//void setupHoneywell() {
+ //   pinMode(12, OUTPUT);  // enable pin to HPM boost
+ //   HONEYWELL_HPM::setup(config.node_id, &getTime);
+//}
 
 void setupClocks() {
     rtc.begin();
@@ -171,8 +175,9 @@ void setup() {
     loadConfig();
     setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     radio->sleep();
-    setupHoneywell();
-    ADAFRUIT_SI7021::setup();
+    setupSensors();
+    //setupHoneywell();
+    //ADAFRUIT_SI7021::setup(config.node_id, &getTime);
     // This is done in RTCZero::standbyMode
     // https://github.com/arduino-libraries/RTCZero/blob/master/src/RTCZero.cpp
     // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
