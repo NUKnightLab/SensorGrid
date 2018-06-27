@@ -47,7 +47,7 @@ namespace ADAFRUIT_SI7021 {
         char temp[7];
         char humid[7];
         ftoa(readTemperature(), temp, 2);
-        ftoa(readHumidity(), temp, 2);
+        ftoa(readHumidity(), humid, 2);
         //float temp = readTemperature();
         //float humid = readHumidity();
         snprintf(buf, len,
