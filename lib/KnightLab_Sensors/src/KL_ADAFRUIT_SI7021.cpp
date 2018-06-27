@@ -6,9 +6,20 @@
 static TimeFunction _time_fcn;
 static uint8_t _node_id;
 
+
 namespace ADAFRUIT_SI7021 {
 
     static Adafruit_Si7021 sensor = Adafruit_Si7021();
+
+    float readTemperature()
+    {
+        return sensor.readTemperature() * 1.8 + 32;
+    }
+
+    float readHumidity()
+    {
+        return sensor.readHumidity();
+    }
 
     bool setup(uint8_t node_id, TimeFunction time_fcn)
     {
@@ -30,14 +41,16 @@ namespace ADAFRUIT_SI7021 {
         return true;
     }
 
+
     size_t read(char* buf, int len)
     {
-        float temp = sensor.readTemperature() * 1.8 + 32;
-        float humid = sensor.readHumidity();
+        float temp = readTemperature();
+        float humid = readHumidity();
         snprintf(buf, len,
         "{\"node\":%d,\"tmp\":%.2f,\"hmd\":%.2f,\"ts\":%ld}",
         _node_id, temp, humid, _time_fcn());
         Serial.println(buf);
+        return strlen(buf);
     }
 
     bool stop()
@@ -45,14 +58,6 @@ namespace ADAFRUIT_SI7021 {
         return true;
     }
 
-    /*float readTemperature()
-    {
-        return sensor.readTemperature() * 1.8 + 32;
-    }
-
-    float readHumidity()
-    {
-        return sensor.readHumidity();
-    }*/
+    
 }
 
