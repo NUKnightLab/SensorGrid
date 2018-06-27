@@ -1,8 +1,9 @@
-## v0.0.2 (TBD)
+## v0.2 (2018-06-27)
 
  * PR #52. Standardizes the sensor API to setup, start, read, stop
+ * Fixes formatting of floats and unsigned longs in output data
 
-## v0.0.1 (2018-06-27)
+## v0.1 (2018-06-27)
 
 Initial beta release appropriate for calibration runs. Supports the Honeywell
 HPM particulate matter sensor (PM2.5 & PM10) and the Adafruit Si7021 temperature
