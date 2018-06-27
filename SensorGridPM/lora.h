@@ -1,3 +1,6 @@
+/**
+ * Copyright 2018 Northwestern University
+ */
 #ifndef SENSORGRIDPM_LORA_H_
 #define SENSORGRIDPM_LORA_H_
 

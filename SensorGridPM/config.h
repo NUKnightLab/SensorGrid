@@ -25,6 +25,9 @@
 #define INIT_LEAD_TIME 7
 #define MESSAGE_DATA_SIZE 100
 #define DATASAMPLE_DATASIZE MESSAGE_DATA_SIZE - 2
+#define TYPE_SI7021_TEMP_HUMIDITY 7
+#define TYPE_HONEYWELL_HPM 8
+
 
 // comment
 
@@ -100,6 +103,7 @@ struct Config {
 };
 
 extern void loadConfig();
+extern void loadSensorConfig();
 extern struct Config config;
 
 struct Message {
@@ -110,6 +114,20 @@ struct Message {
     uint8_t len;
     char data[100];
 } __attribute__((packed));
+
+typedef int32_t (*SensorStartFunction)();
+typedef int32_t (*SensorReadFunction)();
+typedef int32_t (*SensorStopFunction)();
+
+struct SensorConfig {
+    uint8_t id;
+    char *id_str;
+    SensorStartFunction start_function;
+    SensorReadFunction read_function;
+    SensorStopFunction stop_function;
+    struct SensorConfig *next;
+
+}
 
 
 #endif  // SENSORGRIDPM_CONFIG_H_
