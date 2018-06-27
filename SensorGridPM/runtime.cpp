@@ -290,24 +290,36 @@ void transmitData(bool clear) {
     print(F(" len: ")); println(F("%d"), msg->len);
 }
 
-void recordDataSamples() {
+//void recordDataSamples() {
+//    logln(F("Taking data sample"));
+//    memset(databuf, 0, 100);  // TODO Should this be taken out?
+//    digitalWrite(12, HIGH);
+//    logln(F("Before readData:"));
+//    DataSample *sample = appendData();
+//    Watchdog.reset();
+//    HONEYWELL_HPM::read(sample->data, DATASAMPLE_DATASIZE);
+//    // delay(2000);
+//    Watchdog.reset();
+//    if (HONEYWELL_HPM::stop()) {
+//        digitalWrite(12, LOW);
+//        digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+//        logln(F("Sensor fan stopped"));
+//    } else {
+//        logln(F("Sensor fan did not stop"));
+//    }
+//    recordTempAndHumidity();
+//}
+
+void readDataSamples(){
+    SensorConfig *cursor = sensor_config_head;
     logln(F("Taking data sample"));
-    memset(databuf, 0, 100);  // TODO Should this be taken out?
-    digitalWrite(12, HIGH);
-    logln(F("Before readData:"));
-    DataSample *sample = appendData();
-    Watchdog.reset();
-    HONEYWELL_HPM::read(sample->data, DATASAMPLE_DATASIZE);
-    // delay(2000);
-    Watchdog.reset();
-    if (HONEYWELL_HPM::stop()) {
-        digitalWrite(12, LOW);
-        digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
-        logln(F("Sensor fan stopped"));
-    } else {
-        logln(F("Sensor fan did not stop"));
+    while (cursor) {
+      DataSample *sample = appendData();
+      cursor->read_function(sample->data, DATASAMPLE_DATASIZE);
+      cursor->stop_function(); 
+      cursor = cursor->next;
     }
-    recordTempAndHumidity();
+    digitalWrite(12,LOW);
 }
 
 void flashHeartbeat() {

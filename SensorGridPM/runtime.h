@@ -22,5 +22,6 @@ extern void recordUptime(uint32_t uptime);
 extern void logData(bool clear);
 extern void transmitData(bool clear);
 extern uint32_t getNextCollectionTime();
+extern void readDataSamples();
 
 #endif  // SENSORGRIDPM_RUNTIME_H_
