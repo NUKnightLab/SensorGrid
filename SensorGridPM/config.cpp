@@ -3,6 +3,7 @@
  */
 #include "config.h"
 
+struct SensorConfig *sensor_config_head;
 struct Config config;
 
 
