@@ -139,10 +139,6 @@ void setCommunicateDataTimeout() {
     uint32_t com = prev_sample + 30;
     DateTime dt = DateTime(com);
     setInterruptTimeout(dt, communicateData_INT);
-    // rtcz.setAlarmSeconds(dt.second());
-    // rtcz.setAlarmMinutes(dt.minute());
-    // rtcz.enableAlarm(rtcz.MATCH_MMSS);
-    // rtcz.attachInterrupt(communicate_data_INT);
     standby();
 }
 
@@ -156,17 +152,10 @@ void setInitTimeout() {
     if (heartbeat < init - 2) {
         DateTime dt = DateTime(heartbeat);
         setInterruptTimeout(dt, heartbeat_INT);
-        // rtcz.setAlarmSeconds(dt.second());
-        // rtcz.enableAlarm(rtcz.MATCH_SS);
-        // rtcz.attachInterrupt(heartbeat_INT);
         println(F("heartbeat %02d:%02d"), dt.minute(), dt.second());
     } else {
         DateTime dt = DateTime(init);
         setInterruptTimeout(dt, initSensors_INT);
-        // rtcz.setAlarmSeconds(dt.second());
-        // rtcz.setAlarmMinutes(dt.minute());
-        // rtcz.enableAlarm(rtcz.MATCH_MMSS);
-        // rtcz.attachInterrupt(init_sensors_INT);
         println(F("init %02d:%02d"), dt.minute(), dt.second());
     }
     standby();
@@ -179,16 +168,9 @@ void setSampleTimeout() {
     if (heartbeat < sample - 2) {
         DateTime dt = DateTime(heartbeat);
         setInterruptTimeout(dt, heartbeat_INT);
-        // rtcz.setAlarmSeconds(DateTime(heartbeat).second());
-        // rtcz.enableAlarm(rtcz.MATCH_SS);
-        // rtcz.attachInterrupt(heartbeat_INT);
     } else {
         DateTime dt = DateTime(sample);
         setInterruptTimeout(dt, recordDataSamples_INT);
-        // rtcz.setAlarmSeconds(dt.second());
-        // rtcz.setAlarmMinutes(dt.minute());
-        // rtcz.enableAlarm(rtcz.MATCH_MMSS);
-        // rtcz.attachInterrupt(record_data_samples_INT);
     }
     standby();
 }
@@ -200,28 +182,10 @@ void setSampleTimeout() {
 void initSensors() {
     logln(F("Init sensor for data sampling"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
-    // delay(1000);
-    // digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
     digitalWrite(12, HIGH);
     Watchdog.reset();
     HONEYWELL_HPM::start();
 }
-
-/*
-void throwawayHPMData()
-{
-    memset(databuf, 0, 100);
-    logln(F("Reading throwaway HPM data"));
-    digitalWrite(12, HIGH);
-    HONEYWELL_HPM::read(databuf, 100);
-    if (HONEYWELL_HPM::stop()) {
-        digitalWrite(12, LOW);
-        logln(F("Sensor fan stopped"));
-    } else {
-        logln(F("Sensor fan did not stop"));
-    }
-}
-*/
 
 void recordBatteryLevel() {
     float bat = batteryLevel();
@@ -233,12 +197,6 @@ void recordBatteryLevel() {
 void recordTempAndHumidity() {
     DataSample *dataSample = appendData();
     ADAFRUIT_SI7021::read(dataSample->data, DATASAMPLE_DATASIZE);
-//    float temp = ADAFRUIT_SI7021::readTemperature();
-//    float humid = ADAFRUIT_SI7021::readHumidity();
-//    snprintf(dataSample->data, DATASAMPLE_DATASIZE,
-//        "{\"node\":%d,\"tmp\":%.2f,\"hmd\":%.2f,\"ts\":%ld}",
-//        config.node_id, temp, humid, rtcz.getEpoch());
-//    Serial.println(dataSample->data);
 }
 
 void recordUptime(uint32_t uptime) {
@@ -360,51 +318,3 @@ void flashHeartbeat() {
     delay(100);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
 }
-
-/*
-void communicateData()
-{
-    logln(F("Communicating"));
-    float battery = batteryLevel();
-    if (battery <= 3.6) {
-        Serial.println("Critical Battery Level. Not communicating data.");
-        return;
-    }
-    char bat[4];
-    dtostrf(battery, 3, 2, bat);
-    //static char *data = "somedata";
-    //static uint8_t buf[140] = {0};
-    //static Message *msg = (Message*)buf;
-    msg->sensorgrid_version = config.sensorgrid_version;
-    msg->network_id = config.network_id;
-    msg->from_node = config.node_id;
-    msg->message_type = 2;
-    //msg->len = 0;
-    //const char *data = "somedata\0";
-    Serial.println("memcopying data");
-    //memcpy(&msg->data, &data, sizeof(data));
-    //strcpy(msg->data, data);
-    //Serial.print("Copied: "); Serial.println(msg->data);
-    //Serial.print("sizeof msg: "); Serial.println(sizeof(Message), DEC);
-    //Serial.print("sizeof data: "); Serial.println(sizeof(data), DEC);
-    //Serial.print("strlen data: "); Serial.println(strlen(data), DEC);
-    //for (int i=0; i<(5 + msg->len); i++) {
-    //    Serial.print(msg_buf[i], HEX); Serial.print(" ");
-    //}
-    Serial.println("");
-    //send_message(msg_buf, 5 + strlen(msg->data) + 1, config.collector_id);
-    memset(msg->data, 0, 100);
-    sprintf(&msg->data[0], "[");
-    sprintf(&msg->data[1], databuf);
-    //float bat = batteryLevel();
-    Serial.print("bat: "); Serial.println(bat);
-    sprintf(&msg->data[1+strlen(databuf)], ",{\"node\":%d,\"bat\":%s}", config.node_id, bat);
-    sprintf(&msg->data[strlen(msg->data)], "]");
-    //sprintf(&msg->data[msg->len], ",{\"bat\":\"%.2f\"}]", batteryLevel());
-    msg->len = strlen(msg->data);
-    send_message(msg_buf, 5 + msg->len, config.collector_id);
-    radio->sleep();
-    log_("Sent message: "); print(msg->data);
-    print(" len: "); println("%d", msg->len);
-}
-*/
