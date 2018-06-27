@@ -7,7 +7,7 @@
 typedef uint32_t (*TimeFunction)();
 
 namespace ADAFRUIT_SI7021 {
-    bool setup();
+    bool setup(uint8_t node_id, TimeFunction time_fcn);
     //float readTemperature();
     //float readHumidity();
     size_t read(char* buf, int len);
