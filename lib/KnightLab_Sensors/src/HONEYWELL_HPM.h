@@ -13,8 +13,8 @@ namespace HONEYWELL_HPM {
     bool setup(uint8_t node_id, uint8_t data_pin, TimeFunction time_fcn);
     bool start();
     size_t read(char* buf, int len);
-    void readData(JsonArray &data_array);
-    size_t readDataSample(char* buf, int len);
+//    void readData(JsonArray &data_array);
+//    size_t readDataSample(char* buf, int len);
     bool stop();
 }
 

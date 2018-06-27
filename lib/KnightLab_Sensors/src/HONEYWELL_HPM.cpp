@@ -196,7 +196,7 @@ static uint8_t _node_id;
 
 namespace HONEYWELL_HPM {
 
-    bool setup(uint8_t node_id, uint8_t data_pin, TimeFunction time_fcn)
+    bool setup(uint8_t node_id, TimeFunction time_fcn)
     {
         _node_id = node_id;
         Serial1.begin(9600);
@@ -212,7 +212,7 @@ namespace HONEYWELL_HPM {
         return true;
     }
 
-    size_t read(char* buf, int len)
+    /*size_t read(char* buf, int len)
     {
         StaticJsonBuffer<200> jsonBuffer;
         JsonObject& root = jsonBuffer.createObject();
@@ -227,28 +227,28 @@ namespace HONEYWELL_HPM {
         root.printTo(Serial);
         Serial.println();
         return root.printTo(buf, len);
-    }
+    }*/
 
-    void readData(JsonArray &data_array)
-    {
-        StaticJsonBuffer<200> jsonBuffer;
-        //JsonObject& root = jsonBuffer.createObject();
-        JsonObject& root = data_array.createNestedObject();
-        int pm25;
-        int pm10;
-        root["node"] = _node_id;
-        root["ts"] = _time_fcn();
-        read_pm_results_data(&pm25, &pm10);
-        JsonArray& data = root.createNestedArray("hpm");
-        data.add(pm25);
-        data.add(pm10);
-        root.printTo(Serial);
-        Serial.println();
-        //return root.printTo(buf, len);
-        //data_array.add(root);
-    }
+    // void readData(JsonArray &data_array)
+    // {
+    //     StaticJsonBuffer<200> jsonBuffer;
+    //     //JsonObject& root = jsonBuffer.createObject();
+    //     JsonObject& root = data_array.createNestedObject();
+    //     int pm25;
+    //     int pm10;
+    //     root["node"] = _node_id;
+    //     root["ts"] = _time_fcn();
+    //     read_pm_results_data(&pm25, &pm10);
+    //     JsonArray& data = root.createNestedArray("hpm");
+    //     data.add(pm25);
+    //     data.add(pm10);
+    //     root.printTo(Serial);
+    //     Serial.println();
+    //     //return root.printTo(buf, len);
+    //     //data_array.add(root);
+    // }
 
-    size_t readDataSample(char* buf, int len)
+    size_t read(char* buf, int len)
     {
         StaticJsonBuffer<200> jsonBuffer;
         JsonObject& root = jsonBuffer.createObject();
