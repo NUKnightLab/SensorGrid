@@ -2,6 +2,7 @@
 #define __KNIGHTLAB__ADAFRUIT_SI7021_H
 
 #include <Arduino.h>
+#include <KnightLab_ArduinoUtils.h>
 #include <Adafruit_Si7021.h>
 
 typedef uint32_t (*TimeFunction)();

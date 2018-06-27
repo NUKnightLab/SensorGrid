@@ -44,10 +44,14 @@ namespace ADAFRUIT_SI7021 {
 
     size_t read(char* buf, int len)
     {
-        float temp = readTemperature();
-        float humid = readHumidity();
+        char temp[7];
+        char humid[7];
+        ftoa(readTemperature(), temp, 2);
+        ftoa(readHumidity(), temp, 2);
+        //float temp = readTemperature();
+        //float humid = readHumidity();
         snprintf(buf, len,
-        "{\"node\":%d,\"tmp\":%.2f,\"hmd\":%.2f,\"ts\":%ld}",
+        "{\"node\":%d,\"tmp\":%s,\"hmd\":%s,\"ts\":%ld}",
         _node_id, temp, humid, _time_fcn());
         Serial.println(buf);
         return strlen(buf);

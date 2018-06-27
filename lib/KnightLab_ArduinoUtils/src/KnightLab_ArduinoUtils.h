@@ -14,6 +14,7 @@
 extern void set_logging(bool b);
 extern bool is_logging();
 extern void fail(int code);
+extern void ftoa(float n, char *res, int afterpoint);
 
 #if defined(ARDUINO_ARCH_SAMD)
   // Arduino Zero / ATSAMD series CPU watchdog support.

@@ -188,9 +188,11 @@ void initSensors() {
 }
 
 void recordBatteryLevel() {
-    float bat = batteryLevel();
+    //float bat = batteryLevel();
+    char bat[5];
+    ftoa(batteryLevel(), bat, 2);
     DataSample *batSample = appendData();
-    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%.2f,\"ts\":%ld}",
+    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%ld}",
         config.node_id, bat, rtcz.getEpoch());
 }
 
