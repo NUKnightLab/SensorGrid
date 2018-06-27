@@ -192,7 +192,7 @@ void recordBatteryLevel() {
     char bat[5];
     ftoa(batteryLevel(), bat, 2);
     DataSample *batSample = appendData();
-    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%ld}",
+    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%lu}",
         config.node_id, bat, rtcz.getEpoch());
 }
 
@@ -203,7 +203,7 @@ void recordTempAndHumidity() {
 
 void recordUptime(uint32_t uptime) {
     DataSample *sample = appendData();
-    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%ld,\"ts\":%ld}",
+    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"ts\":%lu}",
         config.node_id, uptime, rtcz.getEpoch());
 }
 

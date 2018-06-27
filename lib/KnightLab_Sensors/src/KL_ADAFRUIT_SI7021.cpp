@@ -51,7 +51,7 @@ namespace ADAFRUIT_SI7021 {
         //float temp = readTemperature();
         //float humid = readHumidity();
         snprintf(buf, len,
-        "{\"node\":%d,\"tmp\":%s,\"hmd\":%s,\"ts\":%ld}",
+        "{\"node\":%d,\"tmp\":%s,\"hmd\":%s,\"ts\":%lu}",
         _node_id, temp, humid, _time_fcn());
         Serial.println(buf);
         return strlen(buf);
