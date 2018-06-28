@@ -24,4 +24,10 @@ extern void transmitData(bool clear);
 extern uint32_t getNextCollectionTime();
 extern void readDataSamples();
 
+/* data history */
+struct DataSample {
+    char data[DATASAMPLE_DATASIZE];
+    struct DataSample *next;
+};
+
 #endif  // SENSORGRIDPM_RUNTIME_H_
