@@ -248,7 +248,7 @@ void transmitData(bool clear) {
     msg->network_id = config.network_id;
     msg->from_node = config.node_id;
     msg->message_type = 2;
-    memset(msg->data, 0, 100);
+    memset(msg->data, 0, 100); // TODO: make this 100 a constant
     snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
     int data_index = 1;
     logln(F("TRANSMITTING DATA: ------"));
@@ -290,34 +290,15 @@ void transmitData(bool clear) {
     print(F(" len: ")); println(F("%d"), msg->len);
 }
 
-//void recordDataSamples() {
-//    logln(F("Taking data sample"));
-//    memset(databuf, 0, 100);  // TODO Should this be taken out?
-//    digitalWrite(12, HIGH);
-//    logln(F("Before readData:"));
-//    DataSample *sample = appendData();
-//    Watchdog.reset();
-//    HONEYWELL_HPM::read(sample->data, DATASAMPLE_DATASIZE);
-//    // delay(2000);
-//    Watchdog.reset();
-//    if (HONEYWELL_HPM::stop()) {
-//        digitalWrite(12, LOW);
-//        digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
-//        logln(F("Sensor fan stopped"));
-//    } else {
-//        logln(F("Sensor fan did not stop"));
-//    }
-//    recordTempAndHumidity();
-//}
-
 void readDataSamples(){
     SensorConfig *cursor = sensor_config_head;
-    logln(F("Taking data sample"));
     while (cursor) {
-      DataSample *sample = appendData();
-      cursor->read_function(sample->data, DATASAMPLE_DATASIZE);
-      cursor->stop_function(); 
-      cursor = cursor->next;
+        log_(F("Reading sensor %s .. "), cursor->id_str);
+        DataSample *sample = appendData();
+        cursor->read_function(sample->data, DATASAMPLE_DATASIZE);
+        cursor->stop_function(); 
+        logln(F("Sensor stopped: %s"), cursor->id_str);
+        cursor = cursor->next;
     }
     digitalWrite(12,LOW);
 }

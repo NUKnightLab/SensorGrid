@@ -198,9 +198,11 @@ namespace HONEYWELL_HPM {
 
     bool setup(uint8_t node_id, TimeFunction time_fcn)
     {
+        log_(F("Setup Honeywell HPM sensor .. "));
         _node_id = node_id;
         Serial1.begin(9600);
         _time_fcn = time_fcn;
+        println(F("done"));
         return true;
     }
 

@@ -113,15 +113,9 @@ void updateClock() {
 
 void setupSensors() {
     pinMode(12, OUTPUT);  // enable pin to HPM boost
+    Serial.println("Loading sensor configuration");
     loadSensorConfig();
-    //HONEYWELL_HPM::setup(config.node_id, &getTime);
-    //ADAFRUIT_SI7021::setup(config.node_id, &getTime);
 }
-
-//   void setupHoneywell() {
-//   pinMode(12, OUTPUT);  // enable pin to HPM boost
-//   HONEYWELL_HPM::setup(config.node_id, &getTime);
-//}
 
 void setupClocks() {
     rtc.begin();
@@ -177,8 +171,10 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     loadConfig();
-    loadSensorConfig();
- //   setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
+    //loadSensorConfig();
+    setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
+    delay(2000);
+    Serial.println("Set LoRa to sleep mode");
     radio->sleep();
     setupSensors();
     // setupHoneywell();

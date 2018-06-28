@@ -20,7 +20,7 @@
  * ALWAYS_LOG to true
  */
 #define ALWAYS_LOG false
-#define DO_STANDBY true
+#define DO_STANDBY false
 #define DO_TRANSMIT_DATA false
 #define DO_LOG_DATA true
 #define INIT_LEAD_TIME 7
@@ -123,9 +123,11 @@ typedef bool (*SensorStartFunction)();
 typedef size_t (*SensorReadFunction)(char *buf, int len);
 typedef bool (*SensorStopFunction)();
 
+#define MAX_SENSOR_ID_STR 30
+
 struct SensorConfig {
     uint8_t id;
-    char *id_str;
+    char id_str[MAX_SENSOR_ID_STR];
     SensorStartFunction start_function;
     SensorReadFunction read_function;
     SensorStopFunction stop_function;

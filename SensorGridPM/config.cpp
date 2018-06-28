@@ -78,31 +78,57 @@ void loadConfig() {
     }
 }
 
-
+static SensorConfig *getNextSensorConfig(SensorConfig *current_config) {
+    SensorConfig *new_config;
+    if (current_config == NULL) {
+        new_config = new SensorConfig();
+        sensor_config_head = new_config;
+    } else {
+        current_config->next = new SensorConfig();
+        new_config = current_config->next;
+    }
+    return new_config;
+}
 
 void loadSensorConfig(){
-    struct SensorConfig *sensor_config = new SensorConfig();
-    sensor_config_head = sensor_config;
+    //struct SensorConfig *current_config = new SensorConfig();
+    SensorConfig *current_config = NULL;
 
     /* Adafruit Si7021 temperature/humidity breakout */
     if (ADAFRUIT_SI7021::setup(config.node_id, getTime)) { 
-      sensor_config->next = new SensorConfig();
-      sensor_config = sensor_config->next;
-      sensor_config->id = TYPE_SI7021_TEMP_HUMIDITY;
-      sensor_config->id_str = "SI7021_TEMP_HUMIDITY";
-      sensor_config->start_function = &(ADAFRUIT_SI7021::start);
-      sensor_config->read_function = &(ADAFRUIT_SI7021::read);
-      sensor_config->stop_function = &(ADAFRUIT_SI7021::stop);
+        current_config = getNextSensorConfig(current_config);
+        /*
+      if (sensor_config_head != NULL) {
+          current_config->next = new SensorConfig();
+          current_config = current_config->next;
+      } else {
+          current_config = new SensorConfig();
+          sensor_config_head = current_config;
+      }
+      */
+        current_config->id = TYPE_SI7021_TEMP_HUMIDITY;
+        snprintf(current_config->id_str, MAX_SENSOR_ID_STR, "SI7021_TEMP_HUMIDITY");
+        current_config->start_function = &(ADAFRUIT_SI7021::start);
+        current_config->read_function = &(ADAFRUIT_SI7021::read);
+        current_config->stop_function = &(ADAFRUIT_SI7021::stop);
     }
 
     if (HONEYWELL_HPM::setup(config.node_id, getTime)){
-      sensor_config->next = new SensorConfig();
-      sensor_config = sensor_config->next;
-      sensor_config->id = TYPE_HONEYWELL_HPM;
-      sensor_config->id_str = "HONEYWELL_PM";
-      sensor_config->start_function = &(HONEYWELL_HPM::start);
-      sensor_config->read_function = &(HONEYWELL_HPM::read);
-      sensor_config->stop_function = &(HONEYWELL_HPM::stop);
+        current_config = getNextSensorConfig(current_config);
+        /*
+      if (sensor_config_head != NULL) {
+          current_config->next = new SensorConfig();
+          current_config = current_config->next;
+      } else {
+          current_config = new SensorConfig();
+          sensor_config_head = current_config;
+      }
+      */
+        current_config->id = TYPE_HONEYWELL_HPM;
+        snprintf(current_config->id_str, MAX_SENSOR_ID_STR, "HONEYWELL_PM");
+        current_config->start_function = &(HONEYWELL_HPM::start);
+        current_config->read_function = &(HONEYWELL_HPM::read);
+        current_config->stop_function = &(HONEYWELL_HPM::stop);
     }
 }
 
