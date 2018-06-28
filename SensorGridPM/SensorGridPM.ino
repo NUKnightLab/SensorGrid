@@ -170,8 +170,8 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     loadConfig();
+    logln("Setting up LoRa radio");
     setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
-    Serial.println("Set LoRa to sleep mode");
     radio->sleep();
     setupSensors();
     // setupHoneywell();
