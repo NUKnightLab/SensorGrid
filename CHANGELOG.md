@@ -1,3 +1,6 @@
+## v0.3 (TBD)
+ * PR #59. Abstracts iteration of sensors into linked-list of sensor configs
+
 ## v0.2 (2018-06-27)
 
  * PR #52. Standardizes the sensor API to setup, start, read, stop
