@@ -2,6 +2,8 @@
  * Knight Lab SensorGrid
  *
  * Wireless air pollution (Particulate Matter PM2.5 & PM10) monitoring over LoRa radio
+ * 
+ * Copyright 2018 Northwestern University
  */
 #include <KnightLab_GPS.h>
 #include "config.h"
@@ -52,9 +54,11 @@ static void printCurrentTime() {
     Serial.println(rtcz.getEpoch());
 }
 
+/* moved to config.cpp
 uint32_t getTime() {
     return rtcz.getEpoch();
 }
+*/
 
 /* end local utilities */
 
@@ -66,14 +70,14 @@ void aButton_ISR() {
     static bool busy = false;
     if (busy) return;
     busy = true;
-   // rtcz.disableAlarm();
+    // rtcz.disableAlarm();
     static volatile int state = 0;
     state = !digitalRead(BUTTON_A);
     if (state) {
         Serial.println("A-Button pushed");
         oled.toggleDisplayState();
     }
-    if (oled.isOn()){
+    if (oled.isOn()) {
       updateClock();
       oled.displayDateTime();
     } else {
@@ -107,16 +111,10 @@ void updateClock() {
     setRTCz();
 }
 
-void setupSensors(){
+void setupSensors() {
     pinMode(12, OUTPUT);  // enable pin to HPM boost
-    HONEYWELL_HPM::setup(config.node_id, &getTime);
-    ADAFRUIT_SI7021::setup(config.node_id, &getTime);
+    loadSensorConfig();
 }
-
-//void setupHoneywell() {
- //   pinMode(12, OUTPUT);  // enable pin to HPM boost
- //   HONEYWELL_HPM::setup(config.node_id, &getTime);
-//}
 
 void setupClocks() {
     rtc.begin();
@@ -149,7 +147,6 @@ void HardFault_Handler(void) {
 /* setup and loop */
 
 void setup() {
-
     /* This is causing lock-up. Need to do further research into low power modes
        on the Cortex M0 */
     // oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
@@ -173,11 +170,12 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     loadConfig();
+    logln("Setting up LoRa radio");
     setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     radio->sleep();
     setupSensors();
-    //setupHoneywell();
-    //ADAFRUIT_SI7021::setup(config.node_id, &getTime);
+    // setupHoneywell();
+    // ADAFRUIT_SI7021::setup(config.node_id, &getTime);
     // This is done in RTCZero::standbyMode
     // https://github.com/arduino-libraries/RTCZero/blob/master/src/RTCZero.cpp
     // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
@@ -215,7 +213,7 @@ void loop() {
         initSensors();
         setSampleTimeout();
     } else if (mode == SAMPLE) {
-        recordDataSamples();
+        readDataSamples();
         if (getTime() > next_collection_time) {
             setCommunicateDataTimeout();
         } else {

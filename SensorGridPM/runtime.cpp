@@ -13,15 +13,8 @@ static char databuf[100] = {0};
 StaticJsonBuffer<200> json_buffer;
 JsonArray& data_array = json_buffer.createArray();
 
-/* data history */
-struct DataSample {
-    char data[DATASAMPLE_DATASIZE];
-    struct DataSample *next;
-};
-
-
-DataSample *head = NULL;
-DataSample *tail = NULL;
+DataSample *datasample_head = NULL;
+DataSample *datasample_tail = NULL;
 
 DataSample *appendData() {
     DataSample *new_sample = reinterpret_cast<DataSample*>(malloc(sizeof(DataSample)));
@@ -29,15 +22,15 @@ DataSample *appendData() {
         logln(F("Error creating new sample"));
         while (1) {}
     }
-    if (head == NULL) {
-        head = new_sample;
+    if (datasample_head == NULL) {
+        datasample_head = new_sample;
     }
-    if (tail != NULL) {
-        tail->next = new_sample;
+    if (datasample_tail != NULL) {
+        datasample_tail->next = new_sample;
     }
-    tail = new_sample;
-    tail->next = NULL;
-    return tail;
+    datasample_tail = new_sample;
+    datasample_tail->next = NULL;
+    return datasample_tail;
 }
 
 /* -- end data history */
@@ -209,7 +202,7 @@ void recordUptime(uint32_t uptime) {
 
 void logData(bool clear) {
     logln(F("\nLOGGING DATA: ------"));
-    DataSample *cursor = head;
+    DataSample *cursor = datasample_head;
     static SdFat sd;
     log_(F("Init SD card .."));
     if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
@@ -232,7 +225,7 @@ void logData(bool clear) {
         if (clear) {
             DataSample *_cursor = cursor;
             cursor = cursor->next;
-            head = cursor;
+            datasample_head = cursor;
             free(_cursor);
         } else {
             cursor = cursor->next;
@@ -248,15 +241,15 @@ void transmitData(bool clear) {
     msg->network_id = config.network_id;
     msg->from_node = config.node_id;
     msg->message_type = 2;
-    memset(msg->data, 0, 100);
+    memset(msg->data, 0, 100); // TODO: make this 100 a constant
     snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
     int data_index = 1;
     logln(F("TRANSMITTING DATA: ------"));
-    DataSample *cursor = head;
+    DataSample *cursor = datasample_head;
     while (cursor != NULL) {
         Watchdog.reset();
         logln(cursor->data);
-        if (data_index + strlen(cursor->data) >= MESSAGE_DATA_SIZE - 1) {  // TODO(Anyone): what is the real length we need to check?
+        if (data_index + strlen(cursor->data) >= MESSAGE_DATA_SIZE - 1) {  
             logln(F("Sending partial data history: "));
             msg->data[data_index-1] = ']';
             logln(msg->data);
@@ -273,7 +266,7 @@ void transmitData(bool clear) {
         if (clear) {
             DataSample *_cursor = cursor;
             cursor = cursor->next;
-            head = cursor;
+            datasample_head = cursor;
             free(_cursor);
         } else {
             cursor = cursor->next;
@@ -290,24 +283,17 @@ void transmitData(bool clear) {
     print(F(" len: ")); println(F("%d"), msg->len);
 }
 
-void recordDataSamples() {
-    logln(F("Taking data sample"));
-    memset(databuf, 0, 100);  // TODO Should this be taken out?
-    digitalWrite(12, HIGH);
-    logln(F("Before readData:"));
-    DataSample *sample = appendData();
-    Watchdog.reset();
-    HONEYWELL_HPM::read(sample->data, DATASAMPLE_DATASIZE);
-    // delay(2000);
-    Watchdog.reset();
-    if (HONEYWELL_HPM::stop()) {
-        digitalWrite(12, LOW);
-        digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
-        logln(F("Sensor fan stopped"));
-    } else {
-        logln(F("Sensor fan did not stop"));
+void readDataSamples(){
+    SensorConfig *cursor = sensor_config_head;
+    while (cursor) {
+        log_(F("Reading sensor %s .. "), cursor->id_str);
+        DataSample *sample = appendData();
+        cursor->read_function(sample->data, DATASAMPLE_DATASIZE);
+        cursor->stop_function(); 
+        logln(F("Sensor stopped: %s"), cursor->id_str);
+        cursor = cursor->next;
     }
-    recordTempAndHumidity();
+    digitalWrite(12,LOW);
 }
 
 void flashHeartbeat() {

@@ -11,6 +11,7 @@
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
+#include <KL_ADAFRUIT_SI7021.h>
 //#include "WatchdogSAMD.h"
 
 /**
@@ -25,6 +26,9 @@
 #define INIT_LEAD_TIME 7
 #define MESSAGE_DATA_SIZE 100
 #define DATASAMPLE_DATASIZE MESSAGE_DATA_SIZE - 2
+#define TYPE_SI7021_TEMP_HUMIDITY 7
+#define TYPE_HONEYWELL_HPM 8
+
 
 // comment
 
@@ -71,6 +75,8 @@ extern WatchdogSAMD Watchdog;
 #define DEFAULT_RFM95_INT "3"
 #define DEFAULT_API_PORT "80"
 
+extern struct SensorConfig *sensor_config_head;
+
 
 struct Config {
     uint32_t network_id;
@@ -99,7 +105,9 @@ struct Config {
     uint16_t api_port;
 };
 
+extern uint32_t getTime();
 extern void loadConfig();
+extern void loadSensorConfig();
 extern struct Config config;
 
 struct Message {
@@ -110,6 +118,22 @@ struct Message {
     uint8_t len;
     char data[100];
 } __attribute__((packed));
+
+typedef bool (*SensorStartFunction)();
+typedef size_t (*SensorReadFunction)(char *buf, int len);
+typedef bool (*SensorStopFunction)();
+
+#define MAX_SENSOR_ID_STR 30
+
+struct SensorConfig {
+    uint8_t id;
+    char id_str[MAX_SENSOR_ID_STR];
+    SensorStartFunction start_function;
+    SensorReadFunction read_function;
+    SensorStopFunction stop_function;
+    struct SensorConfig *next;
+
+};
 
 
 #endif  // SENSORGRIDPM_CONFIG_H_

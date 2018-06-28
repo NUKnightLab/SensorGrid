@@ -3,6 +3,7 @@
 
 #include <Arduino.h>
 #include <ArduinoJson.h>
+#include <KnightLab_ArduinoUtils.h>
 
 // don't set this to < 2000 w/o testing valid results from sensor
 #define UART_TIMEOUT 500

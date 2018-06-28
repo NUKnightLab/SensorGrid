@@ -3,7 +3,13 @@
  */
 #include "config.h"
 
+struct SensorConfig *sensor_config_head;
 struct Config config;
+
+
+uint32_t getTime() {
+    return rtcz.getEpoch();
+}
 
 /**
  * We pull both pins 8 and 19 HIGH during SD card read. The default configuration
@@ -13,6 +19,8 @@ struct Config config;
  *
  * No other RFM95 CS alternates are supported at this time
  */
+
+
 void loadConfig() {
     int default_rfm_cs = atoi(DEFAULT_RFM95_CS);
     int alt_rfm_cs = atoi(ALTERNATE_RFM95_CS);
@@ -69,3 +77,40 @@ void loadConfig() {
         fail(FAIL_CODE_BAD_CONFIG);
     }
 }
+
+static SensorConfig *getNextSensorConfig(SensorConfig *current_config) {
+    SensorConfig *new_config;
+    if (current_config == NULL) {
+        new_config = new SensorConfig();
+        sensor_config_head = new_config;
+    } else {
+        current_config->next = new SensorConfig();
+        new_config = current_config->next;
+    }
+    return new_config;
+}
+
+void loadSensorConfig(){
+    //struct SensorConfig *current_config = new SensorConfig();
+    SensorConfig *current_config = NULL;
+
+    /* Adafruit Si7021 temperature/humidity breakout */
+    if (ADAFRUIT_SI7021::setup(config.node_id, getTime)) { 
+        current_config = getNextSensorConfig(current_config);
+        current_config->id = TYPE_SI7021_TEMP_HUMIDITY;
+        snprintf(current_config->id_str, MAX_SENSOR_ID_STR, "SI7021_TEMP_HUMIDITY");
+        current_config->start_function = &(ADAFRUIT_SI7021::start);
+        current_config->read_function = &(ADAFRUIT_SI7021::read);
+        current_config->stop_function = &(ADAFRUIT_SI7021::stop);
+    }
+
+    if (HONEYWELL_HPM::setup(config.node_id, getTime)){
+        current_config = getNextSensorConfig(current_config);
+        current_config->id = TYPE_HONEYWELL_HPM;
+        snprintf(current_config->id_str, MAX_SENSOR_ID_STR, "HONEYWELL_PM");
+        current_config->start_function = &(HONEYWELL_HPM::start);
+        current_config->read_function = &(HONEYWELL_HPM::read);
+        current_config->stop_function = &(HONEYWELL_HPM::stop);
+    }
+}
+

@@ -6,8 +6,6 @@
 
 // #include <Adafruit_SleepyDog.h>
 #include <SdFat.h>
-#include "HONEYWELL_HPM.h"
-#include "KL_ADAFRUIT_SI7021.h"
 
 static SdFat SD;
 
@@ -24,5 +22,12 @@ extern void recordUptime(uint32_t uptime);
 extern void logData(bool clear);
 extern void transmitData(bool clear);
 extern uint32_t getNextCollectionTime();
+extern void readDataSamples();
+
+/* data history */
+struct DataSample {
+    char data[DATASAMPLE_DATASIZE];
+    struct DataSample *next;
+};
 
 #endif  // SENSORGRIDPM_RUNTIME_H_
