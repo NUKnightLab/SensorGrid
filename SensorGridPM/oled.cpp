@@ -121,10 +121,12 @@ void OLED::setButtonFunction(uint32_t pin, voidFuncPtr fcn, uint32_t mode) {
 
 void OLED::on() {
     _oled.ssd1306_command(SSD1306_DISPLAYON);
+    _on = true;
 }
 
 void OLED::off() {
     _oled.ssd1306_command(SSD1306_DISPLAYOFF);
+    _on = false;
 }
 
 void OLED::toggleDisplayState() {

@@ -12,6 +12,7 @@
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
 #include <KL_ADAFRUIT_SI7021.h>
+#include "oled.h"
 //#include "WatchdogSAMD.h"
 
 /**
@@ -20,7 +21,7 @@
  * ALWAYS_LOG to true
  */
 #define ALWAYS_LOG false
-#define DO_STANDBY true
+#define DO_STANDBY false
 #define DO_TRANSMIT_DATA false
 #define DO_LOG_DATA true
 #define INIT_LEAD_TIME 7
@@ -32,11 +33,12 @@
 
 // comment
 
-enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
+enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY, WAIT_FOR_BATTERY };
 extern enum Mode mode;
 
 extern void _setup();
 extern void _loop();
+extern OLED oled;
 
 extern RTCZero rtcz;
 extern RTC_PCF8523 rtc;
