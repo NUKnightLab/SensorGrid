@@ -190,9 +190,11 @@ void logData(bool clear) {
         float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
         println(F("%.2f"), fs);
     }
+    String date = String(rtcz.getYear()) + "-" +  String(rtcz.getMonth()) + "-" +  String(rtcz.getDay());
+    String filename = "datalog_" + date + ".txt";
     File file;
-    logln(F("Writing log lines to datalog.txt"));
-    file = sd.open("datalog.txt", O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
+    logln(F("Writing log lines to filename"));
+    file = sd.open("filename", O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
     while (cursor != NULL) {
         logln(cursor->data);
         file.println(cursor->data);
