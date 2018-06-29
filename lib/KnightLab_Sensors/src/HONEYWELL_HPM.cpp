@@ -11,7 +11,7 @@ byte uartbuf[32];
 /*
  * Read the next message from the sensor off the UART
  */
-bool read_message(byte* buf)
+static bool read_message(byte* buf)
 {
     memset(buf, 0, 32);
     uint8_t i = 0;
@@ -73,7 +73,7 @@ bool read_message(byte* buf)
     }
 }
 
-void _read_pm_results_data(int* pm25, int* pm10)
+static void _read_pm_results_data(int* pm25, int* pm10)
 {
     int retries = 4;
     for (int i=0; i<retries; i++) {    
@@ -92,7 +92,7 @@ void _read_pm_results_data(int* pm25, int* pm10)
     }
 }
 
-void read_pm_results_data(int* pm25, int* pm10)
+static void read_pm_results_data(int* pm25, int* pm10)
 {
     int pm25_1, pm25_2, pm25_3, pm10_1, pm10_2, pm10_3;
     _read_pm_results_data(&pm25_1, &pm10_1);

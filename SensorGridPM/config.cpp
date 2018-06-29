@@ -90,12 +90,12 @@ static SensorConfig *getNextSensorConfig(SensorConfig *current_config) {
     return new_config;
 }
 
-void loadSensorConfig(){
-    //struct SensorConfig *current_config = new SensorConfig();
+void loadSensorConfig() {
+    // struct SensorConfig *current_config = new SensorConfig();
     SensorConfig *current_config = NULL;
 
     /* Adafruit Si7021 temperature/humidity breakout */
-    if (ADAFRUIT_SI7021::setup(config.node_id, getTime)) { 
+    if (ADAFRUIT_SI7021::setup(config.node_id, getTime)) {
         current_config = getNextSensorConfig(current_config);
         current_config->id = TYPE_SI7021_TEMP_HUMIDITY;
         snprintf(current_config->id_str, MAX_SENSOR_ID_STR, "SI7021_TEMP_HUMIDITY");
@@ -104,7 +104,7 @@ void loadSensorConfig(){
         current_config->stop_function = &(ADAFRUIT_SI7021::stop);
     }
 
-    if (HONEYWELL_HPM::setup(config.node_id, getTime)){
+    if (HONEYWELL_HPM::setup(config.node_id, getTime)) {
         current_config = getNextSensorConfig(current_config);
         current_config->id = TYPE_HONEYWELL_HPM;
         snprintf(current_config->id_str, MAX_SENSOR_ID_STR, "HONEYWELL_PM");
