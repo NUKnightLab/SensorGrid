@@ -104,8 +104,6 @@ uint8_t send_message(uint8_t *msg, uint8_t len, uint8_t to_id) {
     Message *_msg = reinterpret_cast<Message*>(msg);
     log_(F("Sending data: ")); logln(F(_msg->data));
     log_(F("Message length: ")); logln(F(len), DEC);
-    // Serial.print("Sending data: "); Serial.println(_msg->data);
-    // Serial.print("Message length: "); Serial.println(len, DEC);
     uint8_t err = router->sendtoWait(msg, len, to_id);
     if (err == RH_ROUTER_ERROR_NONE) {
         return err;
