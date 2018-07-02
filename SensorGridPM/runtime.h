@@ -17,7 +17,7 @@ extern void recordDataSamples();
 extern void setCommunicateDataTimeout();
 extern void flashHeartbeat();
 extern void recordBatteryLevel();
-extern void recordTempAndHumidity();
+//extern void recordTempAndHumidity();
 extern void recordUptime(uint32_t uptime);
 extern void logData(bool clear);
 extern void transmitData(bool clear);

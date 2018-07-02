@@ -201,6 +201,7 @@ void stopSensors() {
         sensor = sensor->next;
     }
     digitalWrite(12,LOW);
+    digitalWrite(LED_BUILTIN, LOW);
 }
 
 /**
@@ -266,10 +267,12 @@ void recordBatteryLevel() {
         config.node_id, bat, rtcz.getEpoch());
 }
 
+/*
 void recordTempAndHumidity() {
     DataSample *dataSample = appendData();
     ADAFRUIT_SI7021::read(dataSample->data, DATASAMPLE_DATASIZE);
 }
+*/
 
 void recordUptime(uint32_t uptime) {
     DataSample *sample = appendData();
@@ -297,7 +300,7 @@ void logData(bool clear) {
     String filename = "datalog_" + date + ".txt";
     File file;
     logln(F("Writing log lines to filename"));
-    file = sd.open("filename", O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
+    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
     while (cursor != NULL) {
         logln(cursor->data);
         file.println(cursor->data);
@@ -373,6 +376,7 @@ void readDataSamples() {
         cursor = cursor->next;
     }
     digitalWrite(12, LOW);
+    digitalWrite(LED_BUILTIN, LOW);
 }
 
 
