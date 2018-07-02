@@ -9,7 +9,6 @@
 #include "config.h"
 #include "lora.h"
 #include "runtime.h"
-#include "oled.h"
 #include "tests.h"
 
 #define SET_CLOCK false
@@ -195,9 +194,19 @@ void loop() {
 
     // enable (instead of reset) Watchdog every loop because we disable during standby
     Watchdog.enable();
+
     static uint32_t start_time = getTime();
     static uint32_t uptime;
     uptime = millis();
+
+    if (mode == STANDBY) {
+        return;
+    }
+
+    if (!checkBatteryLevel()) {
+        return;
+    }
+
     static uint32_t next_collection_time = getNextCollectionTime();
     if (start_time && getTime() - start_time > 3 * 60) {
         oled.off();

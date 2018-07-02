@@ -12,7 +12,6 @@
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
 #include <KL_ADAFRUIT_SI7021.h>
-// #include "WatchdogSAMD.h"
 
 /**
  * SensorGrid will not print to serial if USB is not attached. This can be
@@ -32,17 +31,16 @@
 
 // comment
 
-enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY };
+enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY, WAIT_FOR_BATTERY };
 extern enum Mode mode;
 
 extern void _setup();
 extern void _loop();
+extern OLED oled;
 
 extern RTCZero rtcz;
 extern RTC_PCF8523 rtc;
 extern uint32_t get_time();
-// extern OLED oled;
-
 extern WatchdogSAMD Watchdog;
 
 #define FAIL_CODE_GENERAL 1

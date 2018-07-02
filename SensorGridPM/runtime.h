@@ -23,6 +23,7 @@ extern void logData(bool clear);
 extern void transmitData(bool clear);
 extern uint32_t getNextCollectionTime();
 extern void readDataSamples();
+extern bool checkBatteryLevel();
 
 /* data history */
 struct DataSample {

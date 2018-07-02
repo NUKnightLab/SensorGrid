@@ -72,6 +72,11 @@ void setInterruptTimeout(DateTime &datetime, InterruptFunction fcn) {
 
 /* runtime mode interrupts */
 
+void waitForBattery_INT() {
+    Serial.println("Wake from wait for battery recharge");
+    mode = WAIT;
+}
+
 void initSensors_INT() {
     logln(F("Setting Mode: INIT"));
     mode = INIT;
@@ -96,6 +101,12 @@ void communicateData_INT() {
 
 /* runtime mode timeouts */
 
+void setWaitForBatteryTimeout(int t) {
+    DateTime dt = DateTime(rtcz.getEpoch() + t);
+    setInterruptTimeout(dt, waitForBattery_INT);
+    standby();
+}
+
 void setCommunicateDataTimeout() {
     logln(F("setCommunicateDataTimeout"));
     uint32_t prev_sample = getNextPeriodTime(config.sample_period) - config.sample_period;
@@ -105,8 +116,13 @@ void setCommunicateDataTimeout() {
        times? */
     uint32_t com = prev_sample + 30;
     DateTime dt = DateTime(com);
-    setInterruptTimeout(dt, communicateData_INT);
-    standby();
+    if (com <= rtcz.getEpoch() + 1) {
+        communicateData_INT();
+        return;
+    } else {
+        setInterruptTimeout(dt, communicateData_INT);
+        standby();
+    }
 }
 
 void setInitTimeout() {
@@ -114,18 +130,29 @@ void setInitTimeout() {
     uint32_t sample_time = getNextPeriodTime(config.sample_period);
     uint32_t init = sample_time - INIT_LEAD_TIME;
     uint32_t heartbeat_time = getNextPeriodTime(config.heartbeat_period);
-    logln(F("Next init time is %d"), init);
-    logln(F("Next heartbeat time is %d"), heartbeat_time);
+    logln(F("Next init time is %lu"), init);
+    logln(F("Next heartbeat time is %lu"), heartbeat_time);
     if (heartbeat_time < init - 2) {
         DateTime dt = DateTime(heartbeat_time);
-        setInterruptTimeout(dt, heartbeat_INT);
-        println(F("heartbeat %02d:%02d"), dt.minute(), dt.second());
+        if (heartbeat_time <= rtcz.getEpoch() + 1) {
+            heartbeat_INT();
+            return;
+        } else {
+            setInterruptTimeout(dt, heartbeat_INT);
+            //println(F("heartbeat %02d:%02d"), dt.minute(), dt.second());
+            standby();
+        }
     } else {
         DateTime dt = DateTime(init);
-        setInterruptTimeout(dt, initSensors_INT);
-        println(F("init %02d:%02d"), dt.minute(), dt.second());
+        if (init <= rtcz.getEpoch() + 1) {
+            initSensors_INT();
+            return;
+        } else {
+            setInterruptTimeout(dt, initSensors_INT);
+            //println(F("init %02d:%02d"), dt.minute(), dt.second());
+            standby();
+        }
     }
-    standby();
 }
 
 void setSampleTimeout() {
@@ -134,12 +161,23 @@ void setSampleTimeout() {
     uint32_t heartbeat_time = getNextPeriodTime(config.heartbeat_period);
     if (heartbeat_time < sample_time - 2) {
         DateTime dt = DateTime(heartbeat_time);
-        setInterruptTimeout(dt, heartbeat_INT);
+        if (heartbeat <= rtcz.getEpoch() + 1) {
+            heartbeat_INT();
+            return;
+        } else {
+            setInterruptTimeout(dt, heartbeat_INT);
+            standby();
+        }
     } else {
         DateTime dt = DateTime(sample_time);
-        setInterruptTimeout(dt, recordDataSamples_INT);
+        if (sample_time <= rtcz.getEpoch() + 1) {
+            recordDataSamples_INT();
+            return;
+        } else {
+            setInterruptTimeout(dt, recordDataSamples_INT);
+            standby();
+        }
     }
-    standby();
 }
 
 /* end runtime mode timeouts */
@@ -154,10 +192,75 @@ void initSensors() {
     HONEYWELL_HPM::start();
 }
 
+void stopSensors() {
+    SensorConfig *sensor = sensor_config_head;
+    while (sensor) {
+        log_(F("Stopping sensor %s .. "), sensor->id_str);
+        sensor->stop_function(); 
+        println(F("Stopped"));
+        sensor = sensor->next;
+    }
+    digitalWrite(12,LOW);
+}
+
+/**
+ * A 2-tiered thresholding mechanism is used to manage backing off of power usage
+ * during low-battery times. When the low threshold is hit, the threshold is
+ * changed to the high threshold setting until the battery is charged back up to
+ * that value. After this recharge period, the threshold is set back to the lower
+ * value. This approach prevents thrashing charge/discharge cycles at the threshold
+ * border.
+ * 
+ * While in the charge zone, no sampling or logging happens, in order to minimize
+ * battery usage. How we handle communication and network robustness during this
+ * time remains TBD. A heartbeat mechanism remains in place on the configured
+ * heartbeat period. Early tests indicate even just this level of operation can be
+ * a bit much for reliable recharge during development when standby mode is deactivated
+ * for reliable Serial monitoring.
+ * 
+ * Note: this is extremely difficult to test and debug for. The general battery
+ * charge/discharge profile looks significantly different in development than in
+ * deployment. While developing, standby mode is generally deactivated, causing more
+ * energy usage during "down" time. While USB charge rates during development and
+ * testing are probably fairly consistent, solar charge rates in deployment can vary
+ * drastically. Finally, the battery level read off the voltage divider on VBATPIN is
+ * very inconsistent. Some robustness is built in with an averaging approach that
+ * attempts to reject outliers, but it is not a panacea to the volatility seen in
+ * these values. 
+ */
+static float batteryThreshold = 3.7;
+static float batteryThresholdDelta = 0.2;
+static float batteryThresholdLow = batteryThreshold;
+static float batteryThresholdHigh = batteryThreshold + batteryThresholdDelta;
+bool checkBatteryLevel() {
+    Watchdog.enable();
+    float bat = batteryLevelAveraged();
+    log_(F("Battery level: "));
+    Serial.println(bat);
+    if (bat < batteryThreshold) {
+        /* When we first hit the threshold, stop all the sensors */
+        if (batteryThreshold < batteryThresholdHigh) {
+            stopSensors();
+        }
+        Serial.print("Current battery threshold: ");
+        Serial.println(batteryThreshold);
+        logln(F("Warning: Low battery level. Waiting %d seconds."),
+            config.heartbeat_period);
+        batteryThreshold = batteryThresholdHigh;
+        oled.off();
+        flashHeartbeat();
+        setWaitForBatteryTimeout(config.heartbeat_period);
+        return false;
+    } else {
+        batteryThreshold = batteryThresholdLow;
+        return true;
+    }
+}
+
 void recordBatteryLevel() {
     // float bat = batteryLevel();
     char bat[5];
-    ftoa(batteryLevel(), bat, 2);
+    ftoa(batteryLevelAveraged(), bat, 2);
     DataSample *batSample = appendData();
     snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%lu}",
         config.node_id, bat, rtcz.getEpoch());
@@ -271,6 +374,7 @@ void readDataSamples() {
     }
     digitalWrite(12, LOW);
 }
+
 
 void flashHeartbeat() {
     logln(F("Heartbeat"));

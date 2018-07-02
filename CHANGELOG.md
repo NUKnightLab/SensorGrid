@@ -1,5 +1,6 @@
 ## v0.3 (TBD)
  * PR #59. Abstracts iteration of sensors into linked-list of sensor configs
+ * Adds battery level thresholding power save / recharge mode
 
 ## v0.2 (2018-06-27)
 

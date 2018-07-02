@@ -6,5 +6,7 @@
 #define VBATPIN 9
 
 extern float batteryLevel();
+extern float batteryLevelAveraged();
+
 
 #endif

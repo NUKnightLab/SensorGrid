@@ -125,7 +125,11 @@ static void read_pm_results_data(int* pm25, int* pm10)
         count++;
     }
     int val = total / count;
-    *pm25 = total / count;
+    if (count == 0) {
+        *pm25 = (pm25_1 + pm25_2 + pm25_3) / 3;
+    } else {
+        *pm25 = total / count;
+    }
     total = 0;
     count = 0;
     if (abs(pm10_1 - pm10_mean) <= 0.5 * pm10_std) {
@@ -140,7 +144,11 @@ static void read_pm_results_data(int* pm25, int* pm10)
         total += pm10_3;
         count++;
     }
-    *pm10 = total / count;
+    if (count == 0) {
+        *pm10 = (pm10_1 + pm10_2 + pm10_3) / 3;
+    } else {
+        *pm10 = total / count;
+    }
 }
 
 bool send_start_pm()
