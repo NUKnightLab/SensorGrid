@@ -161,7 +161,7 @@ void setSampleTimeout() {
     uint32_t heartbeat_time = getNextPeriodTime(config.heartbeat_period);
     if (heartbeat_time < sample_time - 2) {
         DateTime dt = DateTime(heartbeat_time);
-        if (heartbeat <= rtcz.getEpoch() + 1) {
+        if (heartbeat_time <= rtcz.getEpoch() + 1) {
             heartbeat_INT();
             return;
         } else {

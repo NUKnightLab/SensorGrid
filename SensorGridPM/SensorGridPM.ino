@@ -199,7 +199,18 @@ void loop() {
     static uint32_t uptime;
     uptime = millis();
 
+    /**
+     * Some apparent lockups may actually be indefinite looping on STANDBY status
+     * if for some reason the scheduled interrupt never happens to kick us out of
+     * STANDBY mode. For that reason, the standby_timer will track time and should
+     * never get to be longer than the scheduled heartbeat period.
+     */
+    static uint32_t standby_timer = getTime();
     if (mode == STANDBY) {
+        if (getTime() - standby_timer > config.heartbeat_period) {
+            standby_timer = getTime();
+            mode = WAIT;
+        }
         return;
     }
 

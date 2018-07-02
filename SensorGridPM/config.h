@@ -12,6 +12,7 @@
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
 #include <KL_ADAFRUIT_SI7021.h>
+#include "oled.h"
 
 /**
  * SensorGrid will not print to serial if USB is not attached. This can be
