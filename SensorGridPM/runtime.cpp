@@ -161,7 +161,7 @@ void setSampleTimeout() {
     uint32_t heartbeat_time = getNextPeriodTime(config.heartbeat_period);
     if (heartbeat_time < sample_time - 2) {
         DateTime dt = DateTime(heartbeat_time);
-        if (heartbeat <= rtcz.getEpoch() + 1) {
+        if (heartbeat_time <= rtcz.getEpoch() + 1) {
             heartbeat_INT();
             return;
         } else {
@@ -195,7 +195,7 @@ void initSensors() {
 void stopSensors() {
     SensorConfig *sensor = sensor_config_head;
     while (sensor) {
-        log_(F("Stopping sensor %s .. "), sensor->id_str);
+        log_(F("Stopping sensor %s .. "), sensor->id);
         sensor->stop_function(); 
         println(F("Stopped"));
         sensor = sensor->next;
@@ -365,11 +365,11 @@ void transmitData(bool clear) {
 void readDataSamples() {
     SensorConfig *cursor = sensor_config_head;
     while (cursor) {
-        log_(F("Reading sensor %s .. "), cursor->id_str);
+        log_(F("Reading sensor %s .. "), cursor->id);
         DataSample *sample = appendData();
         cursor->read_function(sample->data, DATASAMPLE_DATASIZE);
         cursor->stop_function();
-        logln(F("Sensor stopped: %s"), cursor->id_str);
+        logln(F("Sensor stopped: %s"), cursor->id);
         cursor = cursor->next;
     }
     digitalWrite(12, LOW);

@@ -12,6 +12,7 @@
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
 #include <KL_ADAFRUIT_SI7021.h>
+#include "oled.h"
 
 /**
  * SensorGrid will not print to serial if USB is not attached. This can be
@@ -25,8 +26,8 @@
 #define INIT_LEAD_TIME 7
 #define MESSAGE_DATA_SIZE 100
 #define DATASAMPLE_DATASIZE MESSAGE_DATA_SIZE - 2
-#define TYPE_SI7021_TEMP_HUMIDITY 7
-#define TYPE_HONEYWELL_HPM 8
+#define ID_SI7021_TEMP_HUMIDITY "SI7021_TEMP_HUMIDITY"
+#define ID_HONEYWELL_HPM "HONEYWELL_HPM"
 
 
 // comment
@@ -124,8 +125,7 @@ typedef bool (*SensorStopFunction)();
 #define MAX_SENSOR_ID_STR 30
 
 struct SensorConfig {
-    uint8_t id;
-    char id_str[MAX_SENSOR_ID_STR];
+    char id[MAX_SENSOR_ID_STR];
     SensorStartFunction start_function;
     SensorReadFunction read_function;
     SensorStopFunction stop_function;

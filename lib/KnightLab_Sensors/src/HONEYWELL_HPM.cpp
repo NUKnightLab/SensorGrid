@@ -202,104 +202,116 @@ void send_stop_autosend()
 static TimeFunction _time_fcn;
 static uint8_t _node_id;
 
-namespace HONEYWELL_HPM {
-
-    bool setup(uint8_t node_id, TimeFunction time_fcn)
-    {
-        log_(F("Setup Honeywell HPM sensor .. "));
-        _node_id = node_id;
-        Serial1.begin(9600);
-        _time_fcn = time_fcn;
-        println(F("done"));
-        return true;
-    }
-
-    bool start()
-    {
-        send_start_pm();
-        delay(100);
-        send_stop_autosend();
-        return true;
-    }
-
-    /*size_t read(char* buf, int len)
-    {
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& root = jsonBuffer.createObject();
-        int pm25;
-        int pm10;
-        root["node"] = _node_id;
-        root["ts"] = _time_fcn();
-        read_pm_results_data(&pm25, &pm10);
-        JsonArray& data = root.createNestedArray("hpm");
-        data.add(pm25);
-        data.add(pm10);
-        root.printTo(Serial);
-        Serial.println();
-        return root.printTo(buf, len);
-    }*/
-
-    // void readData(JsonArray &data_array)
-    // {
-    //     StaticJsonBuffer<200> jsonBuffer;
-    //     //JsonObject& root = jsonBuffer.createObject();
-    //     JsonObject& root = data_array.createNestedObject();
-    //     int pm25;
-    //     int pm10;
-    //     root["node"] = _node_id;
-    //     root["ts"] = _time_fcn();
-    //     read_pm_results_data(&pm25, &pm10);
-    //     JsonArray& data = root.createNestedArray("hpm");
-    //     data.add(pm25);
-    //     data.add(pm10);
-    //     root.printTo(Serial);
-    //     Serial.println();
-    //     //return root.printTo(buf, len);
-    //     //data_array.add(root);
-    // }
-
-    size_t read(char* buf, int len)
-    {
-        StaticJsonBuffer<200> jsonBuffer;
-        JsonObject& root = jsonBuffer.createObject();
-        //JsonObject& root = data_array.createNestedObject();
-        root["node"] = _node_id;
-        root["ts"] = _time_fcn();
-        int pm25;
-        int pm10;
-        //int count = 0;
-        //int pm25total = 0;
-        //int pm10total = 0;
-        read_pm_results_data(&pm25, &pm10);
-        //if (pm25 != 7168) {
-        //    pm25total += pm25;
-        //    pm10total += pm10;
-        //    count++;
-        //}
-        //pm25 = pm25total / count;
-        //pm10 = pm10total / count;
-        JsonArray& data = root.createNestedArray("hpm");
-        data.add(pm25);
-        data.add(pm10);
-        root.printTo(Serial);
-        Serial.println();
-        return root.printTo(buf, len);
-        //data_array.add(root);
-    }
-
-    bool stop()
-    {
-        /* Sensor tends to miss a lot of stop commands, so we retry several
-           times until we get a stop acknowledgment */
-        Serial.print("SENDING: STOP_PARTICLE_MEASUREMENT ..");
-        for (int i=0; i<10; i++) {
-            if (send_stop_pm())
-                Serial.println(".. SENT");
-                return true;
-            delay(100);
-        }
-        Serial.println("\nTrouble sending: STOP_PARTICLE_MEASUREMENT");
-        Serial.println("WARNING: Sensor fan may not have stopped");
-        return false;
-    }
+bool HONEYWELL_HPM::setup(uint8_t node_id, TimeFunction time_fcn)
+{
+    log_(F("Setup Honeywell HPM sensor .. "));
+    _node_id = node_id;
+    Serial1.begin(9600);
+    _time_fcn = time_fcn;
+    println(F("done"));
+    return true;
 }
+bool HONEYWELL_HPM::start()
+{
+    send_start_pm();
+    delay(100);
+    send_stop_autosend();
+    return true;
+}
+size_t HONEYWELL_HPM::read(char* buf, int len)
+{
+    StaticJsonBuffer<200> jsonBuffer;
+    JsonObject& root = jsonBuffer.createObject();
+    root["node"] = _node_id;
+    root["ts"] = _time_fcn();
+    int pm25;
+    int pm10;
+    read_pm_results_data(&pm25, &pm10);
+    JsonArray& data = root.createNestedArray("hpm");
+    data.add(pm25);
+    data.add(pm10);
+    root.printTo(Serial);
+    Serial.println();
+    return root.printTo(buf, len);
+}
+bool HONEYWELL_HPM::stop()
+{
+    /* Sensor tends to miss a lot of stop commands, so we retry several
+       times until we get a stop acknowledgment */
+    Serial.print("SENDING: STOP_PARTICLE_MEASUREMENT ..");
+    for (int i=0; i<10; i++) {
+        if (send_stop_pm())
+            Serial.println(".. SENT");
+            return true;
+        delay(100);
+    }
+    Serial.println("\nTrouble sending: STOP_PARTICLE_MEASUREMENT");
+    Serial.println("WARNING: Sensor fan may not have stopped");
+    return false;
+}
+
+// class HONEYWELL_HPM : public Interface {
+
+//     static bool setup(uint8_t node_id, TimeFunction time_fcn)
+//     {
+//         log_(F("Setup Honeywell HPM sensor .. "));
+//         _node_id = node_id;
+//         Serial1.begin(9600);
+//         _time_fcn = time_fcn;
+//         println(F("done"));
+//         return true;
+//     }
+
+//     static bool start()
+//     {
+//         send_start_pm();
+//         delay(100);
+//         send_stop_autosend();
+//         return true;
+//     }
+
+//     static size_t read(char* buf, int len)
+//     {
+//         StaticJsonBuffer<200> jsonBuffer;
+//         JsonObject& root = jsonBuffer.createObject();
+//         //JsonObject& root = data_array.createNestedObject();
+//         root["node"] = _node_id;
+//         root["ts"] = _time_fcn();
+//         int pm25;
+//         int pm10;
+//         //int count = 0;
+//         //int pm25total = 0;
+//         //int pm10total = 0;
+//         read_pm_results_data(&pm25, &pm10);
+//         //if (pm25 != 7168) {
+//         //    pm25total += pm25;
+//         //    pm10total += pm10;
+//         //    count++;
+//         //}
+//         //pm25 = pm25total / count;
+//         //pm10 = pm10total / count;
+//         JsonArray& data = root.createNestedArray("hpm");
+//         data.add(pm25);
+//         data.add(pm10);
+//         root.printTo(Serial);
+//         Serial.println();
+//         return root.printTo(buf, len);
+//         //data_array.add(root);
+//     }
+
+//     static bool stop()
+//     {
+//         /* Sensor tends to miss a lot of stop commands, so we retry several
+//            times until we get a stop acknowledgment */
+//         Serial.print("SENDING: STOP_PARTICLE_MEASUREMENT ..");
+//         for (int i=0; i<10; i++) {
+//             if (send_stop_pm())
+//                 Serial.println(".. SENT");
+//                 return true;
+//             delay(100);
+//         }
+//         Serial.println("\nTrouble sending: STOP_PARTICLE_MEASUREMENT");
+//         Serial.println("WARNING: Sensor fan may not have stopped");
+//         return false;
+//     }
+// };
