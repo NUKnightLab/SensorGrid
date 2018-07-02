@@ -4,16 +4,20 @@
 #include <Arduino.h>
 #include <KnightLab_ArduinoUtils.h>
 #include <Adafruit_Si7021.h>
+#include "base.h"
 
-typedef uint32_t (*TimeFunction)();
+//typedef uint32_t (*TimeFunction)();
 
-namespace ADAFRUIT_SI7021 {
-    bool setup(uint8_t node_id, TimeFunction time_fcn);
-    //float readTemperature();
-    //float readHumidity();
-    size_t read(char* buf, int len);
-    bool start();
-    bool stop();
-}
+
+
+class ADAFRUIT_SI7021 : public Interface {
+public:
+    static bool setup(uint8_t node_id, TimeFunction time_fcn);
+    static bool start();
+    static size_t read(char* buf, int len);
+    static bool stop();
+	static float readTemperature();
+	static float readHumidity();
+};
 
 #endif
