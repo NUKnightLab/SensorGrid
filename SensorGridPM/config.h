@@ -12,8 +12,6 @@
 #include <KnightLab_SDConfig.h>
 #include <HONEYWELL_HPM.h>
 #include <KL_ADAFRUIT_SI7021.h>
-#include "oled.h"
-//#include "WatchdogSAMD.h"
 
 /**
  * SensorGrid will not print to serial if USB is not attached. This can be
@@ -43,8 +41,6 @@ extern OLED oled;
 extern RTCZero rtcz;
 extern RTC_PCF8523 rtc;
 extern uint32_t get_time();
-// extern OLED oled;
-
 extern WatchdogSAMD Watchdog;
 
 #define FAIL_CODE_GENERAL 1
@@ -95,7 +91,7 @@ struct Config {
     uint32_t heartbeat_period;  // in seconds
     uint32_t sample_period;  // in minutes
     uint32_t collection_period;  // in minutes
-    uint32_t SD_CHIP_SELECT_PIN;
+    uint8_t SD_CHIP_SELECT_PIN;
     uint32_t RFM95_CS;
     uint32_t RFM95_RST;
     uint32_t RFM95_INT;
@@ -134,7 +130,6 @@ struct SensorConfig {
     SensorReadFunction read_function;
     SensorStopFunction stop_function;
     struct SensorConfig *next;
-
 };
 
 

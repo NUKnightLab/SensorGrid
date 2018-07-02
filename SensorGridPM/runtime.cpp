@@ -37,32 +37,6 @@ DataSample *appendData() {
 
 /* local utils */
 
-void _writeToSD(char* filename, char* str) {
-    static SdFat sd;
-    log_(F("Init SD card .."));
-    if (!sd.begin(config.SD_CHIP_SELECT_PIN)) {
-          println(F(" .. SD card init failed!"));
-          return;
-    }
-    if (false) {  // true to check available SD filespace
-        log_(F("SD free: "));
-        uint32_t volFree = sd.vol()->freeClusterCount();
-        float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
-        println(F("%.2f"), fs);
-    }
-    File file;
-    logln(F("Writing log line to %s"), filename);
-    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
-    file.println(str);
-    file.close();
-    logln(F("File closed"));
-}
-
-void writeToSD(char* filename, char* str) {
-    digitalWrite(8, HIGH);
-    _writeToSD(filename, str);
-    digitalWrite(8, LOW);
-}
 
 static uint32_t getNextPeriodTime(int period) {
     uint32_t t = rtcz.getEpoch();
@@ -153,14 +127,14 @@ void setCommunicateDataTimeout() {
 
 void setInitTimeout() {
     log_(F("Check setInitTimeout: "));
-    uint32_t sample = getNextPeriodTime(config.sample_period);
-    uint32_t init = sample - INIT_LEAD_TIME;
-    uint32_t heartbeat = getNextPeriodTime(config.heartbeat_period);
+    uint32_t sample_time = getNextPeriodTime(config.sample_period);
+    uint32_t init = sample_time - INIT_LEAD_TIME;
+    uint32_t heartbeat_time = getNextPeriodTime(config.heartbeat_period);
     logln(F("Next init time is %lu"), init);
-    logln(F("Next heartbeat time is %lu"), heartbeat);
-    if (heartbeat < init - 2) {
-        DateTime dt = DateTime(heartbeat);
-        if (heartbeat <= rtcz.getEpoch() + 1) {
+    logln(F("Next heartbeat time is %lu"), heartbeat_time);
+    if (heartbeat_time < init - 2) {
+        DateTime dt = DateTime(heartbeat_time);
+        if (heartbeat_time <= rtcz.getEpoch() + 1) {
             heartbeat_INT();
             return;
         } else {
@@ -183,10 +157,10 @@ void setInitTimeout() {
 
 void setSampleTimeout() {
     logln(F("setSampleTimeout"));
-    uint32_t sample = getNextPeriodTime(config.sample_period);
-    uint32_t heartbeat = getNextPeriodTime(config.heartbeat_period);
-    if (heartbeat < sample - 2) {
-        DateTime dt = DateTime(heartbeat);
+    uint32_t sample_time = getNextPeriodTime(config.sample_period);
+    uint32_t heartbeat_time = getNextPeriodTime(config.heartbeat_period);
+    if (heartbeat_time < sample_time - 2) {
+        DateTime dt = DateTime(heartbeat_time);
         if (heartbeat <= rtcz.getEpoch() + 1) {
             heartbeat_INT();
             return;
@@ -195,8 +169,8 @@ void setSampleTimeout() {
             standby();
         }
     } else {
-        DateTime dt = DateTime(sample);
-        if (sample <= rtcz.getEpoch() + 1) {
+        DateTime dt = DateTime(sample_time);
+        if (sample_time <= rtcz.getEpoch() + 1) {
             recordDataSamples_INT();
             return;
         } else {
@@ -284,7 +258,7 @@ bool checkBatteryLevel() {
 }
 
 void recordBatteryLevel() {
-    //float bat = batteryLevel();
+    // float bat = batteryLevel();
     char bat[5];
     ftoa(batteryLevelAveraged(), bat, 2);
     DataSample *batSample = appendData();
@@ -319,9 +293,11 @@ void logData(bool clear) {
         float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
         println(F("%.2f"), fs);
     }
+    String date = String(rtcz.getYear()) + "-" +  String(rtcz.getMonth()) + "-" +  String(rtcz.getDay());
+    String filename = "datalog_" + date + ".txt";
     File file;
-    logln(F("Writing log lines to datalog.txt"));
-    file = sd.open("datalog.txt", O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
+    logln(F("Writing log lines to filename"));
+    file = sd.open("filename", O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
     while (cursor != NULL) {
         logln(cursor->data);
         file.println(cursor->data);
@@ -344,7 +320,7 @@ void transmitData(bool clear) {
     msg->network_id = config.network_id;
     msg->from_node = config.node_id;
     msg->message_type = 2;
-    memset(msg->data, 0, 100); // TODO: make this 100 a constant
+    memset(msg->data, 0, 100);  // TODO(Anyone): make this 100 a constant
     snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
     int data_index = 1;
     logln(F("TRANSMITTING DATA: ------"));
@@ -352,7 +328,7 @@ void transmitData(bool clear) {
     while (cursor != NULL) {
         Watchdog.reset();
         logln(cursor->data);
-        if (data_index + strlen(cursor->data) >= MESSAGE_DATA_SIZE - 1) {  
+        if (data_index + strlen(cursor->data) >= MESSAGE_DATA_SIZE - 1) {
             logln(F("Sending partial data history: "));
             msg->data[data_index-1] = ']';
             logln(msg->data);
@@ -386,17 +362,17 @@ void transmitData(bool clear) {
     print(F(" len: ")); println(F("%d"), msg->len);
 }
 
-void readDataSamples(){
+void readDataSamples() {
     SensorConfig *cursor = sensor_config_head;
     while (cursor) {
         log_(F("Reading sensor %s .. "), cursor->id_str);
         DataSample *sample = appendData();
         cursor->read_function(sample->data, DATASAMPLE_DATASIZE);
-        cursor->stop_function(); 
+        cursor->stop_function();
         logln(F("Sensor stopped: %s"), cursor->id_str);
         cursor = cursor->next;
     }
-    digitalWrite(12,LOW);
+    digitalWrite(12, LOW);
 }
 
 

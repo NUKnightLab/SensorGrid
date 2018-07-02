@@ -44,13 +44,13 @@ static void setRTCz() {
 }
 
 static void printCurrentTime() {
-    Serial.print("Current time: ");
-    Serial.print(rtcz.getHours());
-    Serial.print(":");
-    Serial.print(rtcz.getMinutes());
-    Serial.print(":");
-    Serial.println(rtcz.getSeconds());
-    Serial.println(rtcz.getEpoch());
+    log_(F("Current time: "));
+    log_(F(rtcz.getHours()));
+    log_(F(":"));
+    log_(F(rtcz.getMinutes()));
+    log_(F(":"));
+    logln(F(rtcz.getSeconds()));
+    logln(F(rtcz.getEpoch()));
 }
 
 /* moved to config.cpp
@@ -73,7 +73,7 @@ void aButton_ISR() {
     static volatile int state = 0;
     state = !digitalRead(BUTTON_A);
     if (state) {
-        Serial.println("A-Button pushed");
+        logln(F("A-Button pushed"));
         oled.toggleDisplayState();
     }
     if (oled.isOn()) {
@@ -119,11 +119,11 @@ void setupClocks() {
     rtc.begin();
     /* In general, we no longer use SET_CLOCK. Instead use a GPS module to set the time */
     if (SET_CLOCK) {
-        Serial.print("Printing initial DateTime: ");
+        log_(F("Printing initial DateTime: "));
         rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
-        Serial.print(F(__DATE__));
-        Serial.print(' ');
-        Serial.println(F(__TIME__));
+        log_(F(__DATE__));
+        log_(F(' '));
+        logln(F(__TIME__));
     }
     rtcz.begin();
     setRTCz();
@@ -138,7 +138,7 @@ void HardFault_Handler(void) {
     //
     // When stuck here, change the variable value to != 0 in order to step out
     //
-    Serial.println("!!!!**** HARD FAULT -- REQUESTING RESET *****!!!!");
+    logln(F("!!!!**** HARD FAULT -- REQUESTING RESET *****!!!!"));
     SCB->AIRCR = 0x05FA0004;  // System reset
     while (_Continue == 0u) {}
 }
@@ -187,7 +187,6 @@ void setup() {
 }
 
 void loop() {
-
     #ifdef TEST
     aunit::TestRunner::run();
     return;
