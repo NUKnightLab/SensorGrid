@@ -1,4 +1,7 @@
-## v0.3 (TBD)
+## v0.4 (TBD)
+ * Adds a timeout to STANDBY mode to avoid possible endless standby loops
+
+## v0.3 (2018-07-02)
  * PR #59. Abstracts iteration of sensors into linked-list of sensor configs
  * Adds battery level thresholding power save / recharge mode
 
