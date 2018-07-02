@@ -254,8 +254,8 @@ void stopSensors() {
  * attempts to reject outliers, but it is not a panacea to the volatility seen in
  * these values. 
  */
-static float batteryThreshold = 4.0;
-static float batteryThresholdDelta = 0.1;
+static float batteryThreshold = 3.7;
+static float batteryThresholdDelta = 0.2;
 static float batteryThresholdLow = batteryThreshold;
 static float batteryThresholdHigh = batteryThreshold + batteryThresholdDelta;
 bool checkBatteryLevel() {
