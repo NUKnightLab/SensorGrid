@@ -1,7 +1,7 @@
 /**
  * Copyright 2018 Northwestern University
  */
-#include "sensor.h"
+#include "sensors.h"
 
 struct SensorConfig *sensor_config_head;
 
