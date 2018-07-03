@@ -196,12 +196,17 @@ void send_stop_autosend() {
 //static TimeFunction _time_fcn;
 //static uint8_t _node_id;
 
-bool HONEYWELL_HPM::setup(uint8_t node_id, TimeFunction time_fcn)
-{
+HONEYWELL_HPM::HONEYWELL_HPM(uint8_t node_id, TimeFunction time_fcn) {
+    id = "HONEYWELL_HPM";
+    _node_id = node_id;
+    _time_fcn = time_fcn;
+}
+
+HONEYWELL_HPM::~HONEYWELL_HPM() {}
+
+bool HONEYWELL_HPM::setup() {
     log_(F("Setup Honeywell HPM sensor .. "));
-    this._node_id = node_id;
     Serial1.begin(9600);
-    this._time_fcn = time_fcn;
     println(F("done"));
     return true;
 }
@@ -216,8 +221,8 @@ bool HONEYWELL_HPM::start() {
 size_t HONEYWELL_HPM::read(char* buf, int len) {
     StaticJsonBuffer<200> jsonBuffer;
     JsonObject& root = jsonBuffer.createObject();
-    root["node"] = this._node_id;
-    root["ts"] = this._time_fcn();
+    root["node"] = this->_node_id;
+    root["ts"] = this->_time_fcn();
     int pm25;
     int pm10;
     read_pm_results_data(&pm25, &pm10);

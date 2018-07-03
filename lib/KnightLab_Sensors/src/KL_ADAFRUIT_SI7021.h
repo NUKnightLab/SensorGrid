@@ -11,12 +11,16 @@
 
 
 class ADAFRUIT_SI7021 : public SensorInterface {
+    TimeFunction _time_fcn;
+    uint8_t _node_id;
+
 public:
-    id = "SI7021_TEMP_HUMIDITY";
-    // static bool setup(uint8_t node_id, TimeFunction time_fcn);
-    // static bool start();
-    // static size_t read(char* buf, int len);
-    // static bool stop();
+    ADAFRUIT_SI7021(uint8_t node_id, TimeFunction time_fcn);
+    virtual ~ADAFRUIT_SI7021();
+    bool setup();
+    bool start();
+    size_t read(char* buf, int len);
+    bool stop();
 	float readTemperature();
 	float readHumidity();
 };

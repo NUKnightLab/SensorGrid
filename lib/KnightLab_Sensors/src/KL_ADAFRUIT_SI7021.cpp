@@ -16,9 +16,15 @@ float ADAFRUIT_SI7021::readHumidity() {
     return sensor.readHumidity();
 }
 
-bool ADAFRUIT_SI7021::setup(uint8_t node_id, TimeFunction time_fcn) {
-    this._node_id = node_id;
-    this._time_fcn = time_fcn;
+ADAFRUIT_SI7021::ADAFRUIT_SI7021(uint8_t node_id, TimeFunction time_fcn) {
+    //id = "SI7021_TEMP_HUMIDITY";
+    //_node_id = node_id;
+    //_time_fcn = time_fcn;
+}
+
+ADAFRUIT_SI7021::~ADAFRUIT_SI7021() {}
+
+bool ADAFRUIT_SI7021::setup() {
     
     Serial.print(F("Si7021 "));
     if (sensor.begin()) {
@@ -41,7 +47,7 @@ size_t ADAFRUIT_SI7021::read(char* buf, int len) {
     ftoa(readHumidity(), humid, 2);
     snprintf(buf, len,
     "{\"node\":%d,\"tmp\":%s,\"hmd\":%s,\"ts\":%lu}",
-    this._node_id, temp, humid, this._time_fcn());
+    this->_node_id, temp, humid, this->_time_fcn());
     Serial.println(buf);
     return strlen(buf);
 }

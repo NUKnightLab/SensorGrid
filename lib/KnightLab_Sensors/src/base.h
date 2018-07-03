@@ -7,15 +7,12 @@ typedef uint32_t (*TimeFunction)();
 
 class SensorInterface {
 public:
-    virtual char id[MAX_SENSOR_ID_STR];
-    virtual bool setup(uint8_t node_id, TimeFunction time_fcn);
-	virtual bool start();
-    virtual size_t read(char* buf, int len);
-	virtual bool stop();
-
-private:
-    virtual TimeFunction _time_fcn;
-    virtual uint8_t _node_id;
+    virtual ~SensorInterface(){};
+    char *id = 0;
+    virtual bool setup() = 0;
+	virtual bool start() = 0;
+    virtual size_t read(char* buf, int len) = 0;
+	virtual bool stop() = 0;
 };
 
 #endif
