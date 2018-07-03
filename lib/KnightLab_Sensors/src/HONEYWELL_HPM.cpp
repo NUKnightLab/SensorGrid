@@ -96,9 +96,9 @@ static void read_pm_results_data(int* pm25, int* pm10)
 {
     int pm25_1, pm25_2, pm25_3, pm10_1, pm10_2, pm10_3;
     _read_pm_results_data(&pm25_1, &pm10_1);
-    delay(250);
+    delay(1000);
     _read_pm_results_data(&pm25_2, &pm10_2);
-    delay(250);
+    delay(1000);
     _read_pm_results_data(&pm25_3, &pm10_3);
     int pm25_mean = (pm25_1 + pm25_2 + pm25_3) / 3;
     int pm10_mean = (pm10_1 + pm10_2 + pm10_3) / 3;
