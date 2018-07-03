@@ -274,13 +274,6 @@ void recordBatteryLevel() {
         config.node_id, bat, rtcz.getEpoch());
 }
 
-/*
-void recordTempAndHumidity() {
-    DataSample *dataSample = appendData();
-    ADAFRUIT_SI7021::read(dataSample->data, DATASAMPLE_DATASIZE);
-}
-*/
-
 void recordUptime(uint32_t uptime) {
     DataSample *sample = appendData();
     snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"ts\":%lu}",
