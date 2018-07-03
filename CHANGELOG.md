@@ -1,4 +1,4 @@
-## v0.4 (TBD)
+## v0.4 (2018-07-03)
  * Adds a timeout to STANDBY mode to avoid possible endless standby loops
 
 ## v0.3 (2018-07-02)
