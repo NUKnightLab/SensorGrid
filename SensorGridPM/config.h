@@ -25,6 +25,7 @@
 #define INIT_LEAD_TIME 7
 #define MESSAGE_DATA_SIZE 100
 #define DATASAMPLE_DATASIZE MESSAGE_DATA_SIZE - 2
+#define MAX_LOGFILE_AGE 2592000  // 30 days in seconds
 
 // comment
 
