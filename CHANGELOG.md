@@ -1,5 +1,6 @@
 ## v0.5 (TBD)
  * increases delay between hpm samples
+ * PR #64 converts namespace-based sensor drivers into classes
 
 ## v0.4 (2018-07-03)
  * Adds a timeout to STANDBY mode to avoid possible endless standby loops
