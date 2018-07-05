@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2018 Northwestern University
  */
 #ifndef SENSORGRIDPM_CONFIG_H_
@@ -10,11 +10,10 @@
 #include <KnightLab_ArduinoUtils.h>
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
-#include <HONEYWELL_HPM.h>
-#include <KL_ADAFRUIT_SI7021.h>
+#include <KnightLab_SensorConfig.h>
 #include "oled.h"
 
-/**
+/*
  * SensorGrid will not print to serial if USB is not attached. This can be
  * problematic when debugging timing sensitive issues, in which case set
  * ALWAYS_LOG to true
@@ -26,9 +25,6 @@
 #define INIT_LEAD_TIME 7
 #define MESSAGE_DATA_SIZE 100
 #define DATASAMPLE_DATASIZE MESSAGE_DATA_SIZE - 2
-#define TYPE_SI7021_TEMP_HUMIDITY 7
-#define TYPE_HONEYWELL_HPM 8
-
 
 // comment
 
@@ -106,7 +102,6 @@ struct Config {
 
 extern uint32_t getTime();
 extern void loadConfig();
-extern void loadSensorConfig();
 extern struct Config config;
 
 struct Message {
@@ -121,17 +116,5 @@ struct Message {
 typedef bool (*SensorStartFunction)();
 typedef size_t (*SensorReadFunction)(char *buf, int len);
 typedef bool (*SensorStopFunction)();
-
-#define MAX_SENSOR_ID_STR 30
-
-struct SensorConfig {
-    uint8_t id;
-    char id_str[MAX_SENSOR_ID_STR];
-    SensorStartFunction start_function;
-    SensorReadFunction read_function;
-    SensorStopFunction stop_function;
-    struct SensorConfig *next;
-};
-
 
 #endif  // SENSORGRIDPM_CONFIG_H_

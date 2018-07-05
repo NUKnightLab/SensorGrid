@@ -9,7 +9,6 @@
 
 static uint8_t msg_buf[140] = {0};
 static Message *msg = reinterpret_cast<Message*>(msg_buf);
-static char databuf[100] = {0};
 StaticJsonBuffer<200> json_buffer;
 JsonArray& data_array = json_buffer.createArray();
 
@@ -187,16 +186,23 @@ void setSampleTimeout() {
 void initSensors() {
     logln(F("Init sensor for data sampling"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
-    digitalWrite(12, HIGH);
-    Watchdog.reset();
-    HONEYWELL_HPM::start();
+    digitalWrite(12, HIGH); // turn on 5v power
+    SensorConfig *sensor = sensor_config_head;
+    while (sensor) {
+        Watchdog.reset();
+        log_(F("Starting sensor %s .. "), sensor->sensor->id);
+        sensor->sensor->start();
+        println(F("Started"));
+        sensor = sensor->next;
+    }
 }
 
 void stopSensors() {
     SensorConfig *sensor = sensor_config_head;
     while (sensor) {
-        log_(F("Stopping sensor %s .. "), sensor->id_str);
-        sensor->stop_function(); 
+        log_(F("Stopping sensor %s .. "), sensor->sensor->id);
+        // sensor->stop_function(); 
+        sensor->sensor->stop();
         println(F("Stopped"));
         sensor = sensor->next;
     }
@@ -266,13 +272,6 @@ void recordBatteryLevel() {
     snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%lu}",
         config.node_id, bat, rtcz.getEpoch());
 }
-
-/*
-void recordTempAndHumidity() {
-    DataSample *dataSample = appendData();
-    ADAFRUIT_SI7021::read(dataSample->data, DATASAMPLE_DATASIZE);
-}
-*/
 
 void recordUptime(uint32_t uptime) {
     DataSample *sample = appendData();
@@ -368,17 +367,16 @@ void transmitData(bool clear) {
 void readDataSamples() {
     SensorConfig *cursor = sensor_config_head;
     while (cursor) {
-        log_(F("Reading sensor %s .. "), cursor->id_str);
+        log_(F("Reading sensor %s .. "), cursor->sensor->id);
         DataSample *sample = appendData();
-        cursor->read_function(sample->data, DATASAMPLE_DATASIZE);
-        cursor->stop_function();
-        logln(F("Sensor stopped: %s"), cursor->id_str);
+        cursor->sensor->read(sample->data, DATASAMPLE_DATASIZE);
+        cursor->sensor->stop();
+        logln(F("Sensor stopped: %s"), cursor->sensor->id);
         cursor = cursor->next;
     }
     digitalWrite(12, LOW);
     digitalWrite(LED_BUILTIN, LOW);
 }
-
 
 void flashHeartbeat() {
     logln(F("Heartbeat"));
