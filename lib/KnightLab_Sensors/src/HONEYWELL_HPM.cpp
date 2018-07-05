@@ -7,7 +7,6 @@ byte stop_pm[] = { 0x68, 0x01, 0x02, 0x95 };
 byte read_pm_results[] = { 0x68, 0x01, 0x04, 0x93 };
 byte uartbuf[32];
 
-
 /*
  * Read the next message from the sensor off the UART
  */

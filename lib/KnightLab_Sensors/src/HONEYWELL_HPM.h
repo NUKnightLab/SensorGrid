@@ -1,15 +1,10 @@
 #ifndef __SENSORGRID_HONEYWELL_HPM__
 #define __SENSORGRID_HONEYWELL_HPM__
 
-#include <Arduino.h>
-#include <ArduinoJson.h>
-#include <KnightLab_ArduinoUtils.h>
-#include "base.h"
+#include "KnightLab_SensorInterface.h"
 
 // don't set this to < 2000 w/o testing valid results from sensor
 #define UART_TIMEOUT 500
-
-//typedef uint32_t (*TimeFunction)();
 
 class HONEYWELL_HPM : public SensorInterface {
     TimeFunction _time_fcn;

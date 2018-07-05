@@ -1,14 +1,8 @@
 #ifndef __KNIGHTLAB__ADAFRUIT_SI7021_H
 #define __KNIGHTLAB__ADAFRUIT_SI7021_H
 
-#include <Arduino.h>
-#include <KnightLab_ArduinoUtils.h>
 #include <Adafruit_Si7021.h>
-#include "base.h"
-
-//typedef uint32_t (*TimeFunction)();
-
-
+#include "KnightLab_SensorInterface.h"
 
 class ADAFRUIT_SI7021 : public SensorInterface {
     TimeFunction _time_fcn;

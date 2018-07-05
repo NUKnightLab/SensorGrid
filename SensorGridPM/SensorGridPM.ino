@@ -112,7 +112,7 @@ void updateClock() {
 
 void setupSensors() {
     pinMode(12, OUTPUT);  // enable pin to HPM boost
-    loadSensorConfig();
+    loadSensorConfig(config.node_id, getTime);
 }
 
 void setupClocks() {
