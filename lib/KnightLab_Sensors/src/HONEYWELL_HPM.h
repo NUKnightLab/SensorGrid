@@ -4,7 +4,7 @@
 #include "KnightLab_SensorInterface.h"
 
 // don't set this to < 2000 w/o testing valid results from sensor
-#define UART_TIMEOUT 500
+#define UART_TIMEOUT 2000
 
 class HONEYWELL_HPM : public SensorInterface {
     TimeFunction _time_fcn;
