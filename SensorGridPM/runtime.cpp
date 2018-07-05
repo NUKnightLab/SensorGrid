@@ -9,7 +9,6 @@
 
 static uint8_t msg_buf[140] = {0};
 static Message *msg = reinterpret_cast<Message*>(msg_buf);
-// static char databuf[100] = {0};
 StaticJsonBuffer<200> json_buffer;
 JsonArray& data_array = json_buffer.createArray();
 
