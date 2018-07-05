@@ -24,17 +24,19 @@ void loadSensorConfig() {
     /* Adafruit Si7021 temperature/humidity breakout */
     if (ADAFRUIT_SI7021::setup(config.node_id, getTime)) {
         current_config = getNextSensorConfig(current_config);
-        snprintf(current_config->id, MAX_SENSOR_ID_STR, ID_SI7021_TEMP_HUMIDITY);
-        current_config->start_function = &(ADAFRUIT_SI7021::start);
-        current_config->read_function = &(ADAFRUIT_SI7021::read);
-        current_config->stop_function = &(ADAFRUIT_SI7021::stop);
+        // snprintf(current_config->id, MAX_SENSOR_ID_STR, ID_SI7021_TEMP_HUMIDITY);
+        // current_config->start_function = &(ADAFRUIT_SI7021::start);
+        // current_config->read_function = &(ADAFRUIT_SI7021::read);
+        // current_config->stop_function = &(ADAFRUIT_SI7021::stop);
+        current_config->sensor = new ADAFRUIT_SI7021();
     }
 
     if (HONEYWELL_HPM::setup(config.node_id, getTime)) {
         current_config = getNextSensorConfig(current_config);
-        snprintf(current_config->id, MAX_SENSOR_ID_STR, ID_HONEYWELL_HPM);
-        current_config->start_function = &(HONEYWELL_HPM::start);
-        current_config->read_function = &(HONEYWELL_HPM::read);
-        current_config->stop_function = &(HONEYWELL_HPM::stop);
+        // snprintf(current_config->id, MAX_SENSOR_ID_STR, ID_HONEYWELL_HPM);
+        // current_config->start_function = &(HONEYWELL_HPM::start);
+        // current_config->read_function = &(HONEYWELL_HPM::read);
+        // current_config->stop_function = &(HONEYWELL_HPM::stop);
+        current_config->sensor = new HONEYWELL_HPM();
     }
 }

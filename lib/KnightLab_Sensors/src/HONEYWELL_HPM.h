@@ -11,12 +11,14 @@
 
 //typedef uint32_t (*TimeFunction)();
 
-class HONEYWELL_HPM : public Interface {
+class HONEYWELL_HPM : public SensorInterface {
 public:
-    static bool setup(uint8_t node_id, TimeFunction time_fcn);
-    static bool start();
-    static size_t read(char* buf, int len);
-    static bool stop();
+    id = "HONEYWELL_HPM";
+    // static bool setup(uint8_t node_id, TimeFunction time_fcn);
+    // static bool start();
+    // static size_t read(char* buf, int len);
+    // static bool stop();
+
 };
 
 #endif

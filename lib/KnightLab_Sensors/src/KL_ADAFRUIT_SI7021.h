@@ -10,14 +10,15 @@
 
 
 
-class ADAFRUIT_SI7021 : public Interface {
+class ADAFRUIT_SI7021 : public SensorInterface {
 public:
-    static bool setup(uint8_t node_id, TimeFunction time_fcn);
-    static bool start();
-    static size_t read(char* buf, int len);
-    static bool stop();
-	static float readTemperature();
-	static float readHumidity();
+    id = "SI7021_TEMP_HUMIDITY";
+    // static bool setup(uint8_t node_id, TimeFunction time_fcn);
+    // static bool start();
+    // static size_t read(char* buf, int len);
+    // static bool stop();
+	float readTemperature();
+	float readHumidity();
 };
 
 #endif

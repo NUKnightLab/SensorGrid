@@ -26,8 +26,8 @@
 #define INIT_LEAD_TIME 7
 #define MESSAGE_DATA_SIZE 100
 #define DATASAMPLE_DATASIZE MESSAGE_DATA_SIZE - 2
-#define ID_SI7021_TEMP_HUMIDITY "SI7021_TEMP_HUMIDITY"
-#define ID_HONEYWELL_HPM "HONEYWELL_HPM"
+// #define ID_SI7021_TEMP_HUMIDITY "SI7021_TEMP_HUMIDITY"
+// #define ID_HONEYWELL_HPM "HONEYWELL_HPM"
 
 
 // comment
@@ -122,13 +122,14 @@ typedef bool (*SensorStartFunction)();
 typedef size_t (*SensorReadFunction)(char *buf, int len);
 typedef bool (*SensorStopFunction)();
 
-#define MAX_SENSOR_ID_STR 30
+// #define MAX_SENSOR_ID_STR 30
 
 struct SensorConfig {
-    char id[MAX_SENSOR_ID_STR];
-    SensorStartFunction start_function;
-    SensorReadFunction read_function;
-    SensorStopFunction stop_function;
+    // char id[MAX_SENSOR_ID_STR];
+    // SensorStartFunction start_function;
+    // SensorReadFunction read_function;
+    // SensorStopFunction stop_function;
+    SensorInterface *sensor;
     struct SensorConfig *next;
 };
 
