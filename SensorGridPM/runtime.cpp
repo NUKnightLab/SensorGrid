@@ -7,6 +7,8 @@
 #include "lora.h"
 #include <avr/dtostrf.h>
 
+#define DATE_STRING_SIZE 11
+
 static uint8_t msg_buf[140] = {0};
 static Message *msg = reinterpret_cast<Message*>(msg_buf);
 static char databuf[100] = {0};
@@ -139,7 +141,7 @@ void setInitTimeout() {
             return;
         } else {
             setInterruptTimeout(dt, heartbeat_INT);
-            //println(F("heartbeat %02d:%02d"), dt.minute(), dt.second());
+            // println(F("heartbeat %02d:%02d"), dt.minute(), dt.second());
             standby();
         }
     } else {
@@ -149,7 +151,7 @@ void setInitTimeout() {
             return;
         } else {
             setInterruptTimeout(dt, initSensors_INT);
-            //println(F("init %02d:%02d"), dt.minute(), dt.second());
+            // println(F("init %02d:%02d"), dt.minute(), dt.second());
             standby();
         }
     }
@@ -196,11 +198,11 @@ void stopSensors() {
     SensorConfig *sensor = sensor_config_head;
     while (sensor) {
         log_(F("Stopping sensor %s .. "), sensor->id);
-        sensor->stop_function(); 
+        sensor->stop_function();
         println(F("Stopped"));
         sensor = sensor->next;
     }
-    digitalWrite(12,LOW);
+    digitalWrite(12, LOW);
 }
 
 /**
@@ -293,11 +295,19 @@ void logData(bool clear) {
         float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
         println(F("%.2f"), fs);
     }
-    String date = String(rtcz.getYear()) + "-" +  String(rtcz.getMonth()) + "-" +  String(rtcz.getDay());
+    char datestring[11];
+    DateTime dt = DateTime(rtcz.getEpoch());
+    snprintf(datestring, DATE_STRING_SIZE, "%04d-%02d-%02d", dt.year(), dt.month(), dt.day());
+    String date = String(datestring);
     String filename = "datalog_" + date + ".txt";
+    DateTime aged_dt = DateTime(rtcz.getEpoch() - MAX_LOGFILE_AGE);
+    snprintf(datestring, DATE_STRING_SIZE, "%04d-%02d-%02d", aged_dt.year(), aged_dt.month(), aged_dt.day());
+    String aged_date = String(datestring);
+    String aged_filename = "datalog_" + aged_date + ".txt";
+    sd.remove(aged_filename.c_str());
     File file;
     logln(F("Writing log lines to filename"));
-    file = sd.open("filename", O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
+    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
     while (cursor != NULL) {
         logln(cursor->data);
         file.println(cursor->data);
