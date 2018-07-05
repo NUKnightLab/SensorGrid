@@ -305,7 +305,9 @@ void logData(bool clear) {
     snprintf(datestring, DATE_STRING_SIZE, "%04d-%02d-%02d", aged_dt.year(), aged_dt.month(), aged_dt.day());
     String aged_date = String(datestring);
     String aged_filename = "datalog_" + aged_date + ".txt";
-    sd.remove(aged_filename.c_str());
+    if (sd.exists(aged_filename.c_str())) {
+        sd.remove(aged_filename.c_str());
+    }
     File file;
     logln(F("Writing log lines to filename"));
     file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);  // will create file if it doesn't exist
