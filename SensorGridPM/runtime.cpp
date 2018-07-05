@@ -379,7 +379,6 @@ void readDataSamples() {
     digitalWrite(LED_BUILTIN, LOW);
 }
 
-
 void flashHeartbeat() {
     logln(F("Heartbeat"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on

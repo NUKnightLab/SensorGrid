@@ -192,9 +192,6 @@ void send_stop_autosend() {
     }
 }
 
-//static TimeFunction _time_fcn;
-//static uint8_t _node_id;
-
 HONEYWELL_HPM::HONEYWELL_HPM(uint8_t node_id, TimeFunction time_fcn) {
     id = "HONEYWELL_HPM";
     _node_id = node_id;

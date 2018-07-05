@@ -10,8 +10,6 @@
 #include <KnightLab_ArduinoUtils.h>
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
-// #include <HONEYWELL_HPM.h>
-// #include <KL_ADAFRUIT_SI7021.h>
 #include <KnightLab_SensorConfig.h>
 #include "oled.h"
 
@@ -27,9 +25,6 @@
 #define INIT_LEAD_TIME 7
 #define MESSAGE_DATA_SIZE 100
 #define DATASAMPLE_DATASIZE MESSAGE_DATA_SIZE - 2
-// #define ID_SI7021_TEMP_HUMIDITY "SI7021_TEMP_HUMIDITY"
-// #define ID_HONEYWELL_HPM "HONEYWELL_HPM"
-
 
 // comment
 
@@ -121,9 +116,5 @@ struct Message {
 typedef bool (*SensorStartFunction)();
 typedef size_t (*SensorReadFunction)(char *buf, int len);
 typedef bool (*SensorStopFunction)();
-
-// #define MAX_SENSOR_ID_STR 30
-
-
 
 #endif  // SENSORGRIDPM_CONFIG_H_

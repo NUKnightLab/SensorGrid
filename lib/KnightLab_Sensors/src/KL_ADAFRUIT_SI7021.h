@@ -15,8 +15,8 @@ public:
     bool start();
     size_t read(char* buf, int len);
     bool stop();
-	float readTemperature();
-	float readHumidity();
+    float readTemperature();
+    float readHumidity();
 };
 
 #endif

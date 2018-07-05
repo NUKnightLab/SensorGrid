@@ -2,10 +2,6 @@
 
 /* Adafruit Si7021 temperature/humidity breakout */
 
-
-//static TimeFunction _time_fcn;
-//static uint8_t _node_id;
-
 static Adafruit_Si7021 sensor = Adafruit_Si7021();
 
 float ADAFRUIT_SI7021::readTemperature() {
@@ -16,16 +12,17 @@ float ADAFRUIT_SI7021::readHumidity() {
     return sensor.readHumidity();
 }
 
+/*
 ADAFRUIT_SI7021::ADAFRUIT_SI7021(uint8_t node_id, TimeFunction time_fcn) {
     //id = "SI7021_TEMP_HUMIDITY";
     //_node_id = node_id;
     //_time_fcn = time_fcn;
 }
+*/
 
 ADAFRUIT_SI7021::~ADAFRUIT_SI7021() {}
 
 bool ADAFRUIT_SI7021::setup() {
-    
     Serial.print(F("Si7021 "));
     if (sensor.begin()) {
         Serial.println(F("Found"));
@@ -54,4 +51,4 @@ size_t ADAFRUIT_SI7021::read(char* buf, int len) {
 
 bool ADAFRUIT_SI7021::stop() {
     return true;
-}  
+}
