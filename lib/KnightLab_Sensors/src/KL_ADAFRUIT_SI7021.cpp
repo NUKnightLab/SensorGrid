@@ -12,13 +12,11 @@ float ADAFRUIT_SI7021::readHumidity() {
     return sensor.readHumidity();
 }
 
-/*
 ADAFRUIT_SI7021::ADAFRUIT_SI7021(uint8_t node_id, TimeFunction time_fcn) {
-    //id = "SI7021_TEMP_HUMIDITY";
-    //_node_id = node_id;
-    //_time_fcn = time_fcn;
+    id = "SI7021_TEMP_HUMIDITY";
+    _node_id = node_id;
+    _time_fcn = time_fcn;
 }
-*/
 
 ADAFRUIT_SI7021::~ADAFRUIT_SI7021() {}
 
