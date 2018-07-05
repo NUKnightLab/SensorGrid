@@ -1,4 +1,4 @@
-## v0.5 (TBD)
+## v0.5 (2018-07-05)
  * increases delay between hpm samples
  * PR #64 converts namespace-based sensor drivers into classes
  * PR #66 deletes old log files (currently > 30 days)
