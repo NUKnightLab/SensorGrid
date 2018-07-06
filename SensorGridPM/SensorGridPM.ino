@@ -44,13 +44,9 @@ static void setRTCz() {
 }
 
 static void printCurrentTime() {
-    log_(F("Current time: "));
-    log_(F(rtcz.getHours()));
-    log_(F(":"));
-    log_(F(rtcz.getMinutes()));
-    log_(F(":"));
-    logln(F(rtcz.getSeconds()));
-    logln(F(rtcz.getEpoch()));
+    DateTime dt = rtc.now();
+    logln(F("Current time: %02d:%02d:%02d, "), dt.hour(), dt.minute(), dt.second());
+    logln(F("Current Epoch: %u"), rtcz.getEpoch());   
 }
 
 /* moved to config.cpp
@@ -168,7 +164,7 @@ void setup() {
     logln(F("begin setup .."));
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
-    loadConfig();
+    config.loadConfig();
     logln("Setting up LoRa radio");
     setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     radio->sleep();
@@ -191,6 +187,7 @@ void loop() {
     aunit::TestRunner::run();
     return;
     #endif
+
 
     // enable (instead of reset) Watchdog every loop because we disable during standby
     Watchdog.enable();
