@@ -15,12 +15,15 @@
 #define NOTEST
 
 
+
+
 WatchdogType Watchdog;
 
 enum Mode mode = WAIT;
 
 RTCZero rtcz;
 RTC_PCF8523 rtc;
+int start_epoch;
 OLED oled = OLED(rtc);
 
 // uint32_t sampleRate = 10; // sample rate of the sine wave in Hertz, how many times per second the TC5_Handler() function gets called per second basically
@@ -37,20 +40,21 @@ static void setupLogging() {
     set_logging(true);
 }
 
+static void setRTC() {
+  DateTime dt = DateTime(start_epoch);
+  rtc.adjust(DateTime(start_epoch - 18000)); // Subtract 5 hours to adjust for timezone
+}
+
 static void setRTCz() {
     DateTime dt = rtc.now();
-    rtcz.setDate(dt.day(), dt.month(), dt.year());
+    rtcz.setDate(dt.day(), dt.month(), dt.year()-2000); // When setting the year to 2018, it becomes 34
     rtcz.setTime(dt.hour(), dt.minute(), dt.second());
 }
 
 static void printCurrentTime() {
-    log_(F("Current time: "));
-    log_(F(rtcz.getHours()));
-    log_(F(":"));
-    log_(F(rtcz.getMinutes()));
-    log_(F(":"));
-    logln(F(rtcz.getSeconds()));
-    logln(F(rtcz.getEpoch()));
+    DateTime dt = rtc.now();
+    logln(F("Current time: %02d:%02d:%02d, "), rtcz.getHours(), rtcz.getMinutes(), rtcz.getSeconds());
+    logln(F("Current Epoch: %u"), rtcz.getEpoch());
 }
 
 /* moved to config.cpp
@@ -144,7 +148,6 @@ void HardFault_Handler(void) {
 }
 
 /* setup and loop */
-
 void setup() {
     /* This is causing lock-up. Need to do further research into low power modes
        on the Cortex M0 */
@@ -157,18 +160,42 @@ void setup() {
     aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
     return;
     #endif
-
-    setupGPS();
-    setupClocks();
+    
+//    setupGPS();
+//    setupClocks();
     oled.init();
     oled.displayStartup();
     if (ALWAYS_LOG || Serial) {
         setupLogging();
     }
+
+
+    // Clock set up
+    static volatile int buttonHeld = !digitalRead(BUTTON_A);
+    bool state = false;
+    if (buttonHeld != 0) {
+      state = true;
+    }
+    if (state) {
+      while(1) {
+        delay(2000);
+        Serial.println("Just waiting for the time now...");
+        if (Serial.find("t")) {
+          start_epoch = Serial.parseInt();
+          setRTC();
+          break;
+        }
+      }
+    }
+
+    setupGPS();
+    setupClocks();
+    
+    
     logln(F("begin setup .."));
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
-    loadConfig();
+    config.loadConfig();
     logln("Setting up LoRa radio");
     setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
     radio->sleep();
@@ -191,6 +218,7 @@ void loop() {
     aunit::TestRunner::run();
     return;
     #endif
+
 
     // enable (instead of reset) Watchdog every loop because we disable during standby
     Watchdog.enable();

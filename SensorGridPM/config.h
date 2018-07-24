@@ -73,8 +73,30 @@ extern WatchdogSAMD Watchdog;
 
 extern struct SensorConfig *sensor_config_head;
 
+struct Base {
+    bool file_read = false;
+    bool readConfig(); 
+};
 
-struct Config {
+struct WifiConfig : virtual public Base {
+    char* wifi_ssid;
+    char* wifi_password;
+    char* api_host;
+    uint16_t api_port;
+    
+    bool loadConfig(); 
+};
+
+struct RadioConfig : virtual public Base {
+    uint8_t SD_CHIP_SELECT_PIN;
+    uint32_t RFM95_CS;
+    uint32_t RFM95_RST;
+    uint32_t RFM95_INT;
+  
+    bool loadConfig(); 
+};
+
+struct Config : public WifiConfig, public RadioConfig {
     uint32_t network_id;
     uint8_t node_id;
     uint8_t collector_id;
@@ -89,16 +111,8 @@ struct Config {
     uint32_t heartbeat_period;  // in seconds
     uint32_t sample_period;  // in minutes
     uint32_t collection_period;  // in minutes
-    uint8_t SD_CHIP_SELECT_PIN;
-    uint32_t RFM95_CS;
-    uint32_t RFM95_RST;
-    uint32_t RFM95_INT;
 
-    /* wifi collector */
-    char* wifi_ssid;
-    char* wifi_password;
-    char* api_host;
-    uint16_t api_port;
+    bool loadConfig(); 
 };
 
 extern uint32_t getTime();
