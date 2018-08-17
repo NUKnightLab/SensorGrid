@@ -2,7 +2,7 @@
 
 Wireless particulate matter monitoring over LoRa networks
 
-This is a version of the SensorGrid project that is specific to montoring
+This is a version of the SensorGrid project that is specific to monitoring
 particulate matter data (PM 2.5 and PM 10) and collecting that data over a
 LoRa wireless network.
 
