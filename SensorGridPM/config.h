@@ -12,6 +12,7 @@
 #include <KnightLab_SDConfig.h>
 #include <KnightLab_SensorConfig.h>
 #include "oled.h"
+// #include <TaskScheduler.h>
 
 /*
  * SensorGrid will not print to serial if USB is not attached. This can be
@@ -36,9 +37,16 @@ extern void _setup();
 extern void _loop();
 extern OLED oled;
 
+// Task callback functions
+extern void initSensors();
+extern void readDataSamples();
+extern void logData();
+
+
 extern RTCZero rtcz;
 extern RTC_PCF8523 rtc;
 extern uint32_t get_time();
+extern long getNextTaskTEMP();
 extern WatchdogSAMD Watchdog;
 
 #define FAIL_CODE_GENERAL 1

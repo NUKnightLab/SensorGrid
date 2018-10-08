@@ -69,6 +69,19 @@ void setInterruptTimeout(DateTime &datetime, InterruptFunction fcn) {
     rtcz.attachInterrupt(fcn);
 }
 
+void setInterruptTimeoutSched(DateTime &datetime) {
+    rtcz.setAlarmSeconds(datetime.second());
+    rtcz.setAlarmMinutes(datetime.minute());
+    rtcz.enableAlarm(rtcz.MATCH_MMSS); 
+}
+
+static void standbySched() {
+    if (DO_STANDBY) {
+      Watchdog.disable();
+      rtcz.standbyMode();
+    } 
+}
+
 /* end local utils */
 
 /* runtime mode interrupts */
@@ -186,6 +199,9 @@ void setSampleTimeout() {
 /* runtime mode handlers */
 
 void initSensors() {
+    Watchdog.enable();                                          // Enabled watchdog
+    Serial.print("Uptime: ");
+    Serial.println(millis());
     logln(F("Init sensor for data sampling"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     digitalWrite(12, HIGH); // turn on 5v power
@@ -280,7 +296,10 @@ void recordUptime(uint32_t uptime) {
         config.node_id, uptime, rtcz.getEpoch());
 }
 
-void logData(bool clear) {
+void logData() {
+    recordBatteryLevel();                   // Should get a battery recording level before each log
+    recordUptime(millis());
+    Watchdog.enable();                    // Enabled watchdog
     logln(F("\nLOGGING DATA: ------"));
     DataSample *cursor = datasample_head;
     static SdFat sd;
@@ -314,7 +333,7 @@ void logData(bool clear) {
     while (cursor != NULL) {
         logln(cursor->data);
         file.println(cursor->data);
-        if (clear) {
+        if (!DO_TRANSMIT_DATA) {
             DataSample *_cursor = cursor;
             cursor = cursor->next;
             datasample_head = cursor;
@@ -326,6 +345,11 @@ void logData(bool clear) {
     logln(F("-------"));
     file.close();
     logln(F("File closed"));
+
+    long alarmtime = rtcz.getEpoch() + getNextTaskTEMP() - 3;
+    DateTime alarm = DateTime(alarmtime);
+    setInterruptTimeoutSched(alarm); 
+    standbySched();
 }
 
 void transmitData(bool clear) {
@@ -376,6 +400,7 @@ void transmitData(bool clear) {
 }
 
 void readDataSamples() {
+    Watchdog.reset();
     SensorConfig *cursor = sensor_config_head;
     while (cursor) {
         log_(F("Reading sensor %s .. "), cursor->sensor->id);
@@ -387,6 +412,12 @@ void readDataSamples() {
     }
     digitalWrite(12, LOW);
     digitalWrite(LED_BUILTIN, LOW);
+
+    long alarmtime = rtcz.getEpoch() + getNextTaskTEMP() - 3;
+      
+    DateTime dt = DateTime(alarmtime);
+    setInterruptTimeoutSched(dt); 
+    standbySched();
 }
 
 void flashHeartbeat() {

@@ -10,6 +10,7 @@
 #include "lora.h"
 #include "runtime.h"
 #include "tests.h"
+#include <TaskScheduler.h>
 
 #define SET_CLOCK false
 #define NOTEST
@@ -147,8 +148,124 @@ void HardFault_Handler(void) {
     while (_Continue == 0u) {}
 }
 
+// TASK STUFF
+Task& getNextTask();
+
+void initializeCallback();
+void sampleCallback();
+void logCallback();
+
+// Need to change Callbacks to actual functions
+Task initialize(60, TASK_FOREVER, &initSensors);
+Task sample(60, TASK_FOREVER, &readDataSamples);
+Task _log(180, TASK_FOREVER, &logData);
+
+Scheduler runner;
+
+// Doesn't include watchdog like the one in runtime
+static void standbyTEMP() {
+  if (DO_STANDBY) {
+    rtcz.standbyMode();
+  }
+}
+// Doesn't include interrupt function like in runtime
+void setInterruptTimeoutTEMP(DateTime &datetime) {
+    rtcz.setAlarmSeconds(datetime.second());
+    rtcz.setAlarmMinutes(datetime.minute());
+    rtcz.enableAlarm(rtcz.MATCH_MMSS);
+}
+
+long getNextTaskTEMP() {
+  long minTime = 500;
+  
+  if (runner.timeUntilNextIteration(initialize) < minTime) {
+    minTime = runner.timeUntilNextIteration(initialize);
+  }
+  if (runner.timeUntilNextIteration(sample) < minTime) {
+    minTime = runner.timeUntilNextIteration(sample);
+  }
+  if (runner.timeUntilNextIteration(_log) < minTime) {
+    minTime = runner.timeUntilNextIteration(_log);
+  }
+
+  return minTime;
+}
+
+void initializeCallback() {
+//  oled.clear();
+//  oled.setCursor(0,0);
+  
+  Serial.print("Initializing ");
+  Serial.println(_TASK_TIME_FUNCTION());
+
+//  oled.print("Init: ");
+//  oled.println(_TASK_TIME_FUNCTION());
+//  oled.print("Next task: ");
+//  oled.println(getNextTaskTEMP());
+//  oled.display();
+
+  Serial.print("The time to the next task is: ");
+  Serial.println(getNextTaskTEMP());
+}
+
+void sampleCallback() {
+//  oled.clear();
+//  oled.setCursor(0,0);
+  
+  Serial.print("Sampling ");
+  Serial.println(_TASK_TIME_FUNCTION());
+
+  Serial.print("The time to the next task is: ");
+  Serial.println(getNextTaskTEMP());
+
+  long alarmtime = _TASK_TIME_FUNCTION() + getNextTaskTEMP() - 3;
+  Serial.print("We are setting the alarm to ");
+  Serial.println(alarmtime);
+
+//  oled.print("Sampling: ");
+//  oled.println(_TASK_TIME_FUNCTION());
+//  oled.print("Next task: ");
+//  oled.println(getNextTaskTEMP());
+//  oled.print("Alarm: ");
+//  oled.println(alarmtime);
+//  oled.display();
+  
+  DateTime dt = DateTime(alarmtime);
+  setInterruptTimeoutTEMP(dt); 
+  standbyTEMP(); 
+}
+
+void logCallback() {
+//  oled.clear();
+//  oled.setCursor(0,0);
+
+  Serial.print("Logging ");
+  Serial.println(_TASK_TIME_FUNCTION());
+  
+  Serial.print("The time to the next task is: ");
+  Serial.println(getNextTaskTEMP()); 
+
+  long alarmtime = _TASK_TIME_FUNCTION() + getNextTaskTEMP() - 3;
+  Serial.print("We are setting the alarm to ");
+  Serial.println(alarmtime);
+
+//  oled.print("Logging: ");
+//  oled.println(_TASK_TIME_FUNCTION());
+//  oled.print("Next task: ");
+//  oled.println(getNextTaskTEMP());
+//  oled.print("Alarm: ");
+//  oled.println(alarmtime);
+//  oled.display();
+  
+  DateTime dt = DateTime(alarmtime);
+  setInterruptTimeoutTEMP(dt);
+  standbyTEMP();
+}
+
+
 /* setup and loop */
 void setup() {
+    Watchdog.enable();
     /* This is causing lock-up. Need to do further research into low power modes
        on the Cortex M0 */
     // oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
@@ -178,6 +295,7 @@ void setup() {
     }
     if (state) {
       while(1) {
+        Watchdog.reset();
         delay(2000);
         Serial.println("Just waiting for the time now...");
         if (Serial.find("t")) {
@@ -211,6 +329,33 @@ void setup() {
     logln(F(".. setup complete"));
     printCurrentTime();
     oled.endDisplayStartup();
+
+    // Task Setup
+    Serial.print("Start time: ");
+    Serial.println(_TASK_TIME_FUNCTION());
+
+    runner.init();
+    Serial.println("Initialized scheduler");
+
+    runner.addTask(initialize);
+    Serial.println("added initialize");
+    runner.addTask(sample);
+    Serial.println("added sample");
+    runner.addTask(_log);
+    Serial.println("added log");
+    int wait_time = 0;
+    if (_TASK_TIME_FUNCTION() % 60 != 0){ // Will wait to start initialization on the minute
+      wait_time = 60 - (_TASK_TIME_FUNCTION() % 60);
+    }
+    Serial.print("Wait time: ");
+    Serial.println(wait_time);
+    initialize.enableDelayed(wait_time);
+    Serial.println("Enabled initialize");
+    sample.enableDelayed(7 + wait_time);
+    Serial.println("Enabled sample with 7 second delay");
+    _log.enableDelayed(207 + wait_time); // 207 seconds to start after 3 minutes and then 20 seconds after sample
+    Serial.println("Enabled log with 20 second delay to occur every 3 minutes");
+    Watchdog.disable();
 }
 
 void loop() {
@@ -219,13 +364,22 @@ void loop() {
     return;
     #endif
 
+    runner.execute();
+//    if (oled.isOn()) {
+//        updateClock();
+//        oled.displayDateTime();
+//    }
+    // How often should we check battery level?
+//    if (!checkBatteryLevel()) {
+//        return;
+//    }
 
     // enable (instead of reset) Watchdog every loop because we disable during standby
-    Watchdog.enable();
+    // Watchdog.enable();
 
     static uint32_t start_time = getTime();
-    static uint32_t uptime;
-    uptime = millis();
+//    static uint32_t uptime;
+//    uptime = millis();
 
     /**
      * Some apparent lockups may actually be indefinite looping on STANDBY status
@@ -234,51 +388,51 @@ void loop() {
      * never get to be longer than the scheduled heartbeat period.
      */
     static uint32_t standby_timer = getTime();
-    if (mode == STANDBY) {
-        if (getTime() - standby_timer > config.heartbeat_period) {
-            standby_timer = getTime();
-            mode = WAIT;
-        }
-        return;
-    }
-
-    if (!checkBatteryLevel()) {
-        return;
-    }
-
-    static uint32_t next_collection_time = getNextCollectionTime();
-    if (start_time && getTime() - start_time > 3 * 60) {
-        oled.off();
-    }
-    if (oled.isOn()) {
-        updateClock();
-        oled.displayDateTime();
-    }
-    if (mode == WAIT) {
-        setInitTimeout();
-    } else if (mode == INIT) {
-        initSensors();
-        setSampleTimeout();
-    } else if (mode == SAMPLE) {
-        readDataSamples();
-        if (getTime() > next_collection_time) {
-            setCommunicateDataTimeout();
-        } else {
-            mode = WAIT;
-        }
-    } else if (mode == COMMUNICATE) {
-        recordBatteryLevel();
-        recordUptime(uptime);
-        if (DO_LOG_DATA) {
-            logData(!DO_TRANSMIT_DATA);
-        }
-        if (DO_TRANSMIT_DATA) {
-            transmitData(true);
-        }
-        next_collection_time = getNextCollectionTime();
-        mode = WAIT;
-    } else if (mode == HEARTBEAT) {
-        flashHeartbeat();
-        mode = WAIT;
-    }
+//    if (mode == STANDBY) {
+//        if (getTime() - standby_timer > config.heartbeat_period) {
+//            standby_timer = getTime();
+//            mode = WAIT;
+//        }
+//        return;
+//    }
+//
+//    if (!checkBatteryLevel()) {
+//        return;
+//    }
+//
+//    static uint32_t next_collection_time = getNextCollectionTime();
+//    if (start_time && getTime() - start_time > 3 * 60) {
+//        oled.off();
+//    }
+//    if (oled.isOn()) {
+//        updateClock();
+//        oled.displayDateTime();
+//    }
+//    if (mode == WAIT) {
+//        setInitTimeout();
+//    } else if (mode == INIT) {
+//        initSensors();
+//        setSampleTimeout();
+//    } else if (mode == SAMPLE) {
+//        readDataSamples();
+//        if (getTime() > next_collection_time) {
+//            setCommunicateDataTimeout();
+//        } else {
+//            mode = WAIT;
+//        }
+//    } else if (mode == COMMUNICATE) {
+//        recordBatteryLevel();
+//        recordUptime(uptime);
+//        if (DO_LOG_DATA) {
+//            logData(!DO_TRANSMIT_DATA);
+//        }
+//        if (DO_TRANSMIT_DATA) {
+//            transmitData(true);
+//        }
+//        next_collection_time = getNextCollectionTime();
+//        mode = WAIT;
+//    } else if (mode == HEARTBEAT) {
+//        flashHeartbeat();
+//        mode = WAIT;
+//    }
 }
