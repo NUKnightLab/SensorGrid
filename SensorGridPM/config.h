@@ -78,6 +78,7 @@ extern WatchdogSAMD Watchdog;
 #define DEFAULT_RFM95_RST "4"
 #define DEFAULT_RFM95_INT "3"
 #define DEFAULT_API_PORT "80"
+#define DEFAULT_NODE_IDS {}
 
 extern struct SensorConfig *sensor_config_head;
 
@@ -134,6 +135,7 @@ struct Message {
     uint8_t message_type;
     uint8_t len;
     char data[100];
+    int node_ids[255];
 } __attribute__((packed));
 
 typedef bool (*SensorStartFunction)();

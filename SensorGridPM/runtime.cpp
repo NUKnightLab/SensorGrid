@@ -342,6 +342,60 @@ void logData() {
             cursor = cursor->next;
         }
     }
+//    logln(F("-------"));
+//    file.close();
+//    logln(F("File closed"));
+
+    // Turning on receiving
+    static uint8_t buf[RH_ROUTER_MAX_MESSAGE_LEN];
+    static Message *msg = (Message*)buf;
+    file.println("Searching for message");
+    if (config.node_ids[0] == -1 && RECV_STATUS_SUCCESS == receive(msg, 60000)) { // receive(msg, 2000)) {  // RECV_STATUS_SUCCESS == receive(msg, 2000)) {
+      logln("Received message");
+      file.println("Received message");
+      logln("Token: ");
+      logln((char*)msg->node_ids);
+      file.println("Token: ");
+      int index = 0;
+      while (index < 8) {
+        file.print(msg->node_ids[index]); file.print(" ");
+        index++;
+      }
+      memcpy(config.node_ids, msg->node_ids, sizeof(config.node_ids));
+      file.println(msg->node_ids[config.node_id]);
+      file.println(config.node_ids[config.node_id]);
+    }
+
+    else {
+      Serial.println("No message received ");
+      file.println("No message received ");
+    }
+
+    logln(F("-------"));
+    file.close();
+    logln(F("File closed"));
+
+    file = sd.open(filename, O_WRITE|O_APPEND|O_CREAT);
+    file.println("Checking to see if we can send the token: ");
+    file.println(config.node_ids[config.node_id]);
+    if (config.node_ids[0] != -1) {
+      file.println("Sending the token");
+      static uint8_t buf1[RH_ROUTER_MAX_MESSAGE_LEN];
+      static Message *msg1 = (Message*)buf1;
+      memcpy(msg1->node_ids, config.node_ids, sizeof(msg1->node_ids));
+      // msg1->node_ids = config.node_ids;
+      send_message((uint8_t*)&msg1,5 + msg1->len,config.node_ids[config.node_id]);
+      int index = 0;
+      while (index < 8) {
+        file.print(msg1->node_ids[index]); file.print(" ");
+        index++;
+      }
+      file.println("");
+      memset(config.node_ids, -1, sizeof(config.node_ids));
+      file.println(msg1->node_ids[config.node_id]);
+      file.println(config.node_ids[config.node_id]);
+    }
+    
     logln(F("-------"));
     file.close();
     logln(F("File closed"));

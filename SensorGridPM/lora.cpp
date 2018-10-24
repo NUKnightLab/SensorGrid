@@ -94,6 +94,16 @@ int receive(Message *msg, uint16_t timeout) {
         // memcpy(msg, recv_buf, len);
         // last_rssi[*source] = radio->lastRssi();
         // return _msg->message_type;
+//
+//        // Sending token test code
+//        if (config.node_ids != {})
+//        {
+//          static uint8_t buf[RH_ROUTER_MAX_MESSAGE_LEN];
+//          static Message *msg = (Message*)buf;
+//          msg->node_ids = config.node_ids;
+//          send_message(msg,5 + msg->len,config.node_ids[config.node_id]);
+//        }
+        
     } else {
         return RECV_STATUS_NO_MESSAGE;
     }

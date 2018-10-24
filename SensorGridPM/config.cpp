@@ -82,6 +82,34 @@ bool Config::loadConfig() {
           getConfig("SAMPLE_PERIOD", DEFAULT_SAMPLE_PERIOD)));
       collection_period = (uint32_t)(atoi(
           getConfig("COLLECTION_PERIOD", DEFAULT_COLLECTION_PERIOD)));
+      
+       /* Node IDs on collector */
+
+       char *node_ids_str[254] = {0};
+       config.node_ids[254] = {0};
+       char* nodeIdsConfig = strdup(getConfig("NODE_IDS",""));
+       Serial.print("Node IDs: ");
+       int index = 0;
+       char *token;
+       while( (token = strsep(&nodeIdsConfig,",")) != NULL ) {
+        int node = atoi(token);
+        Serial.print(node, DEC); Serial.print(" ");
+        config.node_ids[index++] = node;
+       }
+       Serial.println("");
+       
+       //char *node_ids_str[MAX_NODES] = {0};
+//       char *node_ids_str = strtok(getConfig("NODE_IDS", DEFAULT_NODE_IDS),",");
+//       Serial.println(node_ids_str);
+//       for (int i = 0; i < sizeof(node_ids_str); i++) {
+//        Serial.println("****");
+//        Serial.println(node_ids_str[i]);
+//        Serial.println("****");
+//        node_ids[i] = int(node_ids_str[i]);
+//        Serial.println(node_ids[i]);
+//       }
+       // node_ids[MAX_NODES] = strtok(getConfig("NODE_IDS", DEFAULT_NODE_IDS),",");
+  
   } else {
       logln(F("ERROR: No config file found"));
       return false;
