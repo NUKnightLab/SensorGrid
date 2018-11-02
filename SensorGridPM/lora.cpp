@@ -74,6 +74,10 @@ int receive(Message *msg, uint16_t timeout) {
     logln(F("Listening for message ..."));
     if (router->recvfromAckTimeout(reinterpret_cast<uint8_t*>(msg), &len, timeout, &from, &to, &id)) {
         // Message *_msg = (Message*)recv_buf;
+        
+        Serial.print("Receieved message firmware version: ");
+        Serial.println(msg->sensorgrid_version);
+      
         if ( msg->sensorgrid_version != config.sensorgrid_version ) {
             logln(F("WARNING: Received message with wrong firmware version: %d\n"),
                 msg->sensorgrid_version);
@@ -113,6 +117,7 @@ int receive(Message *msg, uint16_t timeout) {
 uint8_t send_message(uint8_t *msg, uint8_t len, uint8_t to_id) {
     Message *_msg = reinterpret_cast<Message*>(msg);
     log_(F("Sending data: ")); logln(F(_msg->data));
+    log_(F("Sending token: ")); logln(F(_msg->node_ids));
     log_(F("Message length: ")); logln(F(len), DEC);
     uint8_t err = router->sendtoWait(msg, len, to_id);
     if (err == RH_ROUTER_ERROR_NONE) {

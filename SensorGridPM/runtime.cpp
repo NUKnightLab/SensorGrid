@@ -349,18 +349,14 @@ void logData() {
     // Turning on receiving
     static uint8_t buf[RH_ROUTER_MAX_MESSAGE_LEN];
     static Message *msg = (Message*)buf;
+    Serial.print("Initial message version: ");
+    Serial.println(msg->sensorgrid_version);
     file.println("Searching for message");
     if (config.node_ids[0] == -1 && RECV_STATUS_SUCCESS == receive(msg, 60000)) { // receive(msg, 2000)) {  // RECV_STATUS_SUCCESS == receive(msg, 2000)) {
       logln("Received message");
       file.println("Received message");
       logln("Token: ");
       logln((char*)msg->node_ids);
-      file.println("Token: ");
-      int index = 0;
-      while (index < 8) {
-        file.print(msg->node_ids[index]); file.print(" ");
-        index++;
-      }
       memcpy(config.node_ids, msg->node_ids, sizeof(config.node_ids));
       file.println(msg->node_ids[config.node_id]);
       file.println(config.node_ids[config.node_id]);
@@ -369,6 +365,13 @@ void logData() {
     else {
       Serial.println("No message received ");
       file.println("No message received ");
+      Serial.println("PRINTING THE BUFFER: ");
+      int k = 0;
+      while (k < RH_ROUTER_MAX_MESSAGE_LEN) {
+        Serial.print(buf[k]); Serial.print(" ");
+        k++;
+      }
+      Serial.println("");
     }
 
     logln(F("-------"));
@@ -383,14 +386,26 @@ void logData() {
       static uint8_t buf1[RH_ROUTER_MAX_MESSAGE_LEN];
       static Message *msg1 = (Message*)buf1;
       memcpy(msg1->node_ids, config.node_ids, sizeof(msg1->node_ids));
+      msg1->sensorgrid_version = config.sensorgrid_version;
+      Serial.println("PRINTING THE BUFFER: ");
+      int j = 0;
+      while (j < RH_ROUTER_MAX_MESSAGE_LEN) {
+        Serial.print(buf1[j]); Serial.print(" ");
+        j++;
+      }
+      Serial.println("");
+      Serial.println("Message sensorgrid version: ");
+      Serial.println(msg1->sensorgrid_version);
       // msg1->node_ids = config.node_ids;
       send_message((uint8_t*)&msg1,5 + msg1->len,config.node_ids[config.node_id]);
       int index = 0;
       while (index < 8) {
         file.print(msg1->node_ids[index]); file.print(" ");
+        Serial.print(msg1->node_ids[index]); Serial.print(" ");
         index++;
       }
       file.println("");
+      Serial.println("");
       memset(config.node_ids, -1, sizeof(config.node_ids));
       file.println(msg1->node_ids[config.node_id]);
       file.println(config.node_ids[config.node_id]);

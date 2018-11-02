@@ -19,7 +19,7 @@
  * problematic when debugging timing sensitive issues, in which case set
  * ALWAYS_LOG to true
  */
-#define ALWAYS_LOG false
+#define ALWAYS_LOG true
 #define DO_STANDBY true
 #define DO_TRANSMIT_DATA false
 #define DO_LOG_DATA true
@@ -130,12 +130,12 @@ extern struct Config config;
 
 struct Message {
     uint8_t sensorgrid_version;
+    int node_ids[255];
     uint8_t network_id;
     uint8_t from_node;
     uint8_t message_type;
     uint8_t len;
     char data[100];
-    int node_ids[255];
 } __attribute__((packed));
 
 typedef bool (*SensorStartFunction)();
