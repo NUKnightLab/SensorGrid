@@ -2,6 +2,8 @@
 ### Cooperative multitasking for Arduino microcontrollers
 #### Version 2.6.1: 2018-03-15
 
+Customized version of Task Scheduler Library from https://github.com/arkhipenko/TaskScheduler. Changes use of millseconds to seconds.
+
 ### OVERVIEW:
 A lightweight implementation of cooperative multitasking (task scheduling) supporting:
 1. Periodic task execution, with dynamic execution period in `milliseconds` (default) or `microseconds` (if explicitly enabled) – frequency of execution
