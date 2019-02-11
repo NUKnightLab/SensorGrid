@@ -16,15 +16,19 @@ void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id) {
     /* TODO: Can RH version check be done at compile time? */
     if (RH_VERSION_MAJOR != REQUIRED_RH_VERSION_MAJOR
             || RH_VERSION_MINOR != REQUIRED_RH_VERSION_MINOR) {
-        // log(F("ABORTING: SensorGrid requires RadioHead version %s.%s"),
-        //    REQUIRED_RH_VERSION_MAJOR, REQUIRED_RH_VERSION_MINOR);
-        // log(F("RadioHead %s.%s is installed"), RH_VERSION_MAJOR, RH_VERSION_MINOR);
+        logln("ABORTING: Incorrect RadioHead version number");
+    /*
+        log(F("ABORTING: SensorGrid requires RadioHead version %d.%d"),
+            REQUIRED_RH_VERSION_MAJOR, REQUIRED_RH_VERSION_MINOR);
+         log(F("RadioHead %d.%d is installed"), RH_VERSION_MAJOR, RH_VERSION_MINOR);
+    }*/
         while (1) {}
     }
     radio = new RH_RF95(cs_pin, int_pin);
 #if defined(USE_MESH_ROUTER)
     router = new RHMesh(*radio, node_id);
 #else
+    logln("Setting up standard router with static routes.");
     router = new RHRouter(*radio, NODE_ID);
     /* RadioHead sometimes continues retrying transmissions even after a
        successful reliable delivery. This seems to persist even when switching
@@ -32,12 +36,12 @@ void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id) {
        air space while trying to listen for new messages. As a result, don't
        do any retries in the router. Instead, we will pick up missed messages
        in the application layer. */
-    // router->setRetries(0);
+    router->setRetries(0);
     router->clearRoutingTable();
-    // router->addRouteTo(1, 1);
-    // router->addRouteTo(2, 2);
-    // router->addRouteTo(3, 3);
-    // router->addRouteTo(4, 4);
+    router->addRouteTo(1, 1);
+    router->addRouteTo(2, 2);
+    router->addRouteTo(3, 3);
+    router->addRouteTo(4, 4);
 #endif
     if (USE_SLOW_RELIABLE_MODE)
         radio->setModemConfig(RH_RF95::Bw125Cr48Sf4096);
@@ -46,12 +50,16 @@ void setupRadio(uint8_t cs_pin, uint8_t int_pin, uint8_t node_id) {
         logln(F("Router init failed"));
         while (1) {}
     }
-    logln(F("FREQ: %s"), FREQ);
-        if (!radio->setFrequency(FREQ)) {
+    //logln(F("FREQ: %d"), config.rf95_freq);
+    Serial.print("FREQ: ");
+    Serial.println(config.rf95_freq);
+    if (!radio->setFrequency(config.rf95_freq)) {
         logln(F("Radio frequency set failed"));
         while (1) {}
     }
-    radio->setTxPower(TX, false);
+    logln(F("TX POWER: %d"), config.tx_power);
+    radio->setTxPower(config.tx_power, false);
+    logln(F("CAD TIMEOUT: %d"), CAD_TIMEOUT);
     radio->setCADTimeout(CAD_TIMEOUT);
     /* TODO: what is the correct timeout? From the RH docs:
 [setTimeout] Sets the minimum retransmit timeout. If sendtoWait is waiting
