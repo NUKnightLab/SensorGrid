@@ -139,6 +139,7 @@ void setCommunicateDataTimeout() {
     }
 }
 
+/*
 void setInitTimeout() {
     log_(F("Check setInitTimeout: "));
     uint32_t sample_time = getNextPeriodTime(config.sample_period);
@@ -168,6 +169,7 @@ void setInitTimeout() {
         }
     }
 }
+*/
 
 void setSampleTimeout() {
     logln(F("setSampleTimeout"));

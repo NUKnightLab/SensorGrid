@@ -117,7 +117,7 @@ struct Config : public WifiConfig, public RadioConfig {
     uint8_t node_type;
     int node_ids[255];
     uint32_t heartbeat_period;  // in seconds
-    uint32_t sample_period;  // in minutes
+    uint32_t sample_period;  // in seconds
     uint32_t collection_period;  // in minutes
 
     bool loadConfig(); 

@@ -50,3 +50,10 @@ As a result, please lint with `--filter=-build/include_subdir`
 
  * Variables should be `snake_case`
  * Functions and methods should be `camelCase` (Not PascalCase)
+
+
+## Troubleshooting
+
+### The device goes into time-setting mode without pressing the time set button
+
+The battery or solar subsystem must be plugged in for the device to start up in the standard runtime mode.

@@ -1,3 +1,5 @@
+#ifndef UNIT_TEST
+
 /**
  * Knight Lab SensorGrid
  *
@@ -156,8 +158,8 @@ void sampleCallback();
 void logCallback();
 
 // Need to change Callbacks to actual functions
-Task initialize(60, TASK_FOREVER, &initSensors);
-Task sample(60, TASK_FOREVER, &readDataSamples);
+Task initialize(20, TASK_FOREVER, &initSensors);
+Task sample(20, TASK_FOREVER, &readDataSamples);
 Task _log(180, TASK_FOREVER, &logData);
 
 Scheduler runner;
@@ -436,3 +438,5 @@ void loop() {
 //        mode = WAIT;
 //    }
 }
+
+#endif
