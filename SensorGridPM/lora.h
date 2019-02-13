@@ -16,7 +16,7 @@
 #define TX 5
 #define CAD_TIMEOUT 1000
 #define ROUTER_TIMEOUT 2000
-#define USE_MESH_ROUTER 0
+// #define USE_MESH_ROUTER 0
 #define USE_SLOW_RELIABLE_MODE 0
 
 /* LoRa */

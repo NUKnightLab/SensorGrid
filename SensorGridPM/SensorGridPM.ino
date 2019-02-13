@@ -160,7 +160,7 @@ void logCallback();
 // Need to change Callbacks to actual functions
 Task initialize(20, TASK_FOREVER, &initSensors);
 Task sample(20, TASK_FOREVER, &readDataSamples);
-Task _log(180, TASK_FOREVER, &logData);
+Task _log(60, TASK_FOREVER, &logData);
 
 Scheduler runner;
 

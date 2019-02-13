@@ -302,6 +302,10 @@ void logData() {
     recordBatteryLevel();                   // Should get a battery recording level before each log
     recordUptime(millis());
     Watchdog.enable();                    // Enabled watchdog
+
+    logln(F("\nTRANSMITING DATA: ------"));
+    transmitData(false);
+
     logln(F("\nLOGGING DATA: ------"));
     DataSample *cursor = datasample_head;
     static SdFat sd;
@@ -347,6 +351,7 @@ void logData() {
     logln(F("-------"));
     file.close();
     logln(F("File closed"));
+
 
     long alarmtime = rtcz.getEpoch() + getNextTaskTEMP() - 3;
     DateTime alarm = DateTime(alarmtime);
