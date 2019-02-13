@@ -156,11 +156,13 @@ Task& getNextTask();
 void initializeCallback();
 void sampleCallback();
 void logCallback();
+void heartbeatCallback();
 
 // Need to change Callbacks to actual functions
-Task initialize(20, TASK_FOREVER, &initSensors);
-Task sample(20, TASK_FOREVER, &readDataSamples);
-Task _log(60, TASK_FOREVER, &logData);
+Task initialize(60, TASK_FOREVER, &initSensors);
+Task sample(60, TASK_FOREVER, &readDataSamples);
+Task _log(120, TASK_FOREVER, &logData);
+Task heartbeat(10, TASK_FOREVER, &flashHeartbeat);
 
 Scheduler runner;
 
@@ -188,6 +190,9 @@ long getNextTaskTEMP() {
   }
   if (runner.timeUntilNextIteration(_log) < minTime) {
     minTime = runner.timeUntilNextIteration(_log);
+  }
+  if (runner.timeUntilNextIteration(heartbeat) < minTime) {
+    minTime = runner.timeUntilNextIteration(heartbeat);
   }
 
   return minTime;
@@ -273,7 +278,7 @@ void setup() {
     // oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
     // oled.displayDateTime();
     unsigned long _start = millis();
-    while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
+    //while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
 
     #ifdef TEST
     aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
@@ -355,8 +360,10 @@ void setup() {
     Serial.println("Enabled initialize");
     sample.enableDelayed(7 + wait_time);
     Serial.println("Enabled sample with 7 second delay");
-    _log.enableDelayed(207 + wait_time); // 207 seconds to start after 3 minutes and then 20 seconds after sample
+    _log.enableDelayed(20 + wait_time); // 207 seconds to start after 3 minutes and then 20 seconds after sample
     Serial.println("Enabled log with 20 second delay to occur every 3 minutes");
+    heartbeat.enableDelayed(wait_time);
+    Serial.println("Enabled heartbeat");
     Watchdog.disable();
 }
 

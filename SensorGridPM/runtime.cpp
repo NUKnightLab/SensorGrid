@@ -428,6 +428,7 @@ void readDataSamples() {
 }
 
 void flashHeartbeat() {
+    Watchdog.enable();
     logln(F("Heartbeat"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     delay(100);
