@@ -1,5 +1,5 @@
 #include "config.h"
-#include "lora.h"
+#include <KnightLab_LoRa.h>
 #include <WiFi101.h>
 
 #define WIFI_CS 8
@@ -107,7 +107,9 @@ void setup()
     loadConfig();
     Serial.println("Config loaded");
     // delay(1000);
-    setup_radio(config.RFM95_CS, config.RFM95_INT, config.node_id);
+    setupLoRa(config.node_id, config.RFM95_CS, config.RFM95_INT, config.tx_power);
+
+    return; // skipping wifi for now
     if (config.wifi_password) {
         Serial.print("Attempting to connect to Wifi: ");
         Serial.print(config.wifi_ssid);
@@ -123,12 +125,88 @@ void setup()
 
 void loop()
 {
-    static int i = 0;
-    Serial.println(i++, DEC);
-    static uint8_t buf[RH_ROUTER_MAX_MESSAGE_LEN];
+    static uint8_t buf[KL_ROUTER_MAX_MESSAGE_LEN];
     //static Message msg[sizeof(Message)] = {0};
     static Message *msg = (Message*)buf;
- 
+    static int counter = 0;
+    static unsigned long beacon_time = 0;
+    static unsigned long data_request_time = 0;
+    static bool have_routes = false;
+    uint8_t len = sizeof(buf);
+    uint8_t source;
+    uint8_t dest;
+    uint8_t msg_id;
+    uint8_t flags;
+
+    if (++counter % 10000 == 0)
+        Serial.print(".");
+    if (counter % 1000000 == 0)
+        Serial.println("");
+
+    if (LoRaRouter->recvfromAck(buf, &len, &source, &dest, &msg_id, &flags)) {
+        // received a message
+    }
+
+    if (LoRaRouter->routingTableIsEmpty()) {
+        if (have_routes) {
+            beacon_time = millis() + random(1000, 2000);
+            have_routes = false;
+        }
+    } else {
+        have_routes = true;
+    }
+
+    if (millis() > beacon_time) {
+        Serial.println("BEACON DUE");
+        if (!have_routes) {
+            Serial.println("HAVE NO ROUTES. SENDING BEACON");
+            LoRaRadio->waitPacketSent();
+            LoRaRadio->setModeIdle();
+            if (LoRaRadio->isChannelActive()) {
+                return;
+            }
+            uint8_t dest = 0;
+            uint8_t resp = LoRaRouter->doArp(0);
+            Serial.print("RECEVIED: ");
+            Serial.println(resp);
+        }
+        beacon_time = millis() + 10000;
+    }
+
+    if (millis() > data_request_time) {
+        Serial.println("SCHEDULED DATA TRANSMISSION REQUEST DUE");
+        if (!have_routes) {
+            Serial.println("HAVE NO ROUTES. NOT REQUESTING DATA");
+        } else {
+            uint8_t msg[] = "SEND DATA";
+            uint8_t len = sizeof(msg);
+            uint8_t dest = 2;
+            uint8_t resp = 1;
+            while (resp > 0) {
+                resp = LoRaRouter->sendtoWait(msg, len, dest);
+                if (!resp) break;
+                // We need to keep tryin until the nodes are in their data tx cycle. TODO: should we
+                // sync up schedules instead of this brute force repeat?
+                delay(1000);
+            }
+            len = sizeof(buf);
+            uint8_t from;
+            uint8_t to;
+            uint8_t msg_id;
+            uint8_t flags;
+            // TODO: receive data until we get a no-more-data flag
+            Serial.println("RECEIVING DATA FROM REMOTE");
+            while (1) {
+                if ( LoRaRouter->recvfromAck(buf, &len, &from, &to, &msg_id, &flags) ) {
+                    Serial.print("Message received: ");
+                    Serial.println((char*)buf);
+                }
+            }
+        }
+        data_request_time = millis() + 30000;
+    }
+
+
     /*
     Message msg = {
         .sensorgrid_version=config.sensorgrid_version,
@@ -143,6 +221,7 @@ void loop()
     // uint8_t toID = 2;
     // send_message((uint8_t*)&msg, len, toID);
 
+    /*
     if (RECV_STATUS_SUCCESS == receive(msg, 60000)) {
         Serial.println("Received message");
         Serial.print("VERSION: "); Serial.println(msg->sensorgrid_version, DEC);
@@ -169,6 +248,7 @@ void loop()
     } else {
         Serial.println("No message received ");
     }
+    */
 
     // delay(10000);
 }

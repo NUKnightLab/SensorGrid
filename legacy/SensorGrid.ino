@@ -1064,6 +1064,7 @@ static uint32_t getDataByTypeName(char* type)
 
 void setup()
 {
+    /*
     //while (!Serial);
     check_radiohead_version();
     loadConfig();
@@ -1116,13 +1117,13 @@ void setup()
 
     setupSensors();
 
-    /* initialize protothreads */
     PT_INIT(&update_clock_protothread);
     if (config.has_oled) {
         PT_INIT(&update_display_protothread);
         PT_INIT(&update_display_battery_protothread);
         PT_INIT(&display_timeout_protothread);
     }
+    */
 }
 
 void loop()

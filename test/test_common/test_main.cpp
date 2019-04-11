@@ -1,14 +1,12 @@
-#ifdef UNIT_TEST
-
 #include <Arduino.h>
 #include <unity.h>
 
 #include "KnightLab_ArduinoUtils/test.h"
 #include "KnightLab_FeatherUtils/test.h"
+#include "KnightLab_LoRaUtils/test.h"
+#include "KnightLab_RecordQueue/test.h"
 
-#include "test_lora.h"
 #include "config.h"
-#include "lora.h"
 
 
 #ifndef LED_BUILTIN
@@ -35,11 +33,12 @@ void setup() {
     // if board doesn't support software reset via Serial.DTR/RTS
     //delay(4000);
     while (!Serial);
-
+    set_logging(true);
     UNITY_BEGIN();
     Test_KnightLab_ArduinoUtils::test_all();
     Test_KnightLab_FeatherUtils::test_all();
-    Test_SensorGrid_lora::test_all();
+    //Test_KnightLab_LoRaUtils::test_all();
+    Test_KnightLab_RecordQueue::test_all();
     UNITY_END(); // stop unit testing
 }
 
@@ -61,4 +60,3 @@ void loop() {
     }
     */
 }
-#endif

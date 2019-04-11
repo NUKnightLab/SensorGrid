@@ -4,13 +4,16 @@
 #include "config.h"
 #include "runtime.h"
 #include <ArduinoJson.h>
-#include "lora.h"
+// #include "lora.h"
 #include <avr/dtostrf.h>
+//#include <KnightLab_LoRaUtils.h>
+#include <KnightLab_RecordQueue.h>
+#include <KnightLab_LoRa.h>
 
 #define DATE_STRING_SIZE 11
 
-static uint8_t msg_buf[140] = {0};
-static Message *msg = reinterpret_cast<Message*>(msg_buf);
+static uint8_t msg_buf[KL_ROUTER_MAX_MESSAGE_LEN] = {0};
+//static Message *msg = reinterpret_cast<Message*>(msg_buf);
 StaticJsonBuffer<200> json_buffer;
 JsonArray& data_array = json_buffer.createArray();
 
@@ -304,7 +307,7 @@ void logData() {
     Watchdog.enable();                    // Enabled watchdog
 
     logln(F("\nTRANSMITING DATA: ------"));
-    transmitData(false);
+    //transmitData(false);
 
     logln(F("\nLOGGING DATA: ------"));
     DataSample *cursor = datasample_head;
@@ -359,33 +362,37 @@ void logData() {
     standbySched();
 }
 
-void transmitData(bool clear) {
-    msg->sensorgrid_version = config.sensorgrid_version;
-    msg->network_id = config.network_id;
-    msg->from_node = config.node_id;
-    msg->message_type = 2;
-    memset(msg->data, 0, 100);  // TODO(Anyone): make this 100 a constant
-    snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
+void _do_transmit(uint8_t to_node)
+{
+    bool clear = false;
+    memset(msg_buf, 0, KL_ROUTER_MAX_MESSAGE_LEN);
+    memcpy(msg_buf, "testing", sizeof("testing"));
+    msg_buf[0] = '[';
     int data_index = 1;
     logln(F("TRANSMITTING DATA: ------"));
     DataSample *cursor = datasample_head;
     while (cursor != NULL) {
         Watchdog.reset();
-        logln(cursor->data);
-        if (data_index + strlen(cursor->data) >= MESSAGE_DATA_SIZE - 1) {
+        Serial.println("**** Checking strlen of data");
+        //logln(cursor->data);
+        Serial.println(cursor->data);
+        Serial.println(strlen(cursor->data));
+        Serial.println("***********************");
+        if (data_index + strlen(cursor->data) >= KL_ROUTER_MAX_MESSAGE_LEN) {
             logln(F("Sending partial data history: "));
-            msg->data[data_index-1] = ']';
-            logln(msg->data);
-            msg->len = strlen(msg->data);
-            send_message(msg_buf, 5 + msg->len, config.collector_id);
-            delay(5000);  // TODO(Anyone): better handling on the collector side?
-            memset(msg->data, 0, 100);
-            snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
+            Serial.println((char*)msg_buf);
+            msg_buf[data_index-1] = ']';
+            // TODO: send a have-more-data flag until end
+            sendLoRaMessage(msg_buf, data_index, to_node);
+            delay(1000);
+            //delay(5000);  // TODO(Anyone): better handling on the collector side?
+            memset(msg_buf, 0, KL_ROUTER_MAX_MESSAGE_LEN);
+            msg_buf[0] = '[';
             data_index = 1;
         }
-        snprintf(&msg->data[data_index], MESSAGE_DATA_SIZE - data_index, cursor->data);  // data sample size - index
+        memcpy(&msg_buf[data_index], cursor->data, strlen(cursor->data));
         data_index += strlen(cursor->data);
-        msg->data[data_index++] = ',';
+        msg_buf[data_index++] = ',';
         if (clear) {
             DataSample *_cursor = cursor;
             cursor = cursor->next;
@@ -396,15 +403,68 @@ void transmitData(bool clear) {
         }
     }
     logln(F("-------"));
-    msg->data[data_index-1] = ']';
-    msg->len = strlen(msg->data);
-    logln(F("Sending message remainder"));
-    Watchdog.reset();
-    send_message(msg_buf, 5 + msg->len, config.collector_id);
-    radio->sleep();
-    log_(F("Sent message: ")); print(msg->data);
-    print(F(" len: ")); println(F("%d"), msg->len);
+    if (data_index > 1) {
+        msg_buf[data_index-1] = ']';
+        logln(F("Sending message remainder"));
+        Serial.println((char*)msg_buf);
+        Serial.print("Length: ");
+        Serial.println(data_index);
+        //Watchdog.reset();
+        //sendLoRaMessage(msg_buf, data_index, config.collector_id);
+        /*
+        if (LoRaRouter->sendtoWait(msg_buf, data_index, 10) == RH_ROUTER_ERROR_NONE) {
+            Serial.println("Sent data");
+        } else {
+            Serial.println("Error sending data");
+        }
+        */
+        delay(500);
+        //delay(5000);
+    }
+    //LoRaRadio->sleep();
 }
+
+void transmitData() {
+    Watchdog.enable();
+
+    //sendLoRaMessage(msg_buf, sizeof("testing"), config.collector_id);
+    /*
+    if (LoRaRouter->sendtoWait(msg_buf, sizeof("testing"), 10) == RH_ROUTER_ERROR_NONE) {
+        Serial.println("Sent message");
+    } else {
+        Serial.println("Error sending message");
+    }
+    */
+    uint8_t len = sizeof(msg_buf);
+    uint8_t source;
+    uint8_t dest;
+    uint8_t flags;
+    //Serial.println("Setting up LoRa");
+    //setupLoRa(2, 8, 3, 10);
+    Serial.println("Waiting for request to send data.");
+    // Everyone will send an arp within the first 2 seconds of the collection time in order to
+    // attach any stray nodes.
+    unsigned long arp_time = millis() + random(0, 2000);
+    bool did_arp = false;
+    while (1) {
+        // TODO: we want to time-limit this, perhaps based on the time of the next scheduled event?
+        Watchdog.reset();
+        if (LoRaRouter->recvfromAck(msg_buf, &len, &source, &dest, &flags)) {
+            Serial.print("Received message from: ");
+            Serial.println(source);
+            Serial.println((char*)msg_buf);
+            // TODO: check to see if this is a data request. For now, assume that it is
+            _do_transmit(source);
+            break;
+        } else if (!did_arp && millis() > arp_time) {
+            Serial.println("Sending randomized arp to find stray nodes.");
+            LoRaRouter->doArp(0);
+            did_arp = true;
+            LoRaRouter->printRoutingTable();
+        }
+    }
+}
+
 
 void readDataSamples() {
     Watchdog.reset();
@@ -413,6 +473,7 @@ void readDataSamples() {
         log_(F("Reading sensor %s .. "), cursor->sensor->id);
         DataSample *sample = appendData();
         cursor->sensor->read(sample->data, DATASAMPLE_DATASIZE);
+        logln("Stopping sensor");
         cursor->sensor->stop();
         logln(F("Sensor stopped: %s"), cursor->sensor->id);
         cursor = cursor->next;
@@ -429,7 +490,6 @@ void readDataSamples() {
 
 void flashHeartbeat() {
     Watchdog.enable();
-    logln(F("Heartbeat"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     delay(100);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
@@ -437,4 +497,23 @@ void flashHeartbeat() {
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     delay(100);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+}
+
+void sendBeacon() {
+    Watchdog.enable();
+    Serial.println("Sending hello beacon to network");
+    LoRaRouter->doArp(0);
+    LoRaRouter->printRoutingTable();
+    return;
+
+    if (LoRaRouter->routingTableIsEmpty()) {
+        digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
+        Serial.println("Sending hello beacon to network");
+        LoRaRouter->doArp(0);
+        LoRaRouter->printRoutingTable();
+        digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+    } else {
+        Serial.println("Have routes. Not sending beacon.");
+        LoRaRouter->printRoutingTable();
+    }
 }

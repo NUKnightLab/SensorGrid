@@ -11,6 +11,8 @@
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
 #include <KnightLab_SensorConfig.h>
+//#include <KnightLab_LoRaUtils.h>
+#include <KnightLab_LoRaRouter.h>
 #include "oled.h"
 // #include <TaskScheduler.h>
 
@@ -127,6 +129,7 @@ extern uint32_t getTime();
 extern void loadConfig();
 extern struct Config config;
 
+/*
 struct Message {
     uint8_t sensorgrid_version;
     uint8_t network_id;
@@ -135,6 +138,7 @@ struct Message {
     uint8_t len;
     char data[100];
 } __attribute__((packed));
+*/
 
 typedef bool (*SensorStartFunction)();
 typedef size_t (*SensorReadFunction)(char *buf, int len);

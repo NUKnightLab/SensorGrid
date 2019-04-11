@@ -9,13 +9,13 @@
  */
 #include <KnightLab_GPS.h>
 #include "config.h"
-#include "lora.h"
+//#include "lora.h"
+#include <KnightLab_LoRa.h>
 #include "runtime.h"
 #include "tests.h"
 #include <TaskScheduler.h>
 
 #define SET_CLOCK false
-#define NOTEST
 
 
 
@@ -158,11 +158,20 @@ void sampleCallback();
 void logCallback();
 void heartbeatCallback();
 
+
+void noop() {
+    Watchdog.reset();
+    Serial.print(".");
+}
+
 // Need to change Callbacks to actual functions
 Task initialize(60, TASK_FOREVER, &initSensors);
-Task sample(60, TASK_FOREVER, &readDataSamples);
-Task _log(120, TASK_FOREVER, &logData);
+Task sample(30, TASK_FOREVER, &readDataSamples);
+//Task _log(120, TASK_FOREVER, &logData);
+Task _log(120, TASK_FOREVER, &transmitData);
 Task heartbeat(10, TASK_FOREVER, &flashHeartbeat);
+Task beacon(10, TASK_FOREVER, &sendBeacon);
+Task keepalive(1, TASK_FOREVER, &noop);
 
 Scheduler runner;
 
@@ -193,6 +202,9 @@ long getNextTaskTEMP() {
   }
   if (runner.timeUntilNextIteration(heartbeat) < minTime) {
     minTime = runner.timeUntilNextIteration(heartbeat);
+  }
+  if (runner.timeUntilNextIteration(beacon) < minTime) {
+    minTime = runner.timeUntilNextIteration(beacon);
   }
 
   return minTime;
@@ -278,12 +290,7 @@ void setup() {
     // oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
     // oled.displayDateTime();
     unsigned long _start = millis();
-    //while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
-
-    #ifdef TEST
-    aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
-    return;
-    #endif
+    while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
     
 //    setupGPS();
 //    setupClocks();
@@ -292,7 +299,6 @@ void setup() {
     if (ALWAYS_LOG || Serial) {
         setupLogging();
     }
-
 
     // Clock set up
     static volatile int buttonHeld = !digitalRead(BUTTON_A);
@@ -321,10 +327,22 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     config.loadConfig();
-    logln("Setting up LoRa radio");
-    setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
-    radio->sleep();
     setupSensors();
+    logln("Setting up LoRa radio");
+    Serial.print("NODE ID: ");
+    Serial.println(config.node_id);
+    Serial.print("RFM95_CS: ");
+    Serial.println(config.RFM95_CS);
+    Serial.print("RFM95_INT: ");
+    Serial.println(config.RFM95_INT);
+    Serial.print("TX: ");
+    Serial.println(config.tx_power);
+    Serial.print("FREQ: ");
+    Serial.println(config.rf95_freq);
+
+    setupLoRa(config.node_id, config.RFM95_CS, config.RFM95_INT, config.tx_power);
+
+    //radio->sleep();
     // setupHoneywell();
     // ADAFRUIT_SI7021::setup(config.node_id, &getTime);
     // This is done in RTCZero::standbyMode
@@ -350,6 +368,10 @@ void setup() {
     Serial.println("added sample");
     runner.addTask(_log);
     Serial.println("added log");
+    runner.addTask(beacon);
+    Serial.println("added beacon");
+    runner.addTask(keepalive);
+    Serial.println("added keepalive");
     int wait_time = 0;
     if (_TASK_TIME_FUNCTION() % 60 != 0){ // Will wait to start initialization on the minute
       wait_time = 60 - (_TASK_TIME_FUNCTION() % 60);
@@ -364,16 +386,23 @@ void setup() {
     Serial.println("Enabled log with 20 second delay to occur every 3 minutes");
     heartbeat.enableDelayed(wait_time);
     Serial.println("Enabled heartbeat");
+    beacon.enableDelayed(wait_time);
+    Serial.println("Enabled beacon");
+    keepalive.enable();
+    Serial.println("Enabled keepalive");
     Watchdog.disable();
 }
 
 void loop() {
-    #ifdef TEST
-    aunit::TestRunner::run();
-    return;
-    #endif
-
     runner.execute();
+    if (beacon.isEnabled()) {
+        if (!LoRaRouter->routingTableIsEmpty()) {
+            Serial.println("Have routes. Disabling beacon.");
+            beacon.disable();
+        }
+    } else {
+      // TODO: should we turn the beacon back on if needed?
+    }
 //    if (oled.isOn()) {
 //        updateClock();
 //        oled.displayDateTime();
