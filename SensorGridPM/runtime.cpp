@@ -383,7 +383,11 @@ void _do_transmit(uint8_t to_node)
             Serial.println((char*)msg_buf);
             msg_buf[data_index-1] = ']';
             // TODO: send a have-more-data flag until end
-            sendLoRaMessage(msg_buf, data_index, to_node);
+            uint8_t flags = KL_FLAGS_MORE_DATA;
+            if (cursor->next == NULL) {
+                flags = 0;
+            }
+            sendLoRaMessage(msg_buf, data_index, to_node, flags);
             delay(1000);
             //delay(5000);  // TODO(Anyone): better handling on the collector side?
             memset(msg_buf, 0, KL_ROUTER_MAX_MESSAGE_LEN);
@@ -409,6 +413,7 @@ void _do_transmit(uint8_t to_node)
         Serial.println((char*)msg_buf);
         Serial.print("Length: ");
         Serial.println(data_index);
+        sendLoRaMessage(msg_buf, data_index, to_node);
         //Watchdog.reset();
         //sendLoRaMessage(msg_buf, data_index, config.collector_id);
         /*

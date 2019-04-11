@@ -184,22 +184,25 @@ void loop()
             uint8_t resp = 1;
             while (resp > 0) {
                 resp = LoRaRouter->sendtoWait(msg, len, dest);
-                if (!resp) break;
+                if (!resp) break; // 0 is success
                 // We need to keep tryin until the nodes are in their data tx cycle. TODO: should we
                 // sync up schedules instead of this brute force repeat?
-                delay(1000);
+                Serial.println("No response. Waiting 10 seconds ..");
+                delay(10000);
             }
             len = sizeof(buf);
             uint8_t from;
             uint8_t to;
             uint8_t msg_id;
-            uint8_t flags;
+            uint8_t flags = KL_FLAGS_MORE_DATA;
             // TODO: receive data until we get a no-more-data flag
             Serial.println("RECEIVING DATA FROM REMOTE");
-            while (1) {
+            while ( (flags & KL_FLAGS_MORE_DATA) == KL_FLAGS_MORE_DATA) {
                 if ( LoRaRouter->recvfromAck(buf, &len, &from, &to, &msg_id, &flags) ) {
                     Serial.print("Message received: ");
                     Serial.println((char*)buf);
+                    Serial.print("With flags: ");
+                    Serial.println(flags);
                 }
             }
         }
