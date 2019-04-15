@@ -123,13 +123,56 @@ void setup()
     }
 }
 
+
+void fetchDataFromNode(uint8_t node_id)
+{
+    static uint8_t buf[KL_ROUTER_MAX_MESSAGE_LEN];
+    uint8_t msg[] = "SEND DATA";
+    uint8_t len = sizeof(msg);
+    uint8_t dest = 2;
+    uint8_t resp = 1;
+    Serial.print("FETCHING DATA FROM NODE: ");
+    Serial.println(node_id);
+    resp = LoRaRouter->sendtoWait(msg, len, dest);
+    if (resp > 0) {
+        Serial.println("NO RESPONSE");
+        return;
+    }
+    /*
+    while (resp > 0) {
+        resp = LoRaRouter->sendtoWait(msg, len, dest);
+        if (!resp) break; // 0 is success
+        // We need to keep tryin until the nodes are in their data tx cycle. TODO: should we
+        // sync up schedules instead of this brute force repeat?
+        Serial.println("No response. Waiting 10 seconds ..");
+        delay(10000);
+    }
+    */
+    len = sizeof(buf);
+    uint8_t from;
+    uint8_t to;
+    uint8_t msg_id;
+    uint8_t flags = KL_FLAGS_MORE_DATA;
+    Serial.println("RECEIVING DATA FROM REMOTE");
+    while ( (flags & KL_FLAGS_MORE_DATA) == KL_FLAGS_MORE_DATA) {
+        if ( LoRaRouter->recvfromAck(buf, &len, &from, &to, &msg_id, &flags) ) {
+            Serial.print("Message received: ");
+            Serial.println((char*)buf);
+            Serial.print("With flags: ");
+            Serial.println(flags);
+        } else {
+            break;
+        }
+    }
+}
+
 void loop()
 {
     static uint8_t buf[KL_ROUTER_MAX_MESSAGE_LEN];
     //static Message msg[sizeof(Message)] = {0};
     static Message *msg = (Message*)buf;
     static int counter = 0;
-    static unsigned long beacon_time = 0;
+    //static unsigned long beacon_time = 0;
     static unsigned long data_request_time = 0;
     static bool have_routes = false;
     uint8_t len = sizeof(buf);
@@ -143,10 +186,49 @@ void loop()
     if (counter % 1000000 == 0)
         Serial.println("");
 
-    if (LoRaRouter->recvfromAck(buf, &len, &source, &dest, &msg_id, &flags)) {
-        // received a message
+    /**
+     * Sensor nodes send out a hello beacon when they wake up into data tx mode. Here, we use
+     * the beacon as the trigger for data collection. It does not really matter which beacon
+     * we receive first, the nodes should all be coming online at the same time.
+     * 
+     * We use recvfrom rather than recvfromAck here b/c ARP messages are not passed to the
+     * application layer by recvfromAck.
+     * 
+     * TODO: Currently we just assume any message is the wakeup beacon. We should be more
+     * explicit about this.
+     */
+    if (LoRaRouter->recvfrom(buf, &len, &source, &dest, &msg_id, &flags)) {
+        Serial.println("Received message.");
+        static uint8_t visited[255] = { 0 };
+        if (millis() > data_request_time) {
+            Serial.print("RECEIVED BEACON FROM: ");
+            Serial.print(source);
+            Serial.println("; INITIATING DATA COLLECTION.");
+            fetchDataFromNode(source);
+            LoRaRouter->requestRoutes(source);
+            visited[source] = 1;
+            bool clean_pass = false;
+            while (!clean_pass) {
+                for (int i=1; i<255; i++) {
+                    if (i == config.node_id) {
+                        continue;
+                    }
+                    clean_pass = true;
+                    uint8_t route = LoRaRouter->getRouteTo(i);
+                    if (route && !visited[i]) {
+                        fetchDataFromNode(i);
+                        LoRaRouter->requestRoutes(i);
+                        visited[i] = 1;
+                        clean_pass = false;
+                    }
+                }
+            }
+            memset(visited, 0, 255);
+            data_request_time = millis() + 30000;
+        }
     }
 
+    /*
     if (LoRaRouter->routingTableIsEmpty()) {
         if (have_routes) {
             beacon_time = millis() + random(1000, 2000);
@@ -155,7 +237,9 @@ void loop()
     } else {
         have_routes = true;
     }
+    */
 
+    /*
     if (millis() > beacon_time) {
         Serial.println("BEACON DUE");
         if (!have_routes) {
@@ -172,43 +256,19 @@ void loop()
         }
         beacon_time = millis() + 10000;
     }
+    */
 
+   /*
     if (millis() > data_request_time) {
         Serial.println("SCHEDULED DATA TRANSMISSION REQUEST DUE");
         if (!have_routes) {
             Serial.println("HAVE NO ROUTES. NOT REQUESTING DATA");
         } else {
-            uint8_t msg[] = "SEND DATA";
-            uint8_t len = sizeof(msg);
-            uint8_t dest = 2;
-            uint8_t resp = 1;
-            while (resp > 0) {
-                resp = LoRaRouter->sendtoWait(msg, len, dest);
-                if (!resp) break; // 0 is success
-                // We need to keep tryin until the nodes are in their data tx cycle. TODO: should we
-                // sync up schedules instead of this brute force repeat?
-                Serial.println("No response. Waiting 10 seconds ..");
-                delay(10000);
-            }
-            len = sizeof(buf);
-            uint8_t from;
-            uint8_t to;
-            uint8_t msg_id;
-            uint8_t flags = KL_FLAGS_MORE_DATA;
-            // TODO: receive data until we get a no-more-data flag
-            Serial.println("RECEIVING DATA FROM REMOTE");
-            while ( (flags & KL_FLAGS_MORE_DATA) == KL_FLAGS_MORE_DATA) {
-                if ( LoRaRouter->recvfromAck(buf, &len, &from, &to, &msg_id, &flags) ) {
-                    Serial.print("Message received: ");
-                    Serial.println((char*)buf);
-                    Serial.print("With flags: ");
-                    Serial.println(flags);
-                }
-            }
+            fetchDataFromNode(2);
         }
         data_request_time = millis() + 30000;
     }
-
+    */
 
     /*
     Message msg = {

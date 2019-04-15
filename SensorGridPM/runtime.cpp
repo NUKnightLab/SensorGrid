@@ -450,24 +450,45 @@ void transmitData() {
     // Everyone will send an arp within the first 2 seconds of the collection time in order to
     // attach any stray nodes.
     unsigned long arp_time = millis() + random(0, 2000);
+    unsigned long expire_time = millis() + 60000; // limit the collection time slot
     bool did_arp = false;
-    while (1) {
+    while (millis() < expire_time) {
         // TODO: we want to time-limit this, perhaps based on the time of the next scheduled event?
         Watchdog.reset();
         if (LoRaRouter->recvfromAck(msg_buf, &len, &source, &dest, &flags)) {
             Serial.print("Received message from: ");
             Serial.println(source);
-            Serial.println((char*)msg_buf);
-            // TODO: check to see if this is a data request. For now, assume that it is
-            _do_transmit(source);
+            Serial.print((char*)msg_buf);
+            Serial.print(" with flags: ");
+            Serial.println(flags);
+            if ( (flags & KL_FLAGS_SEND_ROUTES) == KL_FLAGS_SEND_ROUTES ) {
+                Serial.println("SENDING ROUTING TABLE");
+                uint8_t sendbuf[255] = { 0 };
+                uint8_t index = 0;
+                for (uint8_t i=1; i<255; i++) {
+                    if (LoRaRouter->getRouteTo(i)) {
+                        sendbuf[index++] = i;
+                        sendbuf[index++] = LoRaRouter->getRouteTo(i);
+                    }
+                    // TODO: better handling of buffer limit
+                    if (index >= 255) {
+                     break;
+                    }
+                }
+            } else { // TODO: check to see if this is a data request. For now, assume that it is
+                Serial.println("TRANSMITTING DATA");
+                _do_transmit(source);
+            }
             break;
         } else if (!did_arp && millis() > arp_time) {
             Serial.println("Sending randomized arp to find stray nodes.");
             LoRaRouter->doArp(0);
             did_arp = true;
             LoRaRouter->printRoutingTable();
+            Serial.println("-----------");
         }
     }
+    Serial.println("Timeout waiting for collection request.");
 }
 
 
