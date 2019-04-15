@@ -205,7 +205,7 @@ void loop()
             Serial.print(source);
             Serial.println("; INITIATING DATA COLLECTION.");
             fetchDataFromNode(source);
-            LoRaRouter->requestRoutes(source);
+            //LoRaRouter->requestRoutes(source);
             visited[source] = 1;
             bool clean_pass = false;
             while (!clean_pass) {
