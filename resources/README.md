@@ -19,3 +19,5 @@ https://cdn-shop.adafruit.com/product-files/3179/sx1276_77_78_79.pdf
 https://cdn-learn.adafruit.com/assets/assets/000/031/659/original/RFM95_96_97_98W.pdf?1460518717
 
 https://www.hoperf.com/modules/lora/RFM95.html
+
+https://arxiv.org/pdf/1712.02141.pdf
