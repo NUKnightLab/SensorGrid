@@ -10,18 +10,18 @@
 static SdFat SD;
 
 
-extern void setInitTimeout();
+//extern void setInitTimeout();
 // extern void initSensors();
-extern void setSampleTimeout();
+//extern void setSampleTimeout();
 extern void recordDataSamples();
-extern void setCommunicateDataTimeout();
+//extern void setCommunicateDataTimeout();
 extern void flashHeartbeat();
 extern void recordBatteryLevel();
 //extern void recordTempAndHumidity();
 extern void recordUptime(uint32_t uptime);
 // extern void logData(bool clear);
-extern void transmitData(bool clear);
-extern uint32_t getNextCollectionTime();
+//extern void transmitData(bool clear);
+//extern uint32_t getNextCollectionTime();
 // extern void readDataSamples();
 extern bool checkBatteryLevel();
 

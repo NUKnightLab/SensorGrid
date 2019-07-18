@@ -159,6 +159,7 @@ void logCallback();
 Task initialize(60, TASK_FOREVER, &initSensors);
 Task sample(60, TASK_FOREVER, &readDataSamples);
 Task _log(180, TASK_FOREVER, &logData);
+Task heartbeat(5, TASK_FOREVER, &flashHeartbeat);
 
 Scheduler runner;
 
@@ -186,6 +187,9 @@ long getNextTaskTEMP() {
   }
   if (runner.timeUntilNextIteration(_log) < minTime) {
     minTime = runner.timeUntilNextIteration(_log);
+  }
+  if (runner.timeUntilNextIteration(heartbeat) < minTime) {
+    minTime = runner.timeUntilNextIteration(heartbeat);
   }
 
   return minTime;
@@ -314,9 +318,9 @@ void setup() {
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
     config.loadConfig();
-    logln("Setting up LoRa radio");
-    setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
-    radio->sleep();
+    //logln("Setting up LoRa radio");
+    //setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
+    //radio->sleep();
     setupSensors();
     // setupHoneywell();
     // ADAFRUIT_SI7021::setup(config.node_id, &getTime);
@@ -343,6 +347,8 @@ void setup() {
     Serial.println("added sample");
     runner.addTask(_log);
     Serial.println("added log");
+    runner.addTask(heartbeat);
+    Serial.println("added heartbeat");
     int wait_time = 0;
     if (_TASK_TIME_FUNCTION() % 60 != 0){ // Will wait to start initialization on the minute
       wait_time = 60 - (_TASK_TIME_FUNCTION() % 60);
@@ -355,6 +361,7 @@ void setup() {
     Serial.println("Enabled sample with 7 second delay");
     _log.enableDelayed(207 + wait_time); // 207 seconds to start after 3 minutes and then 20 seconds after sample
     Serial.println("Enabled log with 20 second delay to occur every 3 minutes");
+    heartbeat.enableDelayed(wait_time);
     Watchdog.disable();
 }
 
