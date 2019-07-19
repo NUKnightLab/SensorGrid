@@ -311,7 +311,7 @@ void recordUptime() {
     uint32_t uptime = rtcz.getEpoch() - system_start_time;
     DataSample *sample = appendData();
     snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"runtime\":%lu,\"ts\":%lu}",
-        config.node_id, uptime, rtcz.getEpoch());
+        config.node_id, uptime, runtime, rtcz.getEpoch());
     recordData(sample->data, strlen(sample->data));
 }
 

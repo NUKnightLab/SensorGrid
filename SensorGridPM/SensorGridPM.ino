@@ -299,7 +299,7 @@ void setup() {
     if (buttonHeld != 0) {
       state = true;
     }
-    if (state) {
+    if (false && state) { // turn time set check off for now
       while(1) {
         Watchdog.reset();
         delay(2000);
