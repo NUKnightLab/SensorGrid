@@ -16,6 +16,7 @@ static uint8_t msg_buf[140] = {0};
 static Message *msg = reinterpret_cast<Message*>(msg_buf);
 StaticJsonBuffer<200> json_buffer;
 JsonArray& data_array = json_buffer.createArray();
+static uint32_t system_start_time;
 
 DataSample *datasample_head = NULL;
 DataSample *datasample_tail = NULL;
@@ -300,16 +301,23 @@ void recordBatteryLevel() {
     recordData(batSample->data, strlen(batSample->data));
 }
 
-void recordUptime(uint32_t uptime) {
+void setStartTime()
+{
+    system_start_time = rtcz.getEpoch();
+}
+
+void recordUptime() {
+    uint32_t runtime = millis();
+    uint32_t uptime = rtcz.getEpoch() - system_start_time;
     DataSample *sample = appendData();
-    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"ts\":%lu}",
+    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"runtime\":%lu,\"ts\":%lu}",
         config.node_id, uptime, rtcz.getEpoch());
     recordData(sample->data, strlen(sample->data));
 }
 
 void logData() {
     recordBatteryLevel();                   // Should get a battery recording level before each log
-    recordUptime(millis());
+    recordUptime();
     Watchdog.enable();                    // Enabled watchdog
     logln(F("\nLOGGING DATA: ------"));
     DataSample *cursor = datasample_head;
@@ -429,7 +437,7 @@ void readDataSamples() {
         cursor = cursor->next;
     }
     recordBatteryLevel();
-    recordUptime(millis());
+    recordUptime();
     digitalWrite(12, LOW);
     digitalWrite(LED_BUILTIN, LOW);
 

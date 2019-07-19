@@ -314,6 +314,7 @@ void setup() {
 
     setupGPS();
     setupClocks();
+    setStartTime();
     
     
     logln(F("begin setup .."));

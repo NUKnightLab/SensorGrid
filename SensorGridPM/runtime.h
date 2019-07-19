@@ -18,12 +18,13 @@ extern void recordDataSamples();
 extern void flashHeartbeat();
 extern void recordBatteryLevel();
 //extern void recordTempAndHumidity();
-extern void recordUptime(uint32_t uptime);
+extern void recordUptime();
 // extern void logData(bool clear);
 //extern void transmitData(bool clear);
 //extern uint32_t getNextCollectionTime();
 // extern void readDataSamples();
 extern bool checkBatteryLevel();
+void setStartTime();
 
 /* data history */
 struct DataSample {
