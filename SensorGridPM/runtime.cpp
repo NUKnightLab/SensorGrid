@@ -4,7 +4,7 @@
 #include "config.h"
 #include "runtime.h"
 #include <ArduinoJson.h>
-#include "lora.h"
+#include "rh_lora.h"
 #include <avr/dtostrf.h>
 #include <console.h>
 #include <LoRa.h>
@@ -297,12 +297,14 @@ void recordBatteryLevel() {
     DataSample *batSample = appendData();
     snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%lu}",
         config.node_id, bat, rtcz.getEpoch());
+    recordData(batSample->data, strlen(batSample->data));
 }
 
 void recordUptime(uint32_t uptime) {
     DataSample *sample = appendData();
     snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"ts\":%lu}",
         config.node_id, uptime, rtcz.getEpoch());
+    recordData(sample->data, strlen(sample->data));
 }
 
 void logData() {
@@ -426,6 +428,8 @@ void readDataSamples() {
         logln(F("Sensor stopped: %s"), cursor->sensor->id);
         cursor = cursor->next;
     }
+    recordBatteryLevel();
+    recordUptime(millis());
     digitalWrite(12, LOW);
     digitalWrite(LED_BUILTIN, LOW);
 

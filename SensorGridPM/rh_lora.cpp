@@ -1,7 +1,7 @@
 /**
  * Copyright 2018 Northwestern University
  */
-#include "lora.h"
+#include "rh_lora.h"
 
 RH_RF95 *radio;
 #if defined(USE_MESH_ROUTER)

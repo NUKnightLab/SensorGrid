@@ -7,10 +7,12 @@
  */
 #include <KnightLab_GPS.h>
 #include "config.h"
-#include "lora.h"
+#include "rh_lora.h"
 #include "runtime.h"
 #include "tests.h"
 #include <TaskScheduler.h>
+#include <LoRa.h>
+#include <LoRaHarvest.h>
 
 #define SET_CLOCK false
 #define NOTEST
@@ -363,6 +365,10 @@ void setup() {
     Serial.println("Enabled log with 20 second delay to occur every 3 minutes");
     heartbeat.enableDelayed(wait_time);
     Watchdog.disable();
+
+    nodeId(config.node_id);
+    if (config.node_id == 1) isCollector = true;
+    setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
 }
 
 void loop() {
