@@ -307,7 +307,7 @@ void setStartTime()
 }
 
 void recordUptime() {
-    uint32_t runtime = millis();
+    uint32_t runtime = millis() / 1000;
     uint32_t uptime = rtcz.getEpoch() - system_start_time;
     DataSample *sample = appendData();
     snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"runtime\":%lu,\"ts\":%lu}",
