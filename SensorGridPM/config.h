@@ -5,7 +5,7 @@
 #define SENSORGRIDPM_CONFIG_H_
 
 // #include <Adafruit_SleepyDog.h>
-#include <RTCZero.h>
+//#include <RTCZero.h>
 #include <RTClib.h>
 #include <KnightLab_ArduinoUtils.h>
 #include <KnightLab_FeatherUtils.h>
@@ -43,7 +43,7 @@ extern void readDataSamples();
 extern void logData();
 
 
-extern RTCZero rtcz;
+//extern RTCZero rtcz;
 extern RTC_PCF8523 rtc;
 extern uint32_t get_time();
 extern long getNextTaskTEMP();

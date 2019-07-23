@@ -24,7 +24,7 @@ WatchdogType Watchdog;
 
 enum Mode mode = WAIT;
 
-RTCZero rtcz;
+//RTCZero rtcz;
 RTC_PCF8523 rtc;
 int start_epoch;
 OLED oled = OLED(rtc);

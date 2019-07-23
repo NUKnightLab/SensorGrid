@@ -2,6 +2,7 @@
  * Copyright 2018 Northwestern University
  */
 #include "config.h"
+#include <LoRaHarvest.h>
 
 struct Config config;
 

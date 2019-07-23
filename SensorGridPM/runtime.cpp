@@ -9,6 +9,7 @@
 #include <console.h>
 #include <LoRa.h>
 #include <DataManager.h>
+#include <LoRaHarvest.h>
 
 #define DATE_STRING_SIZE 11
 
