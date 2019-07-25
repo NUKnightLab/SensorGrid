@@ -156,17 +156,8 @@ void setup()
     Serial.println("Config loaded");
     // delay(1000);
     //setup_radio(config.RFM95_CS, config.RFM95_INT, config.node_id);
-    if (config.wifi_password) {
-        Serial.print("Attempting to connect to Wifi: ");
-        Serial.print(config.wifi_ssid);
-        Serial.print(" with password: ");
-        Serial.println(config.wifi_password);
-        connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-        WiFi.maxLowPowerMode();
-        wifi_present = true;
-    } else {
-        Serial.println("No WiFi configuration found");
-    }
+
+
     nodeId(NODE_ID);
     if (nodeId() == 1) isCollector = true;
     println("Configuring LoRa with pins: CS: %d; RST: %d; IRQ: %d",
@@ -181,6 +172,20 @@ void setup()
     LoRa.onReceive(onReceive);
     LoRa.receive();
     rtcz.begin();
+
+    /** setup wifi **/
+    if (config.wifi_password) {
+        Serial.print("Attempting to connect to Wifi: ");
+        Serial.print(config.wifi_ssid);
+        Serial.print(" with password: ");
+        Serial.println(config.wifi_password);
+        connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+        WiFi.maxLowPowerMode();
+        wifi_present = true;
+        WiFi.end();
+    } else {
+        Serial.println("No WiFi configuration found");
+    }
 }
 
 void _loop()
