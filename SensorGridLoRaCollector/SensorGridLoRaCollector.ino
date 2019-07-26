@@ -45,6 +45,8 @@ unsigned long nextCollection()
 
 
 WiFiClient client;
+//WiFiSSLClient client;
+
 static bool wifi_present = false;
 
 void printWiFiStatus() {
@@ -83,7 +85,8 @@ void connectToServer(WiFiClient& client, char ssid[], char pass[], char host[], 
         delay(10000);  // wait 10 seconds for connection
         Serial.println("Connected to WiFi");
         printWiFiStatus();
-        Serial.println("\nStarting connection to server...");
+        Serial.print("\nStarting connection to ");
+        Serial.print(host); Serial.print(":"); Serial.println(port);
         if (client.connect(host, port)) {
             Serial.println("connected to server");
         } else {
@@ -269,12 +272,15 @@ void loop() {
             if (collectingPacketId() == 0) {
                 // send collected node data to the API
                 println("***** SEND DATA TO API *****");
-                int msgLength = 0;
+                int msg_length = 0;
                 for (int i=0; i<numBatches(0); i++) {
                     char *batch = (char*)getBatch(i);
-                    msgLength += strlen(batch);
-                    msgLength += 11;
+                    msg_length += strlen(batch);
+                    if (i < numBatches(0)-1) {
+                        msg_length++;
+                    }
                 }
+                msg_length += 13;
                 if (wifi_present) {
                     Serial.print("Attempting to connect to Wifi: ");
                     Serial.print(config.wifi_ssid);
@@ -283,29 +289,30 @@ void loop() {
                     connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
                     WiFi.maxLowPowerMode();
                     client.print("POST /networks/");
-                    client.print(config.network_id);
+                    //client.print(config.network_id);
+                    client.print(1);
                     client.print("/nodes/");
-                    client.print(nodes[collectingNodeIndex()]);
-                    client.println("/data/ HTTPS/1.1");
+                    //client.print(nodes[collectingNodeIndex()]);
+                    client.print(2);
+                    client.println("/data/ HTTP/1.1");
                     client.println("Host: sensorgridapi.knilab.com");
                     client.println("Content-Type: application/json");
                     client.print("Content-Length: ");
-                    client.println(43);
+                    client.println(msg_length);
                     client.println();
                     
                 }
-                client.print("{ data: [{ \"foo\": 1, \"bar\": 2, \"bat\": 3 }]}");
+                client.print("{ \"data\": [");
                 for (int i=0; i<numBatches(0); i++) {
                     char *batch = (char*)getBatch(i);
                     print(batch);
-                    //client.print(batch);
+                    client.print(batch);
                     //for (int j=0; j<10; j++) print("%c", batch[j]);
                     if (i < numBatches(0)-1) {
-                        print(",");
-                        //client.print(",");
+                        client.print(",");
                     }
                 }
-                //client.println("]}");
+                client.println("]}");
                 while (!client.available()) {}
                 while (client.available()) {
                     char c = client.read();
