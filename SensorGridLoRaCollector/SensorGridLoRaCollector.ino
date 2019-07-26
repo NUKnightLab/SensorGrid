@@ -182,7 +182,9 @@ void setup()
         connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
         WiFi.maxLowPowerMode();
         wifi_present = true;
+        //client.stop();
         WiFi.end();
+        //WiFi.disconnect();
     } else {
         Serial.println("No WiFi configuration found");
     }
@@ -267,15 +269,53 @@ void loop() {
             if (collectingPacketId() == 0) {
                 // send collected node data to the API
                 println("***** SEND DATA TO API *****");
-                print("{ node: %d, data: [", nodes[collectingNodeIndex()]);
+                int msgLength = 0;
+                for (int i=0; i<numBatches(0); i++) {
+                    char *batch = (char*)getBatch(i);
+                    msgLength += strlen(batch);
+                    msgLength += 11;
+                }
+                if (wifi_present) {
+                    Serial.print("Attempting to connect to Wifi: ");
+                    Serial.print(config.wifi_ssid);
+                    Serial.print(" with password: ");
+                    Serial.println(config.wifi_password);
+                    connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+                    WiFi.maxLowPowerMode();
+                    client.print("POST /networks/");
+                    client.print(config.network_id);
+                    client.print("/nodes/");
+                    client.print(nodes[collectingNodeIndex()]);
+                    client.println("/data/ HTTPS/1.1");
+                    client.println("Host: sensorgridapi.knilab.com");
+                    client.println("Content-Type: application/json");
+                    client.print("Content-Length: ");
+                    client.println(43);
+                    client.println();
+                    
+                }
+                client.print("{ data: [{ \"foo\": 1, \"bar\": 2, \"bat\": 3 }]}");
                 for (int i=0; i<numBatches(0); i++) {
                     char *batch = (char*)getBatch(i);
                     print(batch);
+                    //client.print(batch);
                     //for (int j=0; j<10; j++) print("%c", batch[j]);
-                    if (i < numBatches(0)-1) print(",");
+                    if (i < numBatches(0)-1) {
+                        print(",");
+                        //client.print(",");
+                    }
                 }
-                println("]}");
+                //client.println("]}");
+                while (!client.available()) {}
+                while (client.available()) {
+                    char c = client.read();
+                    Serial.write(c);
+                }
                 println("**********");
+                if (wifi_present){
+                    WiFi.end();
+                }
+
                 clearData();
                 collectingNodeIndex(collectingNodeIndex() + 1);
             }
