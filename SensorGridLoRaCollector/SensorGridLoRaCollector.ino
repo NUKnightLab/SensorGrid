@@ -329,6 +329,7 @@ void loop() {
             if (collectingNodeIndex() >= sizeof(nodes)) {
                 for (int i=0; i<sizeof(nodes); i++) {
                     // send shutdown
+                    LoRa.flush();
                     LoRa.idle();
                     LoRa.beginPacket();
                     LoRa.write(routes[nodes[i]][1]);
@@ -365,6 +366,7 @@ void loop() {
                 Serial.print(" ");
             }
             Serial.println("");
+            LoRa.flush();
             LoRa.idle();
             LoRa.beginPacket();
             LoRa.write(route[1]);
