@@ -30,8 +30,8 @@
 
 // comment
 
-enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY, WAIT_FOR_BATTERY };
-extern enum Mode mode;
+//enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY, WAIT_FOR_BATTERY };
+//extern enum Mode mode;
 
 extern void _setup();
 extern void _loop();

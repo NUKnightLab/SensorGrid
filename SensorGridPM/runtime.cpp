@@ -4,7 +4,7 @@
 #include "config.h"
 #include "runtime.h"
 #include <ArduinoJson.h>
-#include "rh_lora.h"
+//#include "rh_lora.h"
 #include <avr/dtostrf.h>
 #include <console.h>
 #include <LoRa.h>
@@ -59,6 +59,7 @@ uint32_t getNextCollectionTime() {
 }
 */
 
+/*
 static void standby() {
     mode = STANDBY;
     if (DO_STANDBY) {
@@ -66,6 +67,7 @@ static void standby() {
         rtcz.standbyMode();
     }
 }
+*/
 
 typedef void (*InterruptFunction)();
 
@@ -83,9 +85,13 @@ void setInterruptTimeoutSched(DateTime &datetime) {
 }
 
 static void standbySched() {
+    static bool standby_mode = true;
     if (DO_STANDBY) {
       Watchdog.disable();
-      rtcz.standbyMode();
+      println("standbyMode: %d", standby_mode);
+      if (standby_mode) {
+          rtcz.standbyMode();
+      }
     } 
 }
 
@@ -93,6 +99,7 @@ static void standbySched() {
 
 /* runtime mode interrupts */
 
+/*
 void waitForBattery_INT() {
     Serial.println("Wake from wait for battery recharge");
     mode = WAIT;
@@ -117,16 +124,19 @@ void communicateData_INT() {
     logln(F("Setting Mode: COMMUNICATE"));
     mode = COMMUNICATE;
 }
+*/
 
 /* end runtime mode interrupts */
 
 /* runtime mode timeouts */
 
+/*
 void setWaitForBatteryTimeout(int t) {
     DateTime dt = DateTime(rtcz.getEpoch() + t);
     setInterruptTimeout(dt, waitForBattery_INT);
     standby();
 }
+*/
 
 //void setCommunicateDataTimeout() {
 //    logln(F("setCommunicateDataTimeout"));
@@ -263,6 +273,7 @@ void stopSensors() {
  * attempts to reject outliers, but it is not a panacea to the volatility seen in
  * these values. 
  */
+/*
 static float batteryThreshold = 3.7;
 static float batteryThresholdDelta = 0.2;
 static float batteryThresholdLow = batteryThreshold;
@@ -273,7 +284,8 @@ bool checkBatteryLevel() {
     log_(F("Battery level: "));
     Serial.println(bat);
     if (bat < batteryThreshold) {
-        /* When we first hit the threshold, stop all the sensors */
+        // When we first hit the threshold, stop all the sensors
+
         if (batteryThreshold < batteryThresholdHigh) {
             stopSensors();
         }
@@ -291,15 +303,18 @@ bool checkBatteryLevel() {
         return true;
     }
 }
+*/
 
 void recordBatteryLevel() {
     // float bat = batteryLevel();
+    println("Recording battery ..");
     char bat[5];
     ftoa(batteryLevelAveraged(), bat, 2);
     DataSample *batSample = appendData();
     snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%lu}",
         config.node_id, bat, rtcz.getEpoch());
     recordData(batSample->data, strlen(batSample->data));
+    println(".. done recording battery");
 }
 
 void setStartTime()
@@ -308,15 +323,18 @@ void setStartTime()
 }
 
 void recordUptime() {
+    println("recording uptime ..");
     uint32_t runtime = millis() / 1000;
     uint32_t uptime = rtcz.getEpoch() - system_start_time;
     DataSample *sample = appendData();
     snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"runtime\":%lu,\"ts\":%lu}",
         config.node_id, uptime, runtime, rtcz.getEpoch());
     recordData(sample->data, strlen(sample->data));
+    println(".. done recording uptime");
 }
 
 void logData() {
+    Watchdog.enable();
     recordBatteryLevel();                   // Should get a battery recording level before each log
     recordUptime();
     Watchdog.enable();                    // Enabled watchdog
@@ -365,7 +383,6 @@ void logData() {
     logln(F("-------"));
     file.close();
     logln(F("File closed"));
-
     long delay = getNextTaskTEMP();
     if (delay > 2) {
         long alarmtime = rtcz.getEpoch() + delay;
@@ -426,6 +443,7 @@ void transmitData(bool clear) {
 
 void readDataSamples() {
     //Watchdog.reset();
+    println("Recording data samples ...");
     Watchdog.enable();
     SensorConfig *cursor = sensor_config_head;
     while (cursor) {
@@ -450,33 +468,38 @@ void readDataSamples() {
     if (delay > 2) {
         long alarmtime = rtcz.getEpoch() + delay;
         DateTime alarm = DateTime(alarmtime);
+        print("setInterrupTimeoutSched delay: %d", delay);
         setInterruptTimeoutSched(alarm); 
         standbySched();
     }
+    println(".. done recording data samples");
 }
 
 void flashHeartbeat() {
     //Watchdog.reset();
     Watchdog.enable();
-    print("HEARTBEAT");
-    logln(F("Heartbeat"));
+    //logln(F("Heartbeat"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
+    print(".");
     delay(200);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
+    print(".");
     //delay(100);
     //digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     //delay(100);
     //digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
-
     //long alarmtime = rtcz.getEpoch() + getNextTaskTEMP() - 3;
     //DateTime dt = DateTime(alarmtime);
     //setInterruptTimeoutSched(dt); 
     //standbySched();
+
     long delay = getNextTaskTEMP();
     if (delay > 2) {
         long alarmtime = rtcz.getEpoch() + delay;
         DateTime alarm = DateTime(alarmtime);
-        setInterruptTimeoutSched(alarm); 
+        setInterruptTimeoutSched(alarm);
         standbySched();
+    } else {
+        print("Delay is only: %d", delay);
     }
 }
