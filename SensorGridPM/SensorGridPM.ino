@@ -7,7 +7,6 @@
  */
 #include <KnightLab_GPS.h>
 #include "config.h"
-#include "rh_lora.h"
 #include "runtime.h"
 #include "tests.h"
 #include <TaskScheduler.h>
@@ -17,12 +16,9 @@
 #define SET_CLOCK false
 #define NOTEST
 
-
-
-
 WatchdogType Watchdog;
 
-enum Mode mode = WAIT;
+//enum Mode mode = WAIT;
 
 //RTCZero rtcz;
 RTC_PCF8523 rtc;
@@ -391,7 +387,7 @@ void loop() {
     // enable (instead of reset) Watchdog every loop because we disable during standby
     // Watchdog.enable();
 
-    static uint32_t start_time = getTime();
+    //static uint32_t start_time = getTime();
 //    static uint32_t uptime;
 //    uptime = millis();
 
@@ -401,52 +397,5 @@ void loop() {
      * STANDBY mode. For that reason, the standby_timer will track time and should
      * never get to be longer than the scheduled heartbeat period.
      */
-    static uint32_t standby_timer = getTime();
-//    if (mode == STANDBY) {
-//        if (getTime() - standby_timer > config.heartbeat_period) {
-//            standby_timer = getTime();
-//            mode = WAIT;
-//        }
-//        return;
-//    }
-//
-//    if (!checkBatteryLevel()) {
-//        return;
-//    }
-//
-//    static uint32_t next_collection_time = getNextCollectionTime();
-//    if (start_time && getTime() - start_time > 3 * 60) {
-//        oled.off();
-//    }
-//    if (oled.isOn()) {
-//        updateClock();
-//        oled.displayDateTime();
-//    }
-//    if (mode == WAIT) {
-//        setInitTimeout();
-//    } else if (mode == INIT) {
-//        initSensors();
-//        setSampleTimeout();
-//    } else if (mode == SAMPLE) {
-//        readDataSamples();
-//        if (getTime() > next_collection_time) {
-//            setCommunicateDataTimeout();
-//        } else {
-//            mode = WAIT;
-//        }
-//    } else if (mode == COMMUNICATE) {
-//        recordBatteryLevel();
-//        recordUptime(uptime);
-//        if (DO_LOG_DATA) {
-//            logData(!DO_TRANSMIT_DATA);
-//        }
-//        if (DO_TRANSMIT_DATA) {
-//            transmitData(true);
-//        }
-//        next_collection_time = getNextCollectionTime();
-//        mode = WAIT;
-//    } else if (mode == HEARTBEAT) {
-//        flashHeartbeat();
-//        mode = WAIT;
-//    }
+    //static uint32_t standby_timer = getTime();
 }

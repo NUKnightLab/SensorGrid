@@ -59,6 +59,7 @@ uint32_t getNextCollectionTime() {
 }
 */
 
+/*
 static void standby() {
     mode = STANDBY;
     if (DO_STANDBY) {
@@ -66,6 +67,7 @@ static void standby() {
         rtcz.standbyMode();
     }
 }
+*/
 
 typedef void (*InterruptFunction)();
 
@@ -93,6 +95,7 @@ static void standbySched() {
 
 /* runtime mode interrupts */
 
+/*
 void waitForBattery_INT() {
     Serial.println("Wake from wait for battery recharge");
     mode = WAIT;
@@ -117,16 +120,19 @@ void communicateData_INT() {
     logln(F("Setting Mode: COMMUNICATE"));
     mode = COMMUNICATE;
 }
+*/
 
 /* end runtime mode interrupts */
 
 /* runtime mode timeouts */
 
+/*
 void setWaitForBatteryTimeout(int t) {
     DateTime dt = DateTime(rtcz.getEpoch() + t);
     setInterruptTimeout(dt, waitForBattery_INT);
     standby();
 }
+*/
 
 //void setCommunicateDataTimeout() {
 //    logln(F("setCommunicateDataTimeout"));
@@ -263,6 +269,7 @@ void stopSensors() {
  * attempts to reject outliers, but it is not a panacea to the volatility seen in
  * these values. 
  */
+/*
 static float batteryThreshold = 3.7;
 static float batteryThresholdDelta = 0.2;
 static float batteryThresholdLow = batteryThreshold;
@@ -273,7 +280,7 @@ bool checkBatteryLevel() {
     log_(F("Battery level: "));
     Serial.println(bat);
     if (bat < batteryThreshold) {
-        /* When we first hit the threshold, stop all the sensors */
+        // When we first hit the threshold, stop all the sensors
         if (batteryThreshold < batteryThresholdHigh) {
             stopSensors();
         }
@@ -291,6 +298,7 @@ bool checkBatteryLevel() {
         return true;
     }
 }
+*/
 
 void recordBatteryLevel() {
     // float bat = batteryLevel();
