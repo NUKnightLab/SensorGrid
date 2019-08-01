@@ -4,7 +4,6 @@
 #include "config.h"
 #include "runtime.h"
 #include <ArduinoJson.h>
-//#include "rh_lora.h"
 #include <avr/dtostrf.h>
 #include <console.h>
 #include <LoRa.h>
@@ -96,126 +95,6 @@ static void standbySched() {
 }
 
 /* end local utils */
-
-/* runtime mode interrupts */
-
-/*
-void waitForBattery_INT() {
-    Serial.println("Wake from wait for battery recharge");
-    mode = WAIT;
-}
-
-void initSensors_INT() {
-    logln(F("Setting Mode: INIT"));
-    mode = INIT;
-}
-
-void recordDataSamples_INT() {
-    logln(F("Setting Mode: SAMPLE"));
-    mode = SAMPLE;
-}
-
-void heartbeat_INT() {
-    logln(F("Setting Mode: HEARTBEAT"));
-    mode = HEARTBEAT;
-}
-
-void communicateData_INT() {
-    logln(F("Setting Mode: COMMUNICATE"));
-    mode = COMMUNICATE;
-}
-*/
-
-/* end runtime mode interrupts */
-
-/* runtime mode timeouts */
-
-/*
-void setWaitForBatteryTimeout(int t) {
-    DateTime dt = DateTime(rtcz.getEpoch() + t);
-    setInterruptTimeout(dt, waitForBattery_INT);
-    standby();
-}
-*/
-
-//void setCommunicateDataTimeout() {
-//    logln(F("setCommunicateDataTimeout"));
-//    uint32_t prev_sample = getNextPeriodTime(config.sample_period) - config.sample_period;
-//    /* TODO: we end up in a bad state if com time is not far enough out for data
-//       sampling to complete. This is theoretically possible with the current HPM
-//       collection scheme. How to handle this while still having predictable collection
-//       times? */
-//    uint32_t com = prev_sample + 30;
-//    DateTime dt = DateTime(com);
-//    if (com <= rtcz.getEpoch() + 1) {
-//        communicateData_INT();
-//        return;
-//    } else {
-//        setInterruptTimeout(dt, communicateData_INT);
-//        standby();
-//    }
-//}
-
-/*
-void setInitTimeout() {
-    log_(F("Check setInitTimeout: "));
-    uint32_t sample_time = getNextPeriodTime(config.sample_period);
-    uint32_t init = sample_time - INIT_LEAD_TIME;
-    uint32_t heartbeat_time = getNextPeriodTime(config.heartbeat_period);
-    logln(F("Next init time is %lu"), init);
-    logln(F("Next heartbeat time is %lu"), heartbeat_time);
-    if (heartbeat_time < init - 2) {
-        DateTime dt = DateTime(heartbeat_time);
-        if (heartbeat_time <= rtcz.getEpoch() + 1) {
-            heartbeat_INT();
-            return;
-        } else {
-            setInterruptTimeout(dt, heartbeat_INT);
-            // println(F("heartbeat %02d:%02d"), dt.minute(), dt.second());
-            standby();
-        }
-    } else {
-        DateTime dt = DateTime(init);
-        if (init <= rtcz.getEpoch() + 1) {
-            initSensors_INT();
-            return;
-        } else {
-            setInterruptTimeout(dt, initSensors_INT);
-            // println(F("init %02d:%02d"), dt.minute(), dt.second());
-            standby();
-        }
-    }
-}
-*/
-
-/*
-void setSampleTimeout() {
-    logln(F("setSampleTimeout"));
-    uint32_t sample_time = getNextPeriodTime(config.sample_period);
-    uint32_t heartbeat_time = getNextPeriodTime(config.heartbeat_period);
-    if (heartbeat_time < sample_time - 2) {
-        DateTime dt = DateTime(heartbeat_time);
-        if (heartbeat_time <= rtcz.getEpoch() + 1) {
-            heartbeat_INT();
-            return;
-        } else {
-            setInterruptTimeout(dt, heartbeat_INT);
-            standby();
-        }
-    } else {
-        DateTime dt = DateTime(sample_time);
-        if (sample_time <= rtcz.getEpoch() + 1) {
-            recordDataSamples_INT();
-            return;
-        } else {
-            setInterruptTimeout(dt, recordDataSamples_INT);
-            standby();
-        }
-    }
-}
-*/
-
-/* end runtime mode timeouts */
 
 /* runtime mode handlers */
 
@@ -392,58 +271,7 @@ void logData() {
     }
 }
 
-/*
-void transmitData(bool clear) {
-    msg->sensorgrid_version = config.sensorgrid_version;
-    msg->network_id = config.network_id;
-    msg->from_node = config.node_id;
-    msg->message_type = 2;
-    memset(msg->data, 0, 100);  // TODO(Anyone): make this 100 a constant
-    snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
-    int data_index = 1;
-    logln(F("TRANSMITTING DATA: ------"));
-    DataSample *cursor = datasample_head;
-    while (cursor != NULL) {
-        Watchdog.reset();
-        logln(cursor->data);
-        if (data_index + strlen(cursor->data) >= MESSAGE_DATA_SIZE - 1) {
-            logln(F("Sending partial data history: "));
-            msg->data[data_index-1] = ']';
-            logln(msg->data);
-            msg->len = strlen(msg->data);
-            send_message(msg_buf, 5 + msg->len, config.collector_id);
-            delay(5000);  // TODO(Anyone): better handling on the collector side?
-            memset(msg->data, 0, 100);
-            snprintf(&msg->data[0], MESSAGE_DATA_SIZE, "[");
-            data_index = 1;
-        }
-        snprintf(&msg->data[data_index], MESSAGE_DATA_SIZE - data_index, cursor->data);  // data sample size - index
-        data_index += strlen(cursor->data);
-        msg->data[data_index++] = ',';
-        if (clear) {
-            DataSample *_cursor = cursor;
-            cursor = cursor->next;
-            datasample_head = cursor;
-            free(_cursor);
-        } else {
-            cursor = cursor->next;
-        }
-    }
-    logln(F("-------"));
-    msg->data[data_index-1] = ']';
-    msg->len = strlen(msg->data);
-    logln(F("Sending message remainder"));
-    Watchdog.reset();
-    send_message(msg_buf, 5 + msg->len, config.collector_id);
-    radio->sleep();
-    log_(F("Sent message: ")); print(msg->data);
-    print(F(" len: ")); println(F("%d"), msg->len);
-}
-*/
-
 void readDataSamples() {
-    //Watchdog.reset();
-    println("Recording data samples ...");
     Watchdog.enable();
     SensorConfig *cursor = sensor_config_head;
     while (cursor) {
@@ -459,11 +287,6 @@ void readDataSamples() {
     recordUptime();
     digitalWrite(12, LOW);
     digitalWrite(LED_BUILTIN, LOW);
-
-    //long alarmtime = rtcz.getEpoch() + getNextTaskTEMP() - 3;
-    //DateTime dt = DateTime(alarmtime);
-    //setInterruptTimeoutSched(dt); 
-    //standbySched();
     long delay = getNextTaskTEMP();
     if (delay > 2) {
         long alarmtime = rtcz.getEpoch() + delay;
@@ -472,27 +295,15 @@ void readDataSamples() {
         setInterruptTimeoutSched(alarm); 
         standbySched();
     }
-    println(".. done recording data samples");
 }
 
 void flashHeartbeat() {
-    //Watchdog.reset();
     Watchdog.enable();
-    //logln(F("Heartbeat"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     print(".");
     delay(200);
     digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
     print(".");
-    //delay(100);
-    //digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
-    //delay(100);
-    //digitalWrite(LED_BUILTIN, LOW);    // turn the LED off
-    //long alarmtime = rtcz.getEpoch() + getNextTaskTEMP() - 3;
-    //DateTime dt = DateTime(alarmtime);
-    //setInterruptTimeoutSched(dt); 
-    //standbySched();
-
     long delay = getNextTaskTEMP();
     if (delay > 2) {
         long alarmtime = rtcz.getEpoch() + delay;
