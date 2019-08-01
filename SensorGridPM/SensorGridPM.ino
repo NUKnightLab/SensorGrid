@@ -149,14 +149,14 @@ void HardFault_Handler(void) {
 // TASK STUFF
 Task& getNextTask();
 
-void initializeCallback();
-void sampleCallback();
-void logCallback();
+//void initializeCallback();
+//void sampleCallback();
+//void logCallback();
 
 // Need to change Callbacks to actual functions
 Task initialize(60, TASK_FOREVER, &initSensors);
 Task sample(60, TASK_FOREVER, &readDataSamples);
-Task _log(180, TASK_FOREVER, &logData);
+//Task _log(180, TASK_FOREVER, &logData);
 Task heartbeat(5, TASK_FOREVER, &flashHeartbeat);
 
 Scheduler runner;
@@ -183,47 +183,42 @@ long getNextTaskTEMP() {
   if (runner.timeUntilNextIteration(sample) < minTime) {
     minTime = runner.timeUntilNextIteration(sample);
   }
-  if (runner.timeUntilNextIteration(_log) < minTime) {
-    minTime = runner.timeUntilNextIteration(_log);
-  }
+  //if (runner.timeUntilNextIteration(_log) < minTime) {
+  //  minTime = runner.timeUntilNextIteration(_log);
+  //}
   if (runner.timeUntilNextIteration(heartbeat) < minTime) {
     minTime = runner.timeUntilNextIteration(heartbeat);
   }
-
   return minTime;
 }
 
+/*
 void initializeCallback() {
 //  oled.clear();
 //  oled.setCursor(0,0);
-  
   Serial.print("Initializing ");
   Serial.println(_TASK_TIME_FUNCTION());
-
 //  oled.print("Init: ");
 //  oled.println(_TASK_TIME_FUNCTION());
 //  oled.print("Next task: ");
 //  oled.println(getNextTaskTEMP());
 //  oled.display();
-
   Serial.print("The time to the next task is: ");
   Serial.println(getNextTaskTEMP());
 }
+*/
 
+/*
 void sampleCallback() {
 //  oled.clear();
 //  oled.setCursor(0,0);
-  
   Serial.print("Sampling ");
   Serial.println(_TASK_TIME_FUNCTION());
-
   Serial.print("The time to the next task is: ");
   Serial.println(getNextTaskTEMP());
-
   long alarmtime = _TASK_TIME_FUNCTION() + getNextTaskTEMP() - 3;
   Serial.print("We are setting the alarm to ");
   Serial.println(alarmtime);
-
 //  oled.print("Sampling: ");
 //  oled.println(_TASK_TIME_FUNCTION());
 //  oled.print("Next task: ");
@@ -231,26 +226,23 @@ void sampleCallback() {
 //  oled.print("Alarm: ");
 //  oled.println(alarmtime);
 //  oled.display();
-  
   DateTime dt = DateTime(alarmtime);
   setInterruptTimeoutTEMP(dt); 
   standbyTEMP(); 
 }
+*/
 
+/*
 void logCallback() {
 //  oled.clear();
 //  oled.setCursor(0,0);
-
   Serial.print("Logging ");
   Serial.println(_TASK_TIME_FUNCTION());
-  
   Serial.print("The time to the next task is: ");
   Serial.println(getNextTaskTEMP()); 
-
   long alarmtime = _TASK_TIME_FUNCTION() + getNextTaskTEMP() - 3;
   Serial.print("We are setting the alarm to ");
   Serial.println(alarmtime);
-
 //  oled.print("Logging: ");
 //  oled.println(_TASK_TIME_FUNCTION());
 //  oled.print("Next task: ");
@@ -258,15 +250,15 @@ void logCallback() {
 //  oled.print("Alarm: ");
 //  oled.println(alarmtime);
 //  oled.display();
-  
   DateTime dt = DateTime(alarmtime);
   setInterruptTimeoutTEMP(dt);
   standbyTEMP();
 }
+*/
 
 
 /* setup and loop */
-void setup() {
+void _setup() {
     Watchdog.enable();
     /* This is causing lock-up. Need to do further research into low power modes
        on the Cortex M0 */
@@ -274,12 +266,10 @@ void setup() {
     // oled.displayDateTime();
     unsigned long _start = millis();
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
-
     #ifdef TEST
     aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
     return;
     #endif
-    
 //    setupGPS();
 //    setupClocks();
     oled.init();
@@ -287,8 +277,6 @@ void setup() {
     if (ALWAYS_LOG || Serial) {
         setupLogging();
     }
-
-
     // Clock set up
     static volatile int buttonHeld = !digitalRead(BUTTON_A);
     bool state = false;
@@ -307,12 +295,9 @@ void setup() {
         }
       }
     }
-
     setupGPS();
     setupClocks();
     setStartTime();
-    
-    
     logln(F("begin setup .."));
     pinMode(LED_BUILTIN, OUTPUT);
     digitalWrite(LED_BUILTIN, LOW);
@@ -332,20 +317,17 @@ void setup() {
     logln(F(".. setup complete"));
     printCurrentTime();
     oled.endDisplayStartup();
-
     // Task Setup
     Serial.print("Start time: ");
     Serial.println(_TASK_TIME_FUNCTION());
-
     runner.init();
     Serial.println("Initialized scheduler");
-
     runner.addTask(initialize);
     Serial.println("added initialize");
     runner.addTask(sample);
     Serial.println("added sample");
-    runner.addTask(_log);
-    Serial.println("added log");
+    //runner.addTask(_log);
+    //Serial.println("added log");
     runner.addTask(heartbeat);
     Serial.println("added heartbeat");
     int wait_time = 0;
@@ -358,22 +340,81 @@ void setup() {
     Serial.println("Enabled initialize");
     sample.enableDelayed(7 + wait_time);
     Serial.println("Enabled sample with 7 second delay");
-    _log.enableDelayed(207 + wait_time); // 207 seconds to start after 3 minutes and then 20 seconds after sample
-    Serial.println("Enabled log with 20 second delay to occur every 3 minutes");
+    //_log.enableDelayed(207 + wait_time); // 207 seconds to start after 3 minutes and then 20 seconds after sample
+    //Serial.println("Enabled log with 20 second delay to occur every 3 minutes");
     heartbeat.enableDelayed(wait_time);
     Watchdog.disable();
-
     nodeId(config.node_id);
     if (config.node_id == 1) isCollector = true;
     setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
 }
 
-void loop() {
-    #ifdef TEST
-    aunit::TestRunner::run();
-    return;
-    #endif
 
+void custom_onReceive(int packetSize)
+{
+    static uint8_t route_buffer[MAX_ROUTE_SIZE];
+    static uint8_t msg_buffer[255];
+    int to = LoRa.read();
+    int from = LoRa.read();
+    int dest = LoRa.read();
+    int seq = LoRa.read();
+    int type = LoRa.read();
+    uint32_t ts = LoRa.read() << 24 | LoRa.read() << 16 | LoRa.read() << 8 | LoRa.read();
+    size_t route_idx_ = 0;
+    size_t msg_idx_ = 0;
+    print("REC'D: TO: %d; FROM: %d; DEST: %d; SEQ: %d; TYPE: %d; RSSI: %d; ts: %u",
+        to, from, dest, seq, type, LoRa.packetRssi(), ts);
+    print("; ROUTE:");
+    while (LoRa.available()) {
+        uint8_t node = LoRa.read();
+        if (node == 0) break;
+        route_buffer[route_idx_++] = node;
+        print(" %d", route_buffer[route_idx_-1]);
+    }
+    println("");
+    println("SNR: %f; FRQERR: %f", LoRa.packetSnr(), LoRa.packetFrequencyError());
+    while (LoRa.available()) {
+        msg_buffer[msg_idx_++] = LoRa.read();
+    }
+    handlePacket(to, from, dest, seq, type, ts, route_buffer, route_idx_, msg_buffer, msg_idx_);
+}
+
+void custom_setupLoRa(int csPin, int resetPin, int irqPin)
+{
+    LoRa.setPins(csPin, resetPin, irqPin);
+    if (!LoRa.begin(frequency)) {
+        println("LoRa init failed.");
+        while(true);
+    }
+    LoRa.enableCrc();
+    LoRa.onReceive(custom_onReceive);
+    LoRa.receive();
+}
+
+void setup() {
+    rtcz.begin();
+    Watchdog.enable();
+    unsigned long _start = millis();
+    while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
+    config.loadConfig();
+    nodeId(config.node_id);
+    setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    runner.init();
+    runner.addTask(heartbeat);
+    runner.addTask(initialize);
+    runner.addTask(sample);
+    heartbeat.enable();
+    initialize.enable();
+    sample.enableDelayed(7);
+    Watchdog.disable();
+}
+
+void loop() {
+    //#ifdef TEST
+    //aunit::TestRunner::run();
+    //return;
+    //#endif
+    //Watchdog.enable();
     runner.execute();
 //    if (oled.isOn()) {
 //        updateClock();
