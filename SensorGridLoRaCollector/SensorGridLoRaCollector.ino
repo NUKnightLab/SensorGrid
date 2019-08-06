@@ -253,7 +253,6 @@ void loop() {
         print(".");
         tick_time = millis() + 1000;
     }
-
     static unsigned long timeout = 0;
     static uint8_t seq = 0;
     if (isCollector && runEvery()) collectingData(true);
@@ -270,7 +269,6 @@ void loop() {
         } else {
             collectingPacketId(collectingPacketId() - 1);
             if (collectingPacketId() == 0) {
-                // send collected node data to the API
                 println("***** SEND DATA TO API *****");
                 int msg_length = 0;
                 for (int i=0; i<numBatches(0); i++) {
@@ -300,14 +298,12 @@ void loop() {
                     client.print("Content-Length: ");
                     client.println(msg_length);
                     client.println();
-                    
                 }
                 client.print("{ \"data\": [");
                 for (int i=0; i<numBatches(0); i++) {
                     char *batch = (char*)getBatch(i);
                     print(batch);
                     client.print(batch);
-                    //for (int j=0; j<10; j++) print("%c", batch[j]);
                     if (i < numBatches(0)-1) {
                         client.print(",");
                     }
@@ -322,13 +318,11 @@ void loop() {
                 if (wifi_present){
                     WiFi.end();
                 }
-
                 clearData();
                 collectingNodeIndex(collectingNodeIndex() + 1);
             }
             if (collectingNodeIndex() >= sizeof(nodes)) {
                 for (int i=0; i<sizeof(nodes); i++) {
-                    // send shutdown
                     LoRa.flush();
                     LoRa.idle();
                     LoRa.beginPacket();
@@ -348,7 +342,6 @@ void loop() {
                 collectingPacketId(1);
                 collectingData(false);
                 waitingPacket(false);
-                // TODO: send standby
                 return;
             }
             println("prefetch collection state: collecting: %d, waiting: %d, node idx: %d, packet: %d",
@@ -374,9 +367,7 @@ void loop() {
             LoRa.write(node_id);
             LoRa.write(++++seq);
             LoRa.write(PACKET_TYPE_SENDDATA);
-
             writeTimestamp();
-
             LoRa.write(route, route_size);
             LoRa.write(0); // end route
             LoRa.write(collectingPacketId()); // packet id
@@ -384,18 +375,6 @@ void loop() {
             timeout = millis() + 10000;
             println("set timeout to: %d", timeout);
             LoRa.receive();
-            //Serial.println("Sending broadcast standby");
-            //LoRa.idle();
-            //LoRa.beginPacket();
-            //LoRa.write(255);
-            //LoRa.write(NODE_ID);
-            //LoRa.write(255);
-            //LoRa.write(++++seq);
-            //LoRa.write(PACKET_TYPE_STANDBY);
-            //LoRa.write(0);
-            //LoRa.write(20); // 20 seconds
-            //LoRa.endPacket();
-            //LoRa.receive();
         }
     }
 }
