@@ -278,7 +278,6 @@ void setup()
     LoRa.onReceive(onReceive);
     LoRa.receive();
     rtcz.begin();
-
     /** setup wifi **/
     if (config.wifi_password) {
         Serial.print("Attempting to connect to Wifi: ");
@@ -351,14 +350,55 @@ void sendDataToApi()
     collectingNodeIndex(collectingNodeIndex() + 1);
 }
 
-void loop() {
+void tick()
+{
     static unsigned long tick_time = 0;
     if (millis() > tick_time) {
         print(".");
         tick_time = millis() + 1000;
     }
+}
+
+static uint8_t seq = 0;
+
+void sendCollectPacket(uint8_t node_id, uint8_t packet_id)
+{
+    println("prefetch collection state: collecting: %d, waiting: %d, node idx: %d, packet: %d",
+        collectingData(), waitingPacket(), collectingNodeIndex(), packet_id);
+    waitingPacket(true);
+    //uint8_t node_id = nodes[collectingNodeIndex()];
+    uint8_t *route = routes[node_id];
+    uint8_t route_size = 0;
+    while (route_size < sizeof(route) && route[route_size] > 0) route_size++;
+    Serial.print("Fetching data from: ");
+    Serial.print(node_id);
+    Serial.print("; ROUTE: ");
+    for (int j=0; j<route_size; j++) {
+        Serial.print(route[j]);
+        Serial.print(" ");
+    }
+    Serial.println("");
+    LoRa.flush();
+    LoRa.idle();
+    LoRa.beginPacket();
+    LoRa.write(route[1]);
+    LoRa.write(nodeId());
+    LoRa.write(node_id);
+    LoRa.write(++++seq);
+    LoRa.write(PACKET_TYPE_SENDDATA);
+    writeTimestamp();
+    LoRa.write(route, route_size);
+    LoRa.write(0); // end route
+    LoRa.write(packet_id); // packet id
+    LoRa.endPacket();
+    //timeout = millis() + 10000;
+    //println("set timeout to: %d", timeout);
+    LoRa.receive();
+}
+
+void loop() {
+    tick();
     static unsigned long timeout = 0;
-    static uint8_t seq = 0;
     if (isCollector && runEvery()) collectingData(true);
     if (collectingData()) {
         if (waitingPacket()) {
@@ -450,6 +490,10 @@ void loop() {
                 waitingPacket(false);
                 return;
             }
+
+            uint8_t node_id = nodes[collectingNodeIndex()];
+            sendCollectPacket(node_id, collectingPacketId());
+            /*
             println("prefetch collection state: collecting: %d, waiting: %d, node idx: %d, packet: %d",
                 collectingData(), waitingPacket(), collectingNodeIndex(), collectingPacketId());
             waitingPacket(true);
@@ -481,6 +525,8 @@ void loop() {
             timeout = millis() + 10000;
             println("set timeout to: %d", timeout);
             LoRa.receive();
+            */
+
         }
     }
 }
