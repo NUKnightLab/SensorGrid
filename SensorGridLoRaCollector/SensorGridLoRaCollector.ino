@@ -27,6 +27,7 @@ uint8_t routes[255][6] = {
 
 static unsigned long previousMillis = 0;
 static unsigned long interval = 60000;
+static uint8_t seq = 0;
 
 bool runEvery()
 {
@@ -151,15 +152,45 @@ bool scheduleDataSample(unsigned long interval)
     return false;
 }
 
+void sendCollectPacket(uint8_t node_id, uint8_t packet_id)
+{
+    println("prefetch collection state: collecting: %d, waiting: %d, node idx: %d, packet: %d",
+        collectingData(), waitingPacket(), collectingNodeIndex(), packet_id);
+    waitingPacket(true);
+    //uint8_t node_id = nodes[collectingNodeIndex()];
+    uint8_t *route = routes[node_id];
+    uint8_t route_size = 0;
+    while (route_size < sizeof(route) && route[route_size] > 0) route_size++;
+    Serial.print("Fetching data from: ");
+    Serial.print(node_id);
+    Serial.print("; ROUTE: ");
+    for (int j=0; j<route_size; j++) {
+        Serial.print(route[j]);
+        Serial.print(" ");
+    }
+    Serial.println("");
+    LoRa.flush();
+    LoRa.idle();
+    LoRa.beginPacket();
+    LoRa.write(route[1]);
+    LoRa.write(nodeId());
+    LoRa.write(node_id);
+    LoRa.write(++++seq);
+    LoRa.write(PACKET_TYPE_SENDDATA);
+    writeTimestamp();
+    LoRa.write(route, route_size);
+    LoRa.write(0); // end route
+    LoRa.write(packet_id); // packet id
+    LoRa.endPacket();
+    //timeout = millis() + 10000;
+    //println("set timeout to: %d", timeout);
+    LoRa.receive();
+}
+
 void collector_handleDataMessage(uint8_t from_node, uint8_t *message, size_t msg_size)
 {
-    /**
-     * If we asked for packet 0, then the actual packet we were waiting for is whatever
-     * the node says it is.
-     */
-    println("Collecting packet: %d", collectingPacketId());
-    if (collectingPacketId() == 0) collectingPacketId(message[0]);
-    print("NODE: %d; PACKET: %d; MESSAGE:", from_node, message[0]);
+    uint8_t packet_id = message[0];
+    print("NODE: %d; PACKET: %d; MESSAGE:", from_node, packet_id);
     for (uint8_t i=1; i<msg_size; i++) {
         //print(" %f", (float)message[i] / 10.0);
         print("%c", message[i]);
@@ -172,7 +203,16 @@ void collector_handleDataMessage(uint8_t from_node, uint8_t *message, size_t msg
     println("");
     waitingPacket(false);
     println("collection state: collecting: %d, waiting: %d, node idx: %d, packet: %d",
-        collectingData(), waitingPacket(), collectingNodeIndex(), collectingPacketId());
+        collectingData(), waitingPacket(), collectingNodeIndex(), packet_id);
+    if (packet_id == 1) {
+        sendDataToApi();
+        if (collectingNodeIndex() >= sizeof(nodes)) {
+            sendStandby();
+            return;
+        }
+    }
+    uint8_t node_id = nodes[collectingNodeIndex()];
+    sendCollectPacket(node_id, packet_id--);
 }
 
 int collector_handlePacket(int to, int from, int dest, int seq, int packetType, uint32_t timestamp, uint8_t *route, size_t route_size, uint8_t *message, size_t msg_size, int topology)
@@ -359,42 +399,6 @@ void tick()
     }
 }
 
-static uint8_t seq = 0;
-
-void sendCollectPacket(uint8_t node_id, uint8_t packet_id)
-{
-    println("prefetch collection state: collecting: %d, waiting: %d, node idx: %d, packet: %d",
-        collectingData(), waitingPacket(), collectingNodeIndex(), packet_id);
-    waitingPacket(true);
-    //uint8_t node_id = nodes[collectingNodeIndex()];
-    uint8_t *route = routes[node_id];
-    uint8_t route_size = 0;
-    while (route_size < sizeof(route) && route[route_size] > 0) route_size++;
-    Serial.print("Fetching data from: ");
-    Serial.print(node_id);
-    Serial.print("; ROUTE: ");
-    for (int j=0; j<route_size; j++) {
-        Serial.print(route[j]);
-        Serial.print(" ");
-    }
-    Serial.println("");
-    LoRa.flush();
-    LoRa.idle();
-    LoRa.beginPacket();
-    LoRa.write(route[1]);
-    LoRa.write(nodeId());
-    LoRa.write(node_id);
-    LoRa.write(++++seq);
-    LoRa.write(PACKET_TYPE_SENDDATA);
-    writeTimestamp();
-    LoRa.write(route, route_size);
-    LoRa.write(0); // end route
-    LoRa.write(packet_id); // packet id
-    LoRa.endPacket();
-    //timeout = millis() + 10000;
-    //println("set timeout to: %d", timeout);
-    LoRa.receive();
-}
 
 
 void sendStandby()
@@ -435,16 +439,17 @@ void loop() {
                 waitingPacket(false);
             }
         } else {
-            collectingPacketId(collectingPacketId() - 1);
-            if (collectingPacketId() == 0) {
-                sendDataToApi();
-            }
-            if (collectingNodeIndex() >= sizeof(nodes)) {
-                sendStandby();
-                return;
-            }
-            uint8_t node_id = nodes[collectingNodeIndex()];
-            sendCollectPacket(node_id, collectingPacketId());
+            sendCollectPacket(2, 0);
+            //collectingPacketId(collectingPacketId() - 1);
+            //if (collectingPacketId() == 0) {
+            //    sendDataToApi();
+            //}
+            //if (collectingNodeIndex() >= sizeof(nodes)) {
+            //    sendStandby();
+            //    return;
+            //}
+            //uint8_t node_id = nodes[collectingNodeIndex()];
+            //sendCollectPacket(node_id, collectingPacketId());
         }
     }
 }
