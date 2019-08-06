@@ -413,59 +413,6 @@ void loop() {
             collectingPacketId(collectingPacketId() - 1);
             if (collectingPacketId() == 0) {
                 sendDataToApi();
-                /*
-                println("***** SEND DATA TO API *****");
-                int msg_length = 0;
-                for (int i=0; i<numBatches(0); i++) {
-                    char *batch = (char*)getBatch(i);
-                    msg_length += strlen(batch);
-                    if (i < numBatches(0)-1) {
-                        msg_length++;
-                    }
-                }
-                msg_length += 13;
-                if (wifi_present) {
-                    Serial.print("Attempting to connect to Wifi: ");
-                    Serial.print(config.wifi_ssid);
-                    Serial.print(" with password: ");
-                    Serial.println(config.wifi_password);
-                    connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-                    //WiFi.maxLowPowerMode();
-                    client.print("POST /networks/");
-                    //client.print(config.network_id);
-                    client.print(1);
-                    client.print("/nodes/");
-                    //client.print(nodes[collectingNodeIndex()]);
-                    client.print(2);
-                    client.println("/data/ HTTP/1.1");
-                    client.println("Host: sensorgridapi.knilab.com");
-                    client.println("Content-Type: application/json");
-                    client.print("Content-Length: ");
-                    client.println(msg_length);
-                    client.println();
-                }
-                client.print("{ \"data\": [");
-                for (int i=0; i<numBatches(0); i++) {
-                    char *batch = (char*)getBatch(i);
-                    print(batch);
-                    client.print(batch);
-                    if (i < numBatches(0)-1) {
-                        client.print(",");
-                    }
-                }
-                client.println("]}");
-                while (!client.available()) {}
-                while (client.available()) {
-                    char c = client.read();
-                    Serial.write(c);
-                }
-                println("**********");
-                if (wifi_present){
-                    WiFi.end();
-                }
-                clearData();
-                collectingNodeIndex(collectingNodeIndex() + 1);
-                */
             }
             if (collectingNodeIndex() >= sizeof(nodes)) {
                 for (int i=0; i<sizeof(nodes); i++) {
@@ -490,43 +437,8 @@ void loop() {
                 waitingPacket(false);
                 return;
             }
-
             uint8_t node_id = nodes[collectingNodeIndex()];
             sendCollectPacket(node_id, collectingPacketId());
-            /*
-            println("prefetch collection state: collecting: %d, waiting: %d, node idx: %d, packet: %d",
-                collectingData(), waitingPacket(), collectingNodeIndex(), collectingPacketId());
-            waitingPacket(true);
-            uint8_t node_id = nodes[collectingNodeIndex()];
-            uint8_t *route = routes[node_id];
-            uint8_t route_size = 0;
-            while (route_size < sizeof(route) && route[route_size] > 0) route_size++;
-            Serial.print("Fetching data from: ");
-            Serial.print(node_id);
-            Serial.print("; ROUTE: ");
-            for (int j=0; j<route_size; j++) {
-                Serial.print(route[j]);
-                Serial.print(" ");
-            }
-            Serial.println("");
-            LoRa.flush();
-            LoRa.idle();
-            LoRa.beginPacket();
-            LoRa.write(route[1]);
-            LoRa.write(nodeId());
-            LoRa.write(node_id);
-            LoRa.write(++++seq);
-            LoRa.write(PACKET_TYPE_SENDDATA);
-            writeTimestamp();
-            LoRa.write(route, route_size);
-            LoRa.write(0); // end route
-            LoRa.write(collectingPacketId()); // packet id
-            LoRa.endPacket();
-            timeout = millis() + 10000;
-            println("set timeout to: %d", timeout);
-            LoRa.receive();
-            */
-
         }
     }
 }
