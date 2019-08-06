@@ -350,6 +350,58 @@ void _setup() {
 }
 
 
+int custom_handlePacket(int to, int from, int dest, int seq, int packetType, uint32_t timestamp, uint8_t *route, size_t route_size, uint8_t *message, size_t msg_size, int topology)
+{
+    static int last_seq = 0;
+    if (seq == last_seq) {
+        return MESSAGE_CODE_DUPLICATE_SEQUENCE;
+    }
+    if (to != nodeId() && to != 255) return MESSAGE_CODE_WRONG_ADDRESS;
+    if (!topologyTest(topology, to, from)) return MESSAGE_CODE_TOPOLOGY_FAIL;
+    last_seq = seq;
+    uint8_t packet_id;
+    if (dest == nodeId()) {
+        switch (packetType) {
+            case PACKET_TYPE_SENDDATA:
+                packet_id = message[0];
+                /* sync time with upstream requests */
+                rtcz.setEpoch(timestamp);
+                sendDataPacket(packet_id, ++last_seq, route, route_size); // TODO: get packet # request from message
+                return MESSAGE_CODE_SENT_NEXT_DATA_PACKET;
+            case PACKET_TYPE_DATA:
+                handleDataMessage(route[0], message, msg_size);
+                return MESSAGE_CODE_RECEIVED_DATA_PACKET;
+            case PACKET_TYPE_STANDBY:
+                standby(message[0]); // up to 255 seconds. TODO, use 2 bytes for longer timeouts
+                return MESSAGE_CODE_STANDBY;
+            case PACKET_TYPE_ECHO:
+                if (!isCollector) {
+                    handleEchoMessage(++last_seq, route, route_size, message, msg_size);
+                } else {
+                    println("MESSAGE:");
+                    for (uint8_t i=0; i<msg_size; i++) {
+                        print("%d ", message[i]);
+                    }
+                    println("");
+                }
+        }
+    } else if (dest == 255) { // broadcast message
+        switch (packetType) {
+            case PACKET_TYPE_STANDBY:
+                if (!isCollector) {
+                    println("REC'd BROADCAST STANDBY FOR: %d", message[0]);
+                    routeMessage(255, last_seq, PACKET_TYPE_STANDBY, route, route_size, message, msg_size);
+                    standby(message[0]);
+                }
+                return MESSAGE_CODE_STANDBY;
+        }
+    } else { // route this message
+        routeMessage(dest, last_seq, packetType, route, route_size, message, msg_size);
+        return MESSAGE_CODE_ROUTED;
+    }
+    return MESSAGE_CODE_NONE;
+}
+
 void custom_onReceive(int packetSize)
 {
     static uint8_t route_buffer[MAX_ROUTE_SIZE];
@@ -376,7 +428,7 @@ void custom_onReceive(int packetSize)
     while (LoRa.available()) {
         msg_buffer[msg_idx_++] = LoRa.read();
     }
-    handlePacket(to, from, dest, seq, type, ts, route_buffer, route_idx_, msg_buffer, msg_idx_);
+    custom_handlePacket(to, from, dest, seq, type, ts, route_buffer, route_idx_, msg_buffer, msg_idx_, 0);
 }
 
 void custom_setupLoRa(int csPin, int resetPin, int irqPin)
