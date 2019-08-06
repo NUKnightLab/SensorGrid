@@ -396,6 +396,31 @@ void sendCollectPacket(uint8_t node_id, uint8_t packet_id)
     LoRa.receive();
 }
 
+
+void sendStandby()
+{
+    for (int i=0; i<sizeof(nodes); i++) {
+        LoRa.flush();
+        LoRa.idle();
+        LoRa.beginPacket();
+        LoRa.write(routes[nodes[i]][1]);
+        LoRa.write(nodeId());
+        LoRa.write(nodes[i]);
+        LoRa.write(++++seq);
+        LoRa.write(PACKET_TYPE_STANDBY);
+        writeTimestamp();
+        LoRa.write(routes[nodes[i]], sizeof(routes[nodes[i]]));
+        LoRa.write(0); // end route
+        LoRa.write(nextCollection() / 1000);
+        LoRa.endPacket();
+        LoRa.receive();
+    }
+    collectingNodeIndex(-1);
+    collectingPacketId(1);
+    collectingData(false);
+    waitingPacket(false);
+}
+
 void loop() {
     tick();
     static unsigned long timeout = 0;
@@ -415,26 +440,7 @@ void loop() {
                 sendDataToApi();
             }
             if (collectingNodeIndex() >= sizeof(nodes)) {
-                for (int i=0; i<sizeof(nodes); i++) {
-                    LoRa.flush();
-                    LoRa.idle();
-                    LoRa.beginPacket();
-                    LoRa.write(routes[nodes[i]][1]);
-                    LoRa.write(nodeId());
-                    LoRa.write(nodes[i]);
-                    LoRa.write(++++seq);
-                    LoRa.write(PACKET_TYPE_STANDBY);
-                    writeTimestamp();
-                    LoRa.write(routes[nodes[i]], sizeof(routes[nodes[i]]));
-                    LoRa.write(0); // end route
-                    LoRa.write(nextCollection() / 1000);
-                    LoRa.endPacket();
-                    LoRa.receive();
-                }
-                collectingNodeIndex(-1);
-                collectingPacketId(1);
-                collectingData(false);
-                waitingPacket(false);
+                sendStandby();
                 return;
             }
             uint8_t node_id = nodes[collectingNodeIndex()];
