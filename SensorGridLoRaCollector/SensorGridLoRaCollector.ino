@@ -253,7 +253,7 @@ void collector_onReceive(int packetSize)
     while (LoRa.available()) {
         msg_buffer[msg_idx_++] = LoRa.read();
     }
-    handlePacket(to, from, dest, seq, type, ts, route_buffer, route_idx_, msg_buffer, msg_idx_);
+    collector_handlePacket(to, from, dest, seq, type, ts, route_buffer, route_idx_, msg_buffer, msg_idx_, 0);
 }
 
 void setup()
