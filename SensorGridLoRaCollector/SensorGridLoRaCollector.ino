@@ -307,7 +307,6 @@ void collector_handleDataMessage(uint8_t from_node, uint8_t *message, size_t msg
     char *batch = getCurrentBatch();
     if (packet_id == 1) { // TODO: be sure we received all available packets
         ready_to_post = from_node;
-        //LoRa.idle();
     } else {
         sendCollectPacket(from_node, --packet_id);
     }
@@ -453,7 +452,7 @@ void loop() {
     static uint8_t nodes_collected[255] = {0};
     tick();
     if (ready_to_post > 0) {
-        LoRa.sleep();
+        LoRa.idle();
         digitalWrite(config.RFM95_CS, HIGH);
         SPI.endTransaction();
         sendDataToApi(ready_to_post);
