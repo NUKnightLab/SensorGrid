@@ -459,6 +459,7 @@ void loop() {
         nodes_collected[ready_to_post] = 1;
         ready_to_post = 0;
         digitalWrite(config.RFM95_CS, LOW);
+        /* A fresh begin seems to be required for LoRa to recover the SPI bus from WiFi */
         if (!LoRa.begin(915E6)) {
             Serial.println("LoRa init failed");
             while(true);
