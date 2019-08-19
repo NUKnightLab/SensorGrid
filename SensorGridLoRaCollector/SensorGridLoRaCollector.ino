@@ -1,15 +1,10 @@
 #include <LoRa.h>
 #include "config.h"
-#include <WiFi101.h>
 #include <LoRaHarvest.h>
 #include <console.h>
 #include <DataManager.h>
+#include "wifi.h"
 
-#define WIFI_CS 8
-#define WIFI_IRQ 7
-#define WIFI_RST 4
-#define WIFI_EN 2
-#define NODE_ID 1
 
 extern "C" char *sbrk(int i);
 uint8_t ready_to_post = 0;
@@ -59,86 +54,6 @@ unsigned long nextCollection()
     return previousMillis + interval;
 }
 
-
-static WiFiClient client;
-//WiFiSSLClient client;
-
-static bool wifi_present = true;
-
-void printWiFiStatus() {
-    println("SSID: %s; IP: %s; RSSI: %l", WiFi.SSID(), WiFi.localIP(), WiFi.RSSI());
-  //Serial.print("SSID: ");
-  //Serial.println(WiFi.SSID());
-  //IPAddress ip = WiFi.localIP();
-  //Serial.print("IP Address: ");
-  //Serial.println(ip);
-    //println("IP Address: %s", WiFi.localIP())
-
-  // print the received signal strength:
-  //long rssi = WiFi.RSSI();
-  //Serial.print("signal strength (RSSI):");
-  //Serial.print(rssi);
-  //Serial.println(" dBm");
-}
-
-
-void connectToServer(WiFiClient& client, char ssid[], char pass[], char host[], int port) {
-    int status = WL_IDLE_STATUS;
-    // client;
-    //LoRa.sleep();
-    println("Setting pins CS: %d; IRQ: %d; RST: %d; EN: %d",
-        WIFI_CS, WIFI_IRQ, WIFI_RST, WIFI_EN);
-    WiFi.setPins(WIFI_CS, WIFI_IRQ, WIFI_RST, WIFI_EN);
-    println("End wifi");
-    WiFi.end();
-    println("Free ram: %d", FreeRam());
-    println("Begin wifi: ");
-    print(ssid);
-    print(" ");
-    println(pass);
-    status = WiFi.begin(ssid, pass);
-    println(".. set");
-    print("WiFi status: ");
-    println("%d", status);
-    if (WiFi.status() == WL_NO_SHIELD) {
-        Serial.println("WiFi shield not present");
-        // don't continue
-        while (true) {}
-    }
-    while (status!= WL_CONNECTED) {
-        Serial.print("Attempting to connect to SSID: ");
-        Serial.println(ssid);
-        Serial.print("Using password: ");
-        Serial.println(pass);
-        status = WiFi.begin(ssid, pass);
-        //delay(10000);  // wait 10 seconds for connection
-        Serial.println("Connected to WiFi");
-        printWiFiStatus();
-        Serial.print("\nStarting connection to ");
-        Serial.print(host); Serial.print(":"); Serial.println(port);
-        if (client.connect(host, port)) {
-            Serial.println("connected to server");
-        } else {
-            Serial.println("server connection failed");
-        }
-    }
-
-}
-
-void reconnectClient(WiFiClient &client, char* ssid)
-{
-    client.stop();
-    Serial.print("Reconnecting to ");
-    Serial.print(config.api_host);
-    Serial.print(":");
-    Serial.println(config.api_port);
-    if (client.connect(config.api_host, config.api_port)) {
-        Serial.println("connecting ...");
-    } else {
-        Serial.println("Failed to reconnect");
-    }
-}
-
 bool scheduleDataSample(unsigned long interval)
 {
     static unsigned long previousMillis = 0;
@@ -172,7 +87,7 @@ void sendCollectPacket(uint8_t node_id, uint8_t packet_id)
     LoRa.idle();
     LoRa.beginPacket();
     LoRa.write(route[1]);
-    LoRa.write(NODE_ID);
+    LoRa.write(config.node_id);
     LoRa.write(node_id);
     LoRa.write(++++seq);
     //LoRa.write(PACKET_TYPE_SENDDATA);
@@ -203,66 +118,35 @@ void sendDataToApi(uint8_t node_id)
     println("Free ram: %d", FreeRam());
     digitalWrite(WIFI_CS, LOW);
     if (true) {
-        //println("Connecting to WiFi SSID: %s; PW: %s; HOST: %s; PORT: %d",
-        //    config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-        //connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-        print("setting pins ..");
-        WiFi.setPins(WIFI_CS, WIFI_IRQ, WIFI_RST, WIFI_EN);
-        println(".. pins set");
-        int status = WL_IDLE_STATUS;
-        while (status!= WL_CONNECTED) {
-            Serial.print("Attempting to connect to SSID: ");
-            Serial.println(config.wifi_ssid);
-            Serial.print("Using password: ");
-            Serial.println(config.wifi_password);
-            status = WiFi.begin(config.wifi_ssid, config.wifi_password);
-            Serial.println("Connected to WiFi");
-            printWiFiStatus();
-            Serial.print("\nStarting connection");
-            Serial.print(config.api_host); Serial.print(":"); Serial.println(config.api_port);
-            if (client.connect(config.api_host, config.api_port)) {
-                Serial.println("connected to server");
-            } else {
-                Serial.println("server connection failed");
-            }
-        }
-        Serial.println(".. connected");
-        client.print("POST /networks/");
-        client.print(config.network_id);
-        client.print("/nodes/");
-        client.print(node_id);
-        client.println("/data/ HTTP/1.1");
-        client.print("Host: ");
-        client.println(config.api_host);
-        client.println("Content-Type: application/json");
-        client.print("Content-Length: ");
-        client.println(msg_length);
-        client.println();
+        connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+        printWiFi("POST /networks/");
+        printWiFi(config.network_id);
+        printWiFi("/nodes/");
+        printWiFi(node_id);
+        printlnWiFi("/data/ HTTP/1.1");
+        printWiFi("Host: ");
+        printlnWiFi(config.api_host);
+        printlnWiFi("Content-Type: application/json");
+        printWiFi("Content-Length: ");
+        printlnWiFi(msg_length);
+        printlnWiFi("");
         Serial.println(".. posted header");
     }
-    client.print("{ \"data\": [");
+    printWiFi("{ \"data\": [");
     for (int i=0; i<numBatches(0); i++) {
         char *batch = (char*)getBatch(i);
         print(batch);
-        client.print(batch);
+        printWiFi(batch);
         if (i < numBatches(0)-1) {
-            client.print(",");
+            printWiFi(",");
         }
     }
-    client.println("]}");
-    Serial.println("Receiving server response ..");
-    while (!client.available()) {}
-    while (client.available()) {
-        char c = client.read();
-        Serial.write(c);
-    }
-    println("********** done");
-    client.stop();
-    WiFi.end();
+    printlnWiFi("]}");
+    receiveWiFiResponse();
+    disconnectWiFi();
     digitalWrite(WIFI_CS, HIGH);
     SPI.endTransaction();
     clearData();
-    //collectingNodeIndex(collectingNodeIndex() + 1);
 }
 
 void sendStandby()
@@ -272,7 +156,7 @@ void sendStandby()
         LoRa.idle();
         LoRa.beginPacket();
         LoRa.write(routes[nodes[i]][1]);
-        LoRa.write(NODE_ID);
+        LoRa.write(config.node_id);
         LoRa.write(nodes[i]);
         LoRa.write(++++seq);
         LoRa.write(PACKET_TYPE_STANDBY);
@@ -316,13 +200,13 @@ int collector_handlePacket(int to, int from, int dest, int seq, int packetType, 
         return 1;
         //return MESSAGE_CODE_DUPLICATE_SEQUENCE;
     }
-    if (to != NODE_ID && to != 255) return 2;
+    if (to != config.node_id && to != 255) return 2;
     //if (to != config.node_id && to != 255) return MESSAGE_CODE_WRONG_ADDRESS;
     //if (to != nodeId() && to != 255) return MESSAGE_CODE_WRONG_ADDRESS;
     //if (!topologyTest(topology, to, from)) return MESSAGE_CODE_TOPOLOGY_FAIL;
     last_seq = seq;
     uint8_t packet_id;
-    if (dest == NODE_ID) {
+    if (dest == config.node_id) {
         switch (packetType) {
             //case PACKET_TYPE_SENDDATA:
             //    packet_id = message[0];
@@ -372,7 +256,7 @@ void collector_onReceive(int packetSize)
     static uint8_t route_buffer[MAX_ROUTE_SIZE];
     static uint8_t msg_buffer[255];
     int to = LoRa.read();
-    if (to != NODE_ID) return;
+    if (to != config.node_id) return;
     int from = LoRa.read();
     int dest = LoRa.read();
     int seq = LoRa.read();
@@ -413,26 +297,8 @@ void setup()
     LoRa.enableCrc();
     LoRa.onReceive(collector_onReceive);
     rtcz.begin();
-    WiFi.setPins(WIFI_CS, WIFI_IRQ, WIFI_RST, WIFI_EN);
-    int status = WL_IDLE_STATUS;
-    while (status!= WL_CONNECTED) {
-        Serial.print("Attempting to connect to SSID: ");
-        Serial.println(config.wifi_ssid);
-        Serial.print("Using password: ");
-        Serial.println(config.wifi_password);
-        status = WiFi.begin(config.wifi_ssid, config.wifi_password);
-        Serial.println("Connected to WiFi");
-        printWiFiStatus();
-        Serial.print("\nStarting connection to ");
-        Serial.print(config.api_host); Serial.print(":"); Serial.println(config.api_port);
-        if (client.connect(config.api_host, config.api_port)) {
-            Serial.println("connected to server");
-        } else {
-            Serial.println("server connection failed");
-        }
-    }
-    client.stop();
-    WiFi.end();
+    connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+    disconnectWiFi();
     LoRa.receive();
 }
 
