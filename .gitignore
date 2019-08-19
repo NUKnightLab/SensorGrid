@@ -1,4 +1,4 @@
-.platform.ini
+platformio.ini
 __pycache__
 *.pyc
 *.DS_Store

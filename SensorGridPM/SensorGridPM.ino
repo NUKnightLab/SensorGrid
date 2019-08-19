@@ -14,7 +14,6 @@
 #include <LoRaHarvest.h>
 
 #define SET_CLOCK false
-#define NOTEST
 
 WatchdogType Watchdog;
 
@@ -267,10 +266,6 @@ void _setup() {
     // oled.displayDateTime();
     unsigned long _start = millis();
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
-    #ifdef TEST
-    aunit::TestRunner::setVerbosity(aunit::Verbosity::kAll);
-    return;
-    #endif
 //    setupGPS();
 //    setupClocks();
     oled.init();
@@ -463,10 +458,6 @@ void setup() {
 }
 
 void loop() {
-    //#ifdef TEST
-    //aunit::TestRunner::run();
-    //return;
-    //#endif
     //Watchdog.enable();
     runner.execute();
 //    if (oled.isOn()) {

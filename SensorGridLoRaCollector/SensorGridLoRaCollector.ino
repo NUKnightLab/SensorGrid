@@ -1,7 +1,7 @@
 #include <LoRa.h>
 #include "config.h"
 #include <WiFi101.h>
-//#include <LoRaHarvest.h>
+#include <LoRaHarvest.h>
 #include <console.h>
 #include <DataManager.h>
 
@@ -10,8 +10,6 @@
 #define WIFI_RST 4
 #define WIFI_EN 2
 #define NODE_ID 1
-
-const int MAX_ROUTE_SIZE = 10;
 
 extern "C" char *sbrk(int i);
 uint8_t ready_to_post = 0;
@@ -68,20 +66,19 @@ static WiFiClient client;
 static bool wifi_present = true;
 
 void printWiFiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
+    println("SSID: %s; IP: %s; RSSI: %l", WiFi.SSID(), WiFi.localIP(), WiFi.RSSI());
+  //Serial.print("SSID: ");
+  //Serial.println(WiFi.SSID());
+  //IPAddress ip = WiFi.localIP();
+  //Serial.print("IP Address: ");
+  //Serial.println(ip);
+    //println("IP Address: %s", WiFi.localIP())
 
   // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
+  //long rssi = WiFi.RSSI();
+  //Serial.print("signal strength (RSSI):");
+  //Serial.print(rssi);
+  //Serial.println(" dBm");
 }
 
 
@@ -278,8 +275,8 @@ void sendStandby()
         LoRa.write(NODE_ID);
         LoRa.write(nodes[i]);
         LoRa.write(++++seq);
-        //LoRa.write(PACKET_TYPE_STANDBY);
-        LoRa.write(3);
+        LoRa.write(PACKET_TYPE_STANDBY);
+        //LoRa.write(3);
         collector_writeTimestamp();
         LoRa.write(routes[nodes[i]], sizeof(routes[nodes[i]]));
         LoRa.write(0); // end route
