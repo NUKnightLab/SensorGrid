@@ -96,6 +96,7 @@ void setup()
     while ( !Serial && (millis() - _start) < 10000 ) {}
     loadConfig();
     nodeId(config.node_id);
+    isCollector(true);
     println("Config loaded");
     println("Configuring LoRa with pins: CS: %d; RST: %d; IRQ: %d",
         config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
