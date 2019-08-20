@@ -106,7 +106,7 @@ void setup()
         while(true);
     }
     LoRa.enableCrc();
-    LoRa.onReceive(collector_onReceive);
+    LoRa.onReceive(onReceive);
     rtcz.begin();
     connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
     disconnectWiFi();
