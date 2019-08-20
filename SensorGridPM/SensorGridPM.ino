@@ -341,11 +341,11 @@ void _setup() {
     heartbeat.enableDelayed(wait_time);
     Watchdog.disable();
     nodeId(config.node_id);
-    if (config.node_id == 1) isCollector = true;
     setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
 }
 
 
+/*
 int custom_handlePacket(int to, int from, int dest, int seq, int packetType, uint32_t timestamp, uint8_t *route, size_t route_size, uint8_t *message, size_t msg_size, int topology)
 {
     static int last_seq = 0;
@@ -360,7 +360,6 @@ int custom_handlePacket(int to, int from, int dest, int seq, int packetType, uin
         switch (packetType) {
             case PACKET_TYPE_SENDDATA:
                 packet_id = message[0];
-                /* sync time with upstream requests */
                 rtcz.setEpoch(timestamp);
                 sendDataPacket(packet_id, ++last_seq, route, route_size); // TODO: get packet # request from message
                 return MESSAGE_CODE_SENT_NEXT_DATA_PACKET;
@@ -397,7 +396,9 @@ int custom_handlePacket(int to, int from, int dest, int seq, int packetType, uin
     }
     return MESSAGE_CODE_NONE;
 }
+*/
 
+/*
 void custom_onReceive(int packetSize)
 {
     static uint8_t route_buffer[MAX_ROUTE_SIZE];
@@ -426,7 +427,9 @@ void custom_onReceive(int packetSize)
     }
     custom_handlePacket(to, from, dest, seq, type, ts, route_buffer, route_idx_, msg_buffer, msg_idx_, 0);
 }
+*/
 
+/*
 void custom_setupLoRa(int csPin, int resetPin, int irqPin)
 {
     LoRa.setPins(csPin, resetPin, irqPin);
@@ -438,6 +441,7 @@ void custom_setupLoRa(int csPin, int resetPin, int irqPin)
     LoRa.onReceive(custom_onReceive);
     LoRa.receive();
 }
+*/
 
 void setup() {
     rtcz.begin();
