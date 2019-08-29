@@ -6,7 +6,7 @@
 
 // #include <Adafruit_SleepyDog.h>
 //#include <RTCZero.h>
-#include <RTClib.h>
+//#include <RTClib.h>
 #include <KnightLab_ArduinoUtils.h>
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>

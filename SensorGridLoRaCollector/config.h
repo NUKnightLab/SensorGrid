@@ -5,7 +5,7 @@
 #define KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
 
 #include <RTCZero.h>
-#include <RTClib.h>
+//#include <RTClib.h>
 #include <KnightLab_ArduinoUtils.h>
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>

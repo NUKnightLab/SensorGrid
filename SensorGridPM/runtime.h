@@ -15,7 +15,9 @@ static SdFat SD;
 //extern void setSampleTimeout();
 extern void recordDataSamples();
 //extern void setCommunicateDataTimeout();
-extern void flashHeartbeat();
+//extern void flashHeartbeat();
+extern void flashHeartbeatOn();
+extern void flashHeartbeatOff();
 extern void recordBatteryLevel();
 //extern void recordTempAndHumidity();
 extern void recordUptime();
@@ -24,7 +26,8 @@ extern void recordUptime();
 //extern uint32_t getNextCollectionTime();
 // extern void readDataSamples();
 extern bool checkBatteryLevel();
-void setStartTime();
+void setupRunner();
+void runRunner();
 
 /* data history */
 struct DataSample {

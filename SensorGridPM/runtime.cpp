@@ -9,6 +9,7 @@
 #include <LoRa.h>
 #include <DataManager.h>
 #include <LoRaHarvest.h>
+#include <TaskScheduler.h>
 
 #define DATE_STRING_SIZE 11
 
@@ -16,10 +17,66 @@ static uint8_t msg_buf[140] = {0};
 static Message *msg = reinterpret_cast<Message*>(msg_buf);
 StaticJsonBuffer<200> json_buffer;
 JsonArray& data_array = json_buffer.createArray();
-static uint32_t system_start_time;
+
+Task initialize(60, TASK_FOREVER, &initSensors);
+Task sample(60, TASK_FOREVER, &readDataSamples);
+//Task _log(180, TASK_FOREVER, &logData);
+Task heartbeatOn(5, TASK_FOREVER, &flashHeartbeatOn);
+Task heartbeatOff(5, TASK_FOREVER, &flashHeartbeatOff);
+Scheduler runner;
+
 
 DataSample *datasample_head = NULL;
 DataSample *datasample_tail = NULL;
+
+
+void syncTime(uint32_t timestamp) {
+    uint32_t uptime = rtcz.getEpoch() - systemStartTime();
+    runner.disableAll();
+    rtcz.setEpoch(timestamp);
+    systemStartTime(timestamp - uptime);
+    runner.enableAll();
+}
+
+long nextIterationTime(Task &aTask)
+{
+    return runner.timeUntilNextIteration(aTask);
+}
+
+long getNextTaskTEMP() {
+  long minTime = nextIterationTime(heartbeatOn);
+  if (nextIterationTime(heartbeatOff) < minTime) {
+      minTime = nextIterationTime(heartbeatOff);
+  }
+  if (nextIterationTime(initialize) < minTime) {
+      minTime = nextIterationTime(initialize);
+  }
+  //if (runner.timeUntilNextIteration(initialize) < minTime) {
+  //  minTime = runner.timeUntilNextIteration(initialize);
+  //}
+  if (nextIterationTime(sample) < minTime) {
+      minTime = nextIterationTime(sample);
+  }
+  //if (runner.timeUntilNextIteration(sample) < minTime) {
+  //  minTime = runner.timeUntilNextIteration(sample);
+  //}
+  //if (runner.timeUntilNextIteration(_log) < minTime) {
+  //  minTime = runner.timeUntilNextIteration(_log);
+  //}
+  //if (runner.timeUntilNextIteration(heartbeat) < minTime) {
+  //  minTime = runner.timeUntilNextIteration(heartbeat);
+  //}
+  //if (nextIterationTime(heartbeatOn) < minTime) {
+  //    minTime = nextIterationTime(heartbeatOn);
+  //}
+  //if (runner.timeUntilNextIteration(heartbeatOn) < minTime) {
+  //  minTime = runner.timeUntilNextIteration(heartbeatOn);
+  //}
+  //if (runner.timeUntilNextIteration(heartbeatOff) < minTime) {
+  //  minTime = runner.timeUntilNextIteration(heartbeatOff);
+  //}
+  return minTime;
+}
 
 DataSample *appendData() {
     DataSample *new_sample = reinterpret_cast<DataSample*>(malloc(sizeof(DataSample)));
@@ -86,9 +143,9 @@ void setInterruptTimeoutSched(DateTime &datetime) {
 static void standbySched() {
     static bool standby_mode = true;
     if (DO_STANDBY) {
-      Watchdog.disable();
-      println("standbyMode: %d", standby_mode);
+      //println("standbyMode: %d", standby_mode);
       if (standby_mode) {
+          Watchdog.disable();
           rtcz.standbyMode();
       }
     } 
@@ -100,8 +157,6 @@ static void standbySched() {
 
 void initSensors() {
     Watchdog.enable();
-    Serial.print("Uptime: ");
-    Serial.println(millis());
     logln(F("Init sensor for data sampling"));
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     digitalWrite(12, HIGH); // turn on 5v power
@@ -196,15 +251,15 @@ void recordBatteryLevel() {
     println(".. done recording battery");
 }
 
-void setStartTime()
-{
-    system_start_time = rtcz.getEpoch();
-}
+
 
 void recordUptime() {
     println("recording uptime ..");
     uint32_t runtime = millis() / 1000;
-    uint32_t uptime = rtcz.getEpoch() - system_start_time;
+    uint32_t uptime = rtcz.getEpoch() - systemStartTime();
+    Serial.println(rtcz.getEpoch());
+    Serial.println(systemStartTime());
+    Serial.println(uptime);
     DataSample *sample = appendData();
     snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"runtime\":%lu,\"ts\":%lu}",
         config.node_id, uptime, runtime, rtcz.getEpoch());
@@ -313,4 +368,80 @@ void flashHeartbeat() {
     } else {
         print("Delay is only: %d", delay);
     }
+}
+
+void flashHeartbeatOn() {
+    Watchdog.enable();
+    digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
+    print(".");
+    //long delay = getNextTaskTEMP();
+    //if (delay > 2) {
+    //    long alarmtime = rtcz.getEpoch() + delay;
+    //    DateTime alarm = DateTime(alarmtime);
+    //    setInterruptTimeoutSched(alarm);
+    //    standbySched();
+    //}
+}
+
+void flashHeartbeatOff() {
+    Watchdog.enable();
+    digitalWrite(LED_BUILTIN, LOW);   // turn the LED on
+    long delay = getNextTaskTEMP();
+    if (delay > 2) {
+        println("current time: %d", rtcz.getEpoch());
+        long alarmtime = rtcz.getEpoch() + delay;
+        println("alarm time: %d", alarmtime);
+        DateTime alarm = DateTime(alarmtime);
+        print("setInterrupTimeoutSched delay: %d", delay);
+        setInterruptTimeoutSched(alarm);
+        standbySched();
+    }
+}
+
+void setupRunner()
+{
+    /*
+    Serial.print("Start time: ");
+    Serial.println(_TASK_TIME_FUNCTION());
+    runner.init();
+    Serial.println("Initialized scheduler");
+    runner.addTask(initialize);
+    Serial.println("added initialize");
+    runner.addTask(sample);
+    Serial.println("added sample");
+    //runner.addTask(_log);
+    //Serial.println("added log");
+    runner.addTask(heartbeatOn);
+    runner.addTask(heartbeatOff);
+    Serial.println("added heartbeat");
+    int wait_time = 0;
+    if (_TASK_TIME_FUNCTION() % 60 != 0){ // Will wait to start initialization on the minute
+      wait_time = 60 - (_TASK_TIME_FUNCTION() % 60);
+    }
+    Serial.print("Wait time: ");
+    Serial.println(wait_time);
+    initialize.enableDelayed(wait_time);
+    Serial.println("Enabled initialize");
+    sample.enableDelayed(7 + wait_time);
+    Serial.println("Enabled sample with 7 second delay");
+    */
+    runner.init();
+    //addRunnerTask(heartbeatOn);
+    //addRunnerTask(heartbeatOff);
+    //addRunnerTask(initialize);
+    //addRunnerTask(sample);
+    runner.addTask(heartbeatOn);
+    runner.addTask(heartbeatOff);
+    runner.addTask(initialize);
+    runner.addTask(sample);
+    heartbeatOn.enable();
+    heartbeatOff.enableDelayed(1);
+    initialize.enable();
+    sample.enableDelayed(7);
+    setTimeSyncFcn(syncTime);
+}
+
+void runRunner()
+{
+    runner.execute();
 }

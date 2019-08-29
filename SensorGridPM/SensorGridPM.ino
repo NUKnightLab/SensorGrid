@@ -5,11 +5,11 @@
  * 
  * Copyright 2018 Northwestern University
  */
-#include <KnightLab_GPS.h>
+//#include <KnightLab_GPS.h>
 #include "config.h"
 #include "runtime.h"
 #include "tests.h"
-#include <TaskScheduler.h>
+//#include <TaskScheduler.h>
 #include <LoRa.h>
 #include <LoRaHarvest.h>
 
@@ -80,7 +80,7 @@ void aButton_ISR() {
         oled.toggleDisplayState();
     }
     if (oled.isOn()) {
-      updateClock();
+      //updateClock(); // Temporarily removed
       oled.displayDateTime();
     } else {
       oled.clear();
@@ -101,6 +101,7 @@ void aButton_ISR() {
     */
 }
 
+/*
 void updateClock() {
     int gps_year = GPS.year;
     if (gps_year != 0 && gps_year != 80) {
@@ -112,6 +113,7 @@ void updateClock() {
     }
     setRTCz();
 }
+*/
 
 void setupSensors() {
     pinMode(12, OUTPUT);  // enable pin to HPM boost
@@ -147,19 +149,21 @@ void HardFault_Handler(void) {
 }
 
 // TASK STUFF
-Task& getNextTask();
+//Task& getNextTask();
 
 //void initializeCallback();
 //void sampleCallback();
 //void logCallback();
 
 // Need to change Callbacks to actual functions
+/*
 Task initialize(60, TASK_FOREVER, &initSensors);
 Task sample(60, TASK_FOREVER, &readDataSamples);
 //Task _log(180, TASK_FOREVER, &logData);
-Task heartbeat(5, TASK_FOREVER, &flashHeartbeat);
-
+Task heartbeatOn(5, TASK_FOREVER, &flashHeartbeatOn);
+Task heartbeatOff(5, TASK_FOREVER, &flashHeartbeatOff);
 Scheduler runner;
+*/
 
 // Doesn't include watchdog like the one in runtime
 static void standbyTEMP() {
@@ -174,9 +178,9 @@ void setInterruptTimeoutTEMP(DateTime &datetime) {
     rtcz.enableAlarm(rtcz.MATCH_MMSS);
 }
 
+/*
 long getNextTaskTEMP() {
   long minTime = 500;
-  
   if (runner.timeUntilNextIteration(initialize) < minTime) {
     minTime = runner.timeUntilNextIteration(initialize);
   }
@@ -186,11 +190,18 @@ long getNextTaskTEMP() {
   //if (runner.timeUntilNextIteration(_log) < minTime) {
   //  minTime = runner.timeUntilNextIteration(_log);
   //}
-  if (runner.timeUntilNextIteration(heartbeat) < minTime) {
-    minTime = runner.timeUntilNextIteration(heartbeat);
+  //if (runner.timeUntilNextIteration(heartbeat) < minTime) {
+  //  minTime = runner.timeUntilNextIteration(heartbeat);
+  //}
+  if (runner.timeUntilNextIteration(heartbeatOn) < minTime) {
+    minTime = runner.timeUntilNextIteration(heartbeatOn);
+  }
+  if (runner.timeUntilNextIteration(heartbeatOff) < minTime) {
+    minTime = runner.timeUntilNextIteration(heartbeatOff);
   }
   return minTime;
 }
+*/
 
 /*
 void initializeCallback() {
@@ -255,95 +266,6 @@ void logCallback() {
   standbyTEMP();
 }
 */
-
-
-/* setup and loop */
-void _setup() {
-    Watchdog.enable();
-    /* This is causing lock-up. Need to do further research into low power modes
-       on the Cortex M0 */
-    // oled.setButtonFunction(BUTTON_A, *aButton_ISR, CHANGE);
-    // oled.displayDateTime();
-    unsigned long _start = millis();
-    while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
-//    setupGPS();
-//    setupClocks();
-    oled.init();
-    oled.displayStartup();
-    if (ALWAYS_LOG || Serial) {
-        setupLogging();
-    }
-    // Clock set up
-    static volatile int buttonHeld = !digitalRead(BUTTON_A);
-    bool state = false;
-    if (buttonHeld != 0) {
-      state = true;
-    }
-    if (false && state) { // turn time set check off for now
-      while(1) {
-        Watchdog.reset();
-        delay(2000);
-        Serial.println("Just waiting for the time now...");
-        if (Serial.find("t")) {
-          start_epoch = Serial.parseInt();
-          setRTC();
-          break;
-        }
-      }
-    }
-    setupGPS();
-    setupClocks();
-    setStartTime();
-    logln(F("begin setup .."));
-    pinMode(LED_BUILTIN, OUTPUT);
-    digitalWrite(LED_BUILTIN, LOW);
-    config.loadConfig();
-    //logln("Setting up LoRa radio");
-    //setupRadio(config.RFM95_CS, config.RFM95_INT, config.node_id);
-    //radio->sleep();
-    setupSensors();
-    // setupHoneywell();
-    // ADAFRUIT_SI7021::setup(config.node_id, &getTime);
-    // This is done in RTCZero::standbyMode
-    // https://github.com/arduino-libraries/RTCZero/blob/master/src/RTCZero.cpp
-    // SCB->SCR |= SCB_SCR_SLEEPDEEP_Msk;
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(500);
-    digitalWrite(LED_BUILTIN, LOW);
-    logln(F(".. setup complete"));
-    printCurrentTime();
-    oled.endDisplayStartup();
-    // Task Setup
-    Serial.print("Start time: ");
-    Serial.println(_TASK_TIME_FUNCTION());
-    runner.init();
-    Serial.println("Initialized scheduler");
-    runner.addTask(initialize);
-    Serial.println("added initialize");
-    runner.addTask(sample);
-    Serial.println("added sample");
-    //runner.addTask(_log);
-    //Serial.println("added log");
-    runner.addTask(heartbeat);
-    Serial.println("added heartbeat");
-    int wait_time = 0;
-    if (_TASK_TIME_FUNCTION() % 60 != 0){ // Will wait to start initialization on the minute
-      wait_time = 60 - (_TASK_TIME_FUNCTION() % 60);
-    }
-    Serial.print("Wait time: ");
-    Serial.println(wait_time);
-    initialize.enableDelayed(wait_time);
-    Serial.println("Enabled initialize");
-    sample.enableDelayed(7 + wait_time);
-    Serial.println("Enabled sample with 7 second delay");
-    //_log.enableDelayed(207 + wait_time); // 207 seconds to start after 3 minutes and then 20 seconds after sample
-    //Serial.println("Enabled log with 20 second delay to occur every 3 minutes");
-    heartbeat.enableDelayed(wait_time);
-    Watchdog.disable();
-    nodeId(config.node_id);
-    setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
-}
-
 
 /*
 int custom_handlePacket(int to, int from, int dest, int seq, int packetType, uint32_t timestamp, uint8_t *route, size_t route_size, uint8_t *message, size_t msg_size, int topology)
@@ -445,25 +367,33 @@ void custom_setupLoRa(int csPin, int resetPin, int irqPin)
 
 void setup() {
     rtcz.begin();
+    systemStartTime(rtcz.getEpoch());
     Watchdog.enable();
     unsigned long _start = millis();
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
     config.loadConfig();
     nodeId(config.node_id);
     setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+
+    /*
     runner.init();
-    runner.addTask(heartbeat);
+    runner.addTask(heartbeatOn);
+    runner.addTask(heartbeatOff);
     runner.addTask(initialize);
     runner.addTask(sample);
-    heartbeat.enable();
+    heartbeatOn.enable();
+    heartbeatOff.enableDelayed(1);
     initialize.enable();
     sample.enableDelayed(7);
+    */
+    setupRunner();
     Watchdog.disable();
 }
 
 void loop() {
-    //Watchdog.enable();
-    runner.execute();
+    Watchdog.enable();
+    runRunner();
+    //runner.execute();
 //    if (oled.isOn()) {
 //        updateClock();
 //        oled.displayDateTime();
