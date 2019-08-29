@@ -92,3 +92,21 @@ void receiveWiFiResponse()
     }
     println("********** done");
 }
+
+void receiveWiFiResponse(char* buffer, size_t* len)
+{
+    /* Currently ununsed. May not be entirely working correctly */
+    Serial.println("Receiving buffered server response ..");
+    size_t _len = *len;
+    while (!client.available()) {}
+    size_t i = 0;
+    while (i < *len && client.available()) {
+        char c = client.read();
+        buffer[i++] = c;
+        Serial.write(c);
+    }
+    Serial.print("buffer: ");
+    Serial.println(buffer);
+    *len = i - 1;
+    println("********** done");
+}

@@ -15,4 +15,5 @@ byte printlnWiFi(char* s);
 byte printWiFi(int i);
 byte printlnWiFi(int i);
 void receiveWiFiResponse();
+void receiveWiFiResponse(char* buffer, size_t* len);
 #endif

@@ -109,6 +109,16 @@ void setup()
     LoRa.onReceive(onReceive);
     rtcz.begin();
     connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+    uint32_t wifi_time = 0;
+    Serial.println("Getting time from NTP server ");
+    while (wifi_time == 0) {
+        wifi_time = WiFi.getTime();
+        Serial.print(".");
+        delay(1000);
+    }
+    Serial.print("Setting time from Wifi module: ");
+    Serial.println(wifi_time);
+    rtcz.setEpoch(wifi_time);
     disconnectWiFi();
     LoRa.receive();
 }
