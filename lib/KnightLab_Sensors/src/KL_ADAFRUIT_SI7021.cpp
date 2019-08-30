@@ -35,7 +35,7 @@ bool ADAFRUIT_SI7021::start() {
     return true;
 }
 
-size_t ADAFRUIT_SI7021::read(char* buf, int len) {
+size_t ADAFRUIT_SI7021::read(char buf[], int len) {
     char temp[7];
     char humid[7];
     ftoa(readTemperature(), temp, 2);

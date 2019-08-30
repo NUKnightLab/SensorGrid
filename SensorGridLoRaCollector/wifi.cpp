@@ -93,20 +93,40 @@ void receiveWiFiResponse()
     println("********** done");
 }
 
-void receiveWiFiResponse(char* buffer, size_t* len)
+void readHeader()
 {
-    /* Currently ununsed. May not be entirely working correctly */
+    bool blank_line = true;
+    while(client.available()) {
+        char c = client.read();
+        Serial.print(c);
+        if (c == '\n') {
+            if (blank_line) {
+                Serial.println("--");
+                Serial.println("Done reading header.");
+                break;
+            }
+            blank_line = true;
+        } else if (c != '\r') {
+            blank_line = false;
+        }
+    }
+}
+
+void receiveWiFiResponse(char buffer[], size_t len)
+{
     Serial.println("Receiving buffered server response ..");
-    size_t _len = *len;
     while (!client.available()) {}
-    size_t i = 0;
-    while (i < *len && client.available()) {
+    readHeader();
+    int i = 0;
+    while (i < len - 1 && client.available()) {
         char c = client.read();
         buffer[i++] = c;
         Serial.write(c);
     }
+    buffer[i] = '\0';
+    Serial.print("i: ");
+    Serial.println(i);
     Serial.print("buffer: ");
     Serial.println(buffer);
-    *len = i - 1;
     println("********** done");
 }

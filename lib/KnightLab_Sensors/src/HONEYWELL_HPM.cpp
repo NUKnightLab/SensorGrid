@@ -1,4 +1,5 @@
 #include "HONEYWELL_HPM.h"
+#include <ArduinoJson.h>
 
 byte enable_autosend[] = {0x68, 0x01, 0x40, 0x57};
 byte stop_autosend[] = { 0x68, 0x01, 0x20, 0x77 };
@@ -215,19 +216,24 @@ bool HONEYWELL_HPM::start() {
 }
 
 size_t HONEYWELL_HPM::read(char* buf, int len) {
-    StaticJsonBuffer<200> jsonBuffer;
-    JsonObject& root = jsonBuffer.createObject();
+    // commented code is legacy from ArduinoJson v. 5
+    //StaticJsonBuffer<200> jsonBuffer;
+    //JsonObject& root = jsonBuffer.createObject();
+    StaticJsonDocument<200> root;
     root["node"] = this->_node_id;
     root["ts"] = this->_time_fcn();
     int pm25;
     int pm10;
     read_pm_results_data(&pm25, &pm10);
-    JsonArray& data = root.createNestedArray("hpm");
+    //JsonArray& data = root.createNestedArray("hpm");
+    JsonArray data = root.createNestedArray("hpm");
     data.add(pm25);
     data.add(pm10);
-    root.printTo(Serial);
+    //root.printTo(Serial);
+    serializeJson(root, Serial);
     Serial.println();
-    return root.printTo(buf, len);
+    //return root.printTo(buf, len);
+    return serializeJson(root, buf, len);
 }
 
 bool HONEYWELL_HPM::stop() {

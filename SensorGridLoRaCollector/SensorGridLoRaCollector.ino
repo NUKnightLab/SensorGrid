@@ -43,6 +43,47 @@ bool scheduleDataSample(unsigned long interval)
     return false;
 }
 
+void fetchRoutes()
+{
+    println("***** FETCH ROUTES FROM API *****");
+    //int msg_length = 0;
+    //msg_length += 13;
+    //println("Message length: %d", msg_length);
+    //println("Free ram: %d", FreeRam());
+    size_t n = 255;
+    char json[n];
+    digitalWrite(WIFI_CS, LOW);
+    if (true) {
+        connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+        printWiFi("GET /networks/");
+        printWiFi(config.network_id);
+        printlnWiFi("/routes/ HTTP/1.1");
+        printWiFi("Host: ");
+        printlnWiFi(config.api_host);
+        printlnWiFi("Content-Type: application/json");
+        printlnWiFi("Connection: close");
+        printlnWiFi("");
+        Serial.println(".. posted header");
+    }
+    //printWiFi("{ \"data\": [");
+    //for (int i=0; i<numBatches(0); i++) {
+    //    char *batch = (char*)getBatch(i);
+    //    print(batch);
+    //    printWiFi(batch);
+    //    if (i < numBatches(0)-1) {
+    //        printWiFi(",");
+    //    }
+    //}
+    //printlnWiFi("]}");
+    receiveWiFiResponse(json, n);
+    disconnectWiFi();
+    digitalWrite(WIFI_CS, HIGH);
+    SPI.endTransaction();
+    Serial.println("ROUTES:");
+    Serial.println(json);
+    parseRoutingTable(json);
+}
+
 void sendDataToApi(uint8_t node_id)
 {
     println("***** SEND DATA TO API *****");
@@ -108,6 +149,9 @@ void setup()
     LoRa.enableCrc();
     LoRa.onReceive(onReceive);
     rtcz.begin();
+
+    fetchRoutes();
+
     connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
     uint32_t wifi_time = 0;
     Serial.println("Getting time from NTP server ");

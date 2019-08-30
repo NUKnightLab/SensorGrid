@@ -16,6 +16,7 @@ public:
     bool setup();
     bool start();
     size_t read(char* buf, int len);
+    //size_t read(char buf[], int len);
     bool stop();
 
 };
