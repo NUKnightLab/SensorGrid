@@ -57,7 +57,7 @@ void fetchRoutes()
         connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
         printWiFi("GET /networks/");
         printWiFi(config.network_id);
-        printlnWiFi("/routes/ HTTP/1.1");
+        printlnWiFi("/nodes HTTP/1.1");
         printWiFi("Host: ");
         printlnWiFi(config.api_host);
         printlnWiFi("Content-Type: application/json");
