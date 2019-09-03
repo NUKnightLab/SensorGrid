@@ -114,6 +114,7 @@ void readHeader()
 
 void receiveWiFiResponse(char buffer[], size_t len)
 {
+    // TODO: see https://arduinojson.org/v6/example/http-client/
     Serial.println("Receiving buffered server response ..");
     while (!client.available()) {}
     readHeader();

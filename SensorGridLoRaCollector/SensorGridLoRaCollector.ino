@@ -138,20 +138,10 @@ void setup()
     loadConfig();
     nodeId(config.node_id);
     isCollector(true);
-    println("Config loaded");
-    println("Configuring LoRa with pins: CS: %d; RST: %d; IRQ: %d",
-        config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
-    LoRa.setPins(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
-    if (!LoRa.begin(915E6)) {
-        Serial.println("LoRa init failed");
-        while(true);
-    }
-    LoRa.enableCrc();
-    LoRa.onReceive(onReceive);
-    rtcz.begin();
-
+    println("Config loaded. Fetching routes ..");
     fetchRoutes();
 
+    /* set time */
     connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
     uint32_t wifi_time = 0;
     Serial.println("Getting time from NTP server ");
@@ -162,9 +152,20 @@ void setup()
     }
     Serial.print("Setting time from Wifi module: ");
     Serial.println(wifi_time);
+    rtcz.begin();
     rtcz.setEpoch(wifi_time);
     disconnectWiFi();
-    LoRa.receive();
+
+    println("Configuring LoRa with pins: CS: %d; RST: %d; IRQ: %d",
+        config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    LoRa.setPins(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    if (!LoRa.begin(915E6)) {
+        Serial.println("LoRa init failed");
+        while(true);
+    }
+    LoRa.enableCrc();
+    LoRa.onReceive(onReceive);
+    //LoRa.receive();
 }
 
 void tick()
@@ -194,7 +195,7 @@ void loop() {
         }
         LoRa.receive();
         delay(1000);
-        for (int i=0; i<sizeof(nodes); i++) {
+        for (int i=0; i<node_count; i++) {
             if (nodes_collected[nodes[i]] == 0) {
                 sendCollectPacket(nodes[i], 0, ++++seq);
                 return;
