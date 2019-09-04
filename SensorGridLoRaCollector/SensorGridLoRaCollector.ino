@@ -82,6 +82,12 @@ void fetchRoutes()
     Serial.println("ROUTES:");
     Serial.println(json);
     parseRoutingTable(json);
+    Serial.println("----");
+    Serial.print("Node count: "); Serial.println(node_count);
+    for (int i=0; i<node_count; i++) {
+        Serial.print(nodes[i]); Serial.print(" ");
+    }
+    Serial.println("----");
 }
 
 void sendDataToApi(uint8_t node_id)
@@ -148,7 +154,7 @@ void setup()
     while (wifi_time == 0) {
         wifi_time = WiFi.getTime();
         Serial.print(".");
-        delay(1000);
+        delay(2000);
     }
     Serial.print("Setting time from Wifi module: ");
     Serial.println(wifi_time);
@@ -195,8 +201,13 @@ void loop() {
         }
         LoRa.receive();
         delay(1000);
+        Serial.print("Finding next uncollected node of node_count: ");
+        Serial.println(node_count);
         for (int i=0; i<node_count; i++) {
+            Serial.print("Checking if collected: ");
+            Serial.println(nodes[i]);
             if (nodes_collected[nodes[i]] == 0) {
+                Serial.println(".. not collected");
                 sendCollectPacket(nodes[i], 0, ++++seq);
                 return;
             }
@@ -204,5 +215,5 @@ void loop() {
         memset(nodes_collected, 0, sizeof(nodes_collected));
         sendStandby(++++seq, nextCollection());
     }
-    if (runEvery()) sendCollectPacket(2, 0, ++++seq);
+    if (runEvery()) sendCollectPacket(nodes[0], 0, ++++seq);
 }
