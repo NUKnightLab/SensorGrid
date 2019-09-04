@@ -15,8 +15,8 @@
 
 static uint8_t msg_buf[140] = {0};
 static Message *msg = reinterpret_cast<Message*>(msg_buf);
-StaticJsonBuffer<200> json_buffer;
-JsonArray& data_array = json_buffer.createArray();
+//StaticJsonBuffer<200> json_buffer;
+//JsonArray& data_array = json_buffer.createArray();
 
 Task initialize(60, TASK_FOREVER, &initSensors);
 Task sample(60, TASK_FOREVER, &readDataSamples);

@@ -117,7 +117,9 @@ void updateClock() {
 
 void setupSensors() {
     pinMode(12, OUTPUT);  // enable pin to HPM boost
-    loadSensorConfig(config.node_id, getTime);
+    Serial.println("Loading sensor config ...");
+    loadSensorConfig(nodeId(), getTime);
+    Serial.println(".. done loading sensor config");
 }
 
 void setupClocks() {
@@ -373,6 +375,7 @@ void setup() {
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
     config.loadConfig();
     nodeId(config.node_id);
+    setupSensors();
     setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
 
     /*
