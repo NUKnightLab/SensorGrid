@@ -186,6 +186,8 @@ void tick()
 void loop() {
     static uint8_t nodes_collected[255] = {0};
     tick();
+
+
     if (readyToPost() > 0) {
         LoRa.idle();
         digitalWrite(config.RFM95_CS, HIGH);
@@ -209,11 +211,67 @@ void loop() {
             if (nodes_collected[nodes[i]] == 0) {
                 Serial.println(".. not collected");
                 sendCollectPacket(nodes[i], 0, ++++seq);
+                lastRequestNode(nodes[i]);
+                resetRequestTimer();
                 return;
             }
         }
-        memset(nodes_collected, 0, sizeof(nodes_collected));
-        sendStandby(++++seq, nextCollection());
+        //sendStandby(++++seq, nextCollection());
     }
-    if (runEvery()) sendCollectPacket(nodes[0], 0, ++++seq);
+
+    // TODO: should we keep a cycle timer that runs separately from the request timeout?
+    if (requestTimer() > 30000) {
+        Serial.println("****** TIMEOUT ******");
+        // TODO: a partially collected node should be written to the API and collection continued
+        // on next cycle. Will require sensors to clear collected data based on request packet id
+        if (nodes_collected[lastRequestNode()] == 0) {
+            nodes_collected[lastRequestNode()] = 2; // simple timeout code for now
+        } else if (nodes_collected[lastRequestNode()] == 2) {
+            nodes_collected[lastRequestNode()] = 3;
+        //} else if (nodes_collected[lastRequestNode()] == 3) {
+        //    nodes_collected[lastRequestNode()] = 4;
+        }
+        for (int i=0; i<node_count; i++) {
+            Serial.print("Checking if collected: ");
+            Serial.println(nodes[i]);
+            if (nodes_collected[nodes[i]] == 0) {
+                Serial.println(".. not collected");
+                sendCollectPacket(nodes[i], 0, ++++seq);
+                lastRequestNode(nodes[i]);
+                resetRequestTimer();
+                return;
+            }
+        }
+        // No remaining uncollected, but check for previous timeouts
+        for (int i=0; i<node_count; i++) {
+            Serial.print("Checking if collected: ");
+            Serial.println(nodes[i]);
+            if (nodes_collected[nodes[i]] == 2) {
+                Serial.println(".. not collected (previously timed out)");
+                sendCollectPacket(nodes[i], 0, ++++seq);
+                lastRequestNode(nodes[i]);
+                resetRequestTimer();
+                return;
+            }
+        }
+        for (int i=0; i<node_count; i++) {
+            if (nodes_collected[nodes[i]] == 3) {
+                Serial.print("****** WARNING ****** unreachable node: ");
+                Serial.println(nodes[i]);
+            }
+        }
+        // mark all collected and reset timer
+        Serial.println("Resetting collection state for next cycle");
+        memset(nodes_collected, 0, sizeof(nodes_collected));
+        resetRequestTimer();
+    }
+
+/*
+    if (runEvery()) {
+        memset(nodes_collected, 0, sizeof(nodes_collected));
+        sendCollectPacket(nodes[0], 0, ++++seq);
+        lastRequestNode(nodes[0]);
+        resetRequestTimer();
+    }
+    */
 }
