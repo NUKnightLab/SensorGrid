@@ -226,8 +226,28 @@ void loop() {
         // on next cycle. Will require sensors to clear collected data based on request packet id
         if (nodes_collected[lastRequestNode()] == 0) {
             nodes_collected[lastRequestNode()] = 2; // simple timeout code for now
+            /*
+            if (txPower(lastRequestNode()) < MAX_LORA_TX_POWER) {
+                txPower(lastRequestNode(), txPower(lastRequestNode())+1);
+            }
+            Serial.print("Increased TX power level to unreachable node ");
+            Serial.print(lastRequestNode());
+            Serial.print(" to: ");
+            Serial.print(txPower(lastRequestNode()));
+            Serial.println(" dB");
+            */
         } else if (nodes_collected[lastRequestNode()] == 2) {
             nodes_collected[lastRequestNode()] = 3;
+            /*
+            if (txPower(lastRequestNode()) < MAX_LORA_TX_POWER) {
+                txPower(lastRequestNode(), txPower(lastRequestNode())+1);
+            }
+            Serial.print("Increased TX power level to unreachable node ");
+            Serial.print(lastRequestNode());
+            Serial.print(" to: ");
+            Serial.print(txPower(lastRequestNode()));
+            Serial.println(" dB");
+            */
         //} else if (nodes_collected[lastRequestNode()] == 3) {
         //    nodes_collected[lastRequestNode()] = 4;
         }
