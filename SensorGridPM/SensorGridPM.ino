@@ -390,6 +390,9 @@ void setup() {
     sample.enableDelayed(7);
     */
     setupRunner();
+    for (uint8_t i=0; i<255; i++) {
+      txPower(i, DEFAULT_LORA_TX_POWER);
+    }
     Watchdog.disable();
 }
 
