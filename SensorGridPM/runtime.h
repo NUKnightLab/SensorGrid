@@ -19,6 +19,7 @@ extern void recordDataSamples();
 extern void flashHeartbeatOn();
 extern void flashHeartbeatOff();
 extern void recordBatteryLevel();
+extern void recordRestart();
 //extern void recordTempAndHumidity();
 extern void recordUptime();
 // extern void logData(bool clear);

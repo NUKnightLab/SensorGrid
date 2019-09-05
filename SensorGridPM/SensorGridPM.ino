@@ -408,6 +408,7 @@ void setup() {
       txPower(i, DEFAULT_LORA_TX_POWER);
     }
     Watchdog.disable();
+    recordRestart();
 }
 
 void loop() {

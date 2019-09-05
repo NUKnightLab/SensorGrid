@@ -239,6 +239,16 @@ bool checkBatteryLevel() {
 }
 */
 
+void recordRestart()
+{
+    println("recording restart ...");
+    DataSample *sample = appendData();
+    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"event\":\"restart\",\"ts\":%lu}",
+        nodeId(), rtcz.getEpoch());
+    recordData(sample->data, strlen(sample->data));
+    println("done recording restart ...");
+}
+
 void recordBatteryLevel()
 {
     // float bat = batteryLevel();

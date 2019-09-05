@@ -67,7 +67,7 @@ bool Config::loadConfig() {
       digitalWrite(default_rfm_cs, LOW);
       digitalWrite(alt_rfm_cs, LOW);
       network_id = (uint32_t)(atoi(getConfig("NETWORK_ID")));
-      node_id = (uint8_t)(atoi(getConfig("NODE_ID")));
+      node_id = (uint8_t)(atoi(getConfig("NODE_ID")), 0);
       collector_id = (uint8_t)(atoi(getConfig("COLLECTOR_ID")));
       rf95_freq = static_cast<float>(atof(getConfig("RF95_FREQ")));
       tx_power = (uint8_t)(atoi(getConfig("TX_POWER")));
@@ -87,12 +87,19 @@ bool Config::loadConfig() {
       logln(F("ERROR: No config file found"));
       return false;
   }
-  WifiConfig::loadConfig();
+  //Serial.print("Loading WiFi config .."); // TODO: collector only?
+  //WifiConfig::loadConfig();
+  //Serial.println(".. done");
+  Serial.print("Loading LoRa config ..");
   RadioConfig::loadConfig();
-  logln(F("Config loaded"));
+  Serial.println(".. done");
   if (!node_id) {
-      logln(F("ERROR: Missing required config parameter NODE_ID"));
-      fail(FAIL_CODE_BAD_CONFIG);
+      Serial.println("Node ID not configured. Using Lower byte of Si7021 serial number A.");
+      Adafruit_Si7021 _sensor = Adafruit_Si7021();
+      _sensor.begin();
+      node_id = (byte)_sensor.sernum_a;
+      Serial.print("NODE ID: ");
+      Serial.println(node_id);
   }
   return true;
 }
