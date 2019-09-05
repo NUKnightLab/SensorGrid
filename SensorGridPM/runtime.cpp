@@ -239,7 +239,8 @@ bool checkBatteryLevel() {
 }
 */
 
-void recordBatteryLevel() {
+void recordBatteryLevel()
+{
     // float bat = batteryLevel();
     println("Recording battery ..");
     char bat[5];
@@ -251,9 +252,8 @@ void recordBatteryLevel() {
     println(".. done recording battery");
 }
 
-
-
-void recordUptime() {
+void recordUptime()
+{
     println("recording uptime ..");
     uint32_t runtime = millis() / 1000;
     uint32_t uptime = rtcz.getEpoch() - systemStartTime();
@@ -267,10 +267,22 @@ void recordUptime() {
     println(".. done recording uptime");
 }
 
+void recordTxSettings()
+{
+    /* TODO: generalize this for all nodes */
+    println("recording tx settings ..");
+    DataSample *sample = appendData();
+    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"tx\":[[1,%d],[2,%d],[3,%d],[4,%d]]}",
+        txPower(1), txPower(2), txPower(3), txPower(4));
+    recordData(sample->data, strlen(sample->data));
+    println(".. done recording tx settings");
+}
+
 void logData() {
     Watchdog.enable();
     recordBatteryLevel();                   // Should get a battery recording level before each log
     recordUptime();
+    recordTxSettings();
     Watchdog.enable();                    // Enabled watchdog
     logln(F("\nLOGGING DATA: ------"));
     DataSample *cursor = datasample_head;
@@ -340,6 +352,7 @@ void readDataSamples() {
     }
     recordBatteryLevel();
     recordUptime();
+    recordTxSettings();
     digitalWrite(12, LOW);
     digitalWrite(LED_BUILTIN, LOW);
     long delay = getNextTaskTEMP();
