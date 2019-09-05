@@ -367,6 +367,18 @@ void custom_setupLoRa(int csPin, int resetPin, int irqPin)
 }
 */
 
+void readNodeId()
+{
+    /* This approach does not seem accurate enough to be useful */
+    // true analog pin. do not set pin mode
+    Serial.println("Reading node id ..");
+    analogWrite(A0, 341); // 1 volt
+    pinMode(A1, INPUT);
+    Serial.print("A1 voltage: ");
+    Serial.println(analogRead(A1));
+    while(1);
+}
+
 void setup() {
     rtcz.begin();
     systemStartTime(rtcz.getEpoch());
@@ -375,8 +387,10 @@ void setup() {
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
     config.loadConfig();
     nodeId(config.node_id);
+    //nodeId(4);
     setupSensors();
-    setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    //setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    setupLoRa(atoi(DEFAULT_RFM95_CS), atoi(DEFAULT_RFM95_RST), atoi(DEFAULT_RFM95_INT));
 
     /*
     runner.init();
