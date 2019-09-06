@@ -29,7 +29,6 @@ Scheduler runner;
 DataSample *datasample_head = NULL;
 DataSample *datasample_tail = NULL;
 
-
 void syncTime(uint32_t timestamp) {
     uint32_t uptime = rtcz.getEpoch() - systemStartTime();
     runner.disableAll();
@@ -43,7 +42,8 @@ long nextIterationTime(Task &aTask)
     return runner.timeUntilNextIteration(aTask);
 }
 
-long getNextTaskTEMP() {
+long getNextTaskTEMP()
+{
   long minTime = nextIterationTime(heartbeatOn);
   if (nextIterationTime(heartbeatOff) < minTime) {
       minTime = nextIterationTime(heartbeatOff);
@@ -51,34 +51,14 @@ long getNextTaskTEMP() {
   if (nextIterationTime(initialize) < minTime) {
       minTime = nextIterationTime(initialize);
   }
-  //if (runner.timeUntilNextIteration(initialize) < minTime) {
-  //  minTime = runner.timeUntilNextIteration(initialize);
-  //}
   if (nextIterationTime(sample) < minTime) {
       minTime = nextIterationTime(sample);
   }
-  //if (runner.timeUntilNextIteration(sample) < minTime) {
-  //  minTime = runner.timeUntilNextIteration(sample);
-  //}
-  //if (runner.timeUntilNextIteration(_log) < minTime) {
-  //  minTime = runner.timeUntilNextIteration(_log);
-  //}
-  //if (runner.timeUntilNextIteration(heartbeat) < minTime) {
-  //  minTime = runner.timeUntilNextIteration(heartbeat);
-  //}
-  //if (nextIterationTime(heartbeatOn) < minTime) {
-  //    minTime = nextIterationTime(heartbeatOn);
-  //}
-  //if (runner.timeUntilNextIteration(heartbeatOn) < minTime) {
-  //  minTime = runner.timeUntilNextIteration(heartbeatOn);
-  //}
-  //if (runner.timeUntilNextIteration(heartbeatOff) < minTime) {
-  //  minTime = runner.timeUntilNextIteration(heartbeatOff);
-  //}
   return minTime;
 }
 
-DataSample *appendData() {
+DataSample *appendData()
+{
     DataSample *new_sample = reinterpret_cast<DataSample*>(malloc(sizeof(DataSample)));
     if (new_sample == NULL) {
         logln(F("Error creating new sample"));
@@ -99,31 +79,11 @@ DataSample *appendData() {
 
 /* local utils */
 
-
 static uint32_t getNextPeriodTime(int period) {
     uint32_t t = rtcz.getEpoch();
     int d = t % period;
     return (t + period - d);
 }
-
-/*
-uint32_t getNextCollectionTime() {
-    int period = config.collection_period;
-    uint32_t t = rtcz.getEpoch();
-    int d = t % period;
-    return (t + period - d);
-}
-*/
-
-/*
-static void standby() {
-    mode = STANDBY;
-    if (DO_STANDBY) {
-        Watchdog.disable();
-        rtcz.standbyMode();
-    }
-}
-*/
 
 typedef void (*InterruptFunction)();
 
@@ -397,13 +357,6 @@ void flashHeartbeatOn() {
     Watchdog.enable();
     digitalWrite(LED_BUILTIN, HIGH);   // turn the LED on
     print(".");
-    //long delay = getNextTaskTEMP();
-    //if (delay > 2) {
-    //    long alarmtime = rtcz.getEpoch() + delay;
-    //    DateTime alarm = DateTime(alarmtime);
-    //    setInterruptTimeoutSched(alarm);
-    //    standbySched();
-    //}
 }
 
 void flashHeartbeatOff() {
@@ -423,36 +376,7 @@ void flashHeartbeatOff() {
 
 void setupRunner()
 {
-    /*
-    Serial.print("Start time: ");
-    Serial.println(_TASK_TIME_FUNCTION());
     runner.init();
-    Serial.println("Initialized scheduler");
-    runner.addTask(initialize);
-    Serial.println("added initialize");
-    runner.addTask(sample);
-    Serial.println("added sample");
-    //runner.addTask(_log);
-    //Serial.println("added log");
-    runner.addTask(heartbeatOn);
-    runner.addTask(heartbeatOff);
-    Serial.println("added heartbeat");
-    int wait_time = 0;
-    if (_TASK_TIME_FUNCTION() % 60 != 0){ // Will wait to start initialization on the minute
-      wait_time = 60 - (_TASK_TIME_FUNCTION() % 60);
-    }
-    Serial.print("Wait time: ");
-    Serial.println(wait_time);
-    initialize.enableDelayed(wait_time);
-    Serial.println("Enabled initialize");
-    sample.enableDelayed(7 + wait_time);
-    Serial.println("Enabled sample with 7 second delay");
-    */
-    runner.init();
-    //addRunnerTask(heartbeatOn);
-    //addRunnerTask(heartbeatOff);
-    //addRunnerTask(initialize);
-    //addRunnerTask(sample);
     runner.addTask(heartbeatOn);
     runner.addTask(heartbeatOff);
     runner.addTask(initialize);
