@@ -385,10 +385,8 @@ void setup() {
     while ( !Serial && (millis() - _start) < WAIT_SERIAL_TIMEOUT ) {}
     config.loadConfig();
     nodeId(config.node_id);
-    //nodeId(4);
     setupSensors();
-    //setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
-    setupLoRa(atoi(DEFAULT_RFM95_CS), atoi(DEFAULT_RFM95_RST), atoi(DEFAULT_RFM95_INT));
+    setupLoRa(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
 
     /*
     runner.init();
