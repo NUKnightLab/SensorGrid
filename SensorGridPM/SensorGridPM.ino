@@ -8,8 +8,6 @@
 //#include <KnightLab_GPS.h>
 #include "config.h"
 #include "runtime.h"
-#include "tests.h"
-//#include <TaskScheduler.h>
 #include <LoRa.h>
 #include <LoRaHarvest.h>
 

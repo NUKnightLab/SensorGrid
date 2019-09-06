@@ -37,7 +37,7 @@ extern uint32_t get_time();
 #define NODE_TYPE_COLLECTOR 1
 #define NODE_TYPE_SENSOR 2
 
-#define MAX_NODES 20
+//#define MAX_NODES 20
 
 #define CONFIG_FILE "CONFIG.TXT"  // Adalogger doesn't seem to like underscores
                                   // in the name!!!
