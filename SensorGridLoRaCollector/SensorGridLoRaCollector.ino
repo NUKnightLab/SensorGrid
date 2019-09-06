@@ -148,19 +148,24 @@ void setup()
     fetchRoutes();
 
     /* set time */
-    connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-    uint32_t wifi_time = 0;
-    Serial.println("Getting time from NTP server ");
-    while (wifi_time == 0) {
-        wifi_time = WiFi.getTime();
-        Serial.print(".");
-        delay(2000);
-    }
-    Serial.print("Setting time from Wifi module: ");
-    Serial.println(wifi_time);
+    const uint32_t UNSET_RTCZ_TIME = 943920000;
     rtcz.begin();
-    rtcz.setEpoch(wifi_time);
-    disconnectWiFi();
+    if (rtcz.getEpoch() == UNSET_RTCZ_TIME) {
+        connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+        uint32_t wifi_time = 0;
+        Serial.println("Getting time from NTP server ");
+        while (wifi_time == 0) {
+            wifi_time = WiFi.getTime();
+            Serial.print(".");
+            delay(2000);
+        }
+        Serial.print("Setting time from Wifi module: ");
+        Serial.println(wifi_time);
+        rtcz.setEpoch(wifi_time);
+        disconnectWiFi();
+    } else {
+        println("Using preset time: %lu", rtcz.getEpoch());
+    }
 
     println("Configuring LoRa with pins: CS: %d; RST: %d; IRQ: %d",
         config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
