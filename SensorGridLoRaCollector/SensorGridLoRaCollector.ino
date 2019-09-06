@@ -5,7 +5,13 @@
 #include <DataManager.h>
 #include "wifi.h"
 
+#define SERIAL_TIMEOUT 10000
+#define COLLECTION_CODE_UNCOLLECTED 0
+#define COLLECTION_CODE_COLLECTED 1
+#define COLLECTION_CODE_TIMEOUT 2
+#define COLLECTION_CODE_UNREACHABLE 3
 
+static uint8_t nodes_collected[255] = {0};
 extern "C" char *sbrk(int i);
 
 int FreeRam () {
@@ -13,81 +19,28 @@ int FreeRam () {
   return &stack_dummy - sbrk(0);
 }
 
-static unsigned long previousMillis = 0;
-static unsigned long interval = 60000;
 static uint8_t seq = 0;
-
-bool runEvery()
-{
-    uint32_t currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
-        previousMillis = currentMillis;
-        return true;
-    }
-    return false;
-}
-
-uint32_t nextCollection()
-{
-    return previousMillis + interval;
-}
-
-bool scheduleDataSample(unsigned long interval)
-{
-    static unsigned long previousMillis = 0;
-    unsigned long currentMillis = millis();
-    if (currentMillis - previousMillis >= interval) {
-        previousMillis = currentMillis;
-        return true;
-    }
-    return false;
-}
 
 void fetchRoutes()
 {
     println("***** FETCH ROUTES FROM API *****");
-    //int msg_length = 0;
-    //msg_length += 13;
-    //println("Message length: %d", msg_length);
-    //println("Free ram: %d", FreeRam());
     size_t n = 255;
     char json[n];
     digitalWrite(WIFI_CS, LOW);
-    if (true) {
-        connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-        printWiFi("GET /networks/");
-        printWiFi(config.network_id);
-        printlnWiFi("/nodes HTTP/1.1");
-        printWiFi("Host: ");
-        printlnWiFi(config.api_host);
-        printlnWiFi("Content-Type: application/json");
-        printlnWiFi("Connection: close");
-        printlnWiFi("");
-        Serial.println(".. posted header");
-    }
-    //printWiFi("{ \"data\": [");
-    //for (int i=0; i<numBatches(0); i++) {
-    //    char *batch = (char*)getBatch(i);
-    //    print(batch);
-    //    printWiFi(batch);
-    //    if (i < numBatches(0)-1) {
-    //        printWiFi(",");
-    //    }
-    //}
-    //printlnWiFi("]}");
+    connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+    printWiFi("GET /networks/");
+    printWiFi(config.network_id);
+    printlnWiFi("/nodes HTTP/1.1");
+    printWiFi("Host: ");
+    printlnWiFi(config.api_host);
+    printlnWiFi("Content-Type: application/json");
+    printlnWiFi("Connection: close");
+    printlnWiFi("");
     receiveWiFiResponse(json, n);
     disconnectWiFi();
     digitalWrite(WIFI_CS, HIGH);
     SPI.endTransaction();
-    Serial.println("ROUTES:");
-    Serial.println(json);
     parseRoutingTable(json);
-    Serial.println("----");
-    Serial.print("Node count: "); Serial.println(node_count);
-    for (int i=0; i<node_count; i++) {
-        Serial.print(nodes[i]); Serial.print(" ");
-    }
-    Serial.println("----");
 }
 
 void sendDataToApi(uint8_t node_id)
@@ -105,21 +58,18 @@ void sendDataToApi(uint8_t node_id)
     println("Message length: %d", msg_length);
     println("Free ram: %d", FreeRam());
     digitalWrite(WIFI_CS, LOW);
-    if (true) {
-        connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-        printWiFi("POST /networks/");
-        printWiFi(config.network_id);
-        printWiFi("/nodes/");
-        printWiFi(node_id);
-        printlnWiFi("/data/ HTTP/1.1");
-        printWiFi("Host: ");
-        printlnWiFi(config.api_host);
-        printlnWiFi("Content-Type: application/json");
-        printWiFi("Content-Length: ");
-        printlnWiFi(msg_length);
-        printlnWiFi("");
-        Serial.println(".. posted header");
-    }
+    connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+    printWiFi("POST /networks/");
+    printWiFi(config.network_id);
+    printWiFi("/nodes/");
+    printWiFi(node_id);
+    printlnWiFi("/data/ HTTP/1.1");
+    printWiFi("Host: ");
+    printlnWiFi(config.api_host);
+    printlnWiFi("Content-Type: application/json");
+    printWiFi("Content-Length: ");
+    printlnWiFi(msg_length);
+    printlnWiFi("");
     printWiFi("{ \"data\": [");
     for (int i=0; i<numBatches(0); i++) {
         char *batch = (char*)getBatch(i);
@@ -137,46 +87,31 @@ void sendDataToApi(uint8_t node_id)
     clearData();
 }
 
-void setup()
+void setTime()
 {
-    unsigned long _start = millis();
-    while ( !Serial && (millis() - _start) < 10000 ) {}
-    loadConfig();
-    nodeId(config.node_id);
-    isCollector(true);
-    println("Config loaded. Fetching routes ..");
-    fetchRoutes();
-
-    /* set time */
     const uint32_t UNSET_RTCZ_TIME = 943920000;
     rtcz.begin();
     if (rtcz.getEpoch() == UNSET_RTCZ_TIME) {
         connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
         uint32_t wifi_time = 0;
-        Serial.println("Getting time from NTP server ");
+        println("Getting time from NTP server ");
         while (wifi_time == 0) {
             wifi_time = WiFi.getTime();
             Serial.print(".");
             delay(2000);
         }
-        Serial.print("Setting time from Wifi module: ");
-        Serial.println(wifi_time);
+        println("Setting time from Wifi module: %lu", wifi_time);
         rtcz.setEpoch(wifi_time);
         disconnectWiFi();
     } else {
         println("Using preset time: %lu", rtcz.getEpoch());
     }
+}
 
-    println("Configuring LoRa with pins: CS: %d; RST: %d; IRQ: %d",
-        config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
-    LoRa.setPins(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
-    if (!LoRa.begin(915E6)) {
-        Serial.println("LoRa init failed");
-        while(true);
-    }
-    LoRa.enableCrc();
-    LoRa.onReceive(onReceive);
-    //LoRa.receive();
+void waitSerial()
+{
+    unsigned long _start = millis();
+    while ( !Serial && (millis() - _start) < SERIAL_TIMEOUT ) {}
 }
 
 void tick()
@@ -188,11 +123,48 @@ void tick()
     }
 }
 
+bool sendNextCollectPacket(int collection_code)
+{
+    for (int i=0; i<node_count; i++) {
+        println("Checking if collected: %d", nodes[i]);
+        if (nodes_collected[nodes[i]] == collection_code) {
+            print(".. not collected");
+            if (collection_code == COLLECTION_CODE_TIMEOUT) {
+                println(" (previously timed out)");
+            } else {
+                println("");
+            }
+            sendCollectPacket(nodes[i], 0, ++++seq);
+            lastRequestNode(nodes[i]);
+            resetRequestTimer();
+            return true;
+        }
+    }
+    return false; // no collection requests were sent
+}
+
+void setup()
+{
+    waitSerial();
+    isCollector(true);
+    loadConfig();
+    nodeId(config.node_id);
+    setTime(); 
+    println("Config loaded. Fetching routes ..");
+    fetchRoutes();
+    println("Configuring LoRa with pins: CS: %d; RST: %d; IRQ: %d",
+        config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    LoRa.setPins(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    if (!LoRa.begin(915E6)) {
+        println("LoRa init failed");
+        while(true);
+    }
+    LoRa.enableCrc();
+    LoRa.onReceive(onReceive);
+}
+
 void loop() {
-    static uint8_t nodes_collected[255] = {0};
     tick();
-
-
     if (readyToPost() > 0) {
         LoRa.idle();
         digitalWrite(config.RFM95_CS, HIGH);
@@ -207,96 +179,29 @@ void loop() {
             while(true);
         }
         LoRa.receive();
-        delay(1000);
-        Serial.print("Finding next uncollected node of node_count: ");
-        Serial.println(node_count);
-        for (int i=0; i<node_count; i++) {
-            Serial.print("Checking if collected: ");
-            Serial.println(nodes[i]);
-            if (nodes_collected[nodes[i]] == 0) {
-                Serial.println(".. not collected");
-                sendCollectPacket(nodes[i], 0, ++++seq);
-                lastRequestNode(nodes[i]);
-                resetRequestTimer();
-                return;
-            }
-        }
+        //delay(1000);
+        println("Finding next uncollected node of node_count: %d", node_count);
+        if (sendNextCollectPacket(COLLECTION_CODE_UNCOLLECTED)) return;
         //sendStandby(++++seq, nextCollection());
     }
-
-    // TODO: should we keep a cycle timer that runs separately from the request timeout?
     if (requestTimer() > 30000) {
-        Serial.println("****** TIMEOUT ******");
+        Serial.println("***** TIMEOUT *****");
         // TODO: a partially collected node should be written to the API and collection continued
         // on next cycle. Will require sensors to clear collected data based on request packet id
-        if (nodes_collected[lastRequestNode()] == 0) {
-            nodes_collected[lastRequestNode()] = 2; // simple timeout code for now
-            /*
-            if (txPower(lastRequestNode()) < MAX_LORA_TX_POWER) {
-                txPower(lastRequestNode(), txPower(lastRequestNode())+1);
-            }
-            Serial.print("Increased TX power level to unreachable node ");
-            Serial.print(lastRequestNode());
-            Serial.print(" to: ");
-            Serial.print(txPower(lastRequestNode()));
-            Serial.println(" dB");
-            */
-        } else if (nodes_collected[lastRequestNode()] == 2) {
-            nodes_collected[lastRequestNode()] = 3;
-            /*
-            if (txPower(lastRequestNode()) < MAX_LORA_TX_POWER) {
-                txPower(lastRequestNode(), txPower(lastRequestNode())+1);
-            }
-            Serial.print("Increased TX power level to unreachable node ");
-            Serial.print(lastRequestNode());
-            Serial.print(" to: ");
-            Serial.print(txPower(lastRequestNode()));
-            Serial.println(" dB");
-            */
-        //} else if (nodes_collected[lastRequestNode()] == 3) {
-        //    nodes_collected[lastRequestNode()] = 4;
+        if (nodes_collected[lastRequestNode()] == COLLECTION_CODE_UNCOLLECTED) {
+            nodes_collected[lastRequestNode()] = COLLECTION_CODE_TIMEOUT; // simple timeout code for now
+        } else if (nodes_collected[lastRequestNode()] == COLLECTION_CODE_TIMEOUT) {
+            nodes_collected[lastRequestNode()] = COLLECTION_CODE_UNREACHABLE;
         }
+        if (sendNextCollectPacket(COLLECTION_CODE_UNCOLLECTED)) return;
+        if (sendNextCollectPacket(COLLECTION_CODE_TIMEOUT)) return;
         for (int i=0; i<node_count; i++) {
-            Serial.print("Checking if collected: ");
-            Serial.println(nodes[i]);
-            if (nodes_collected[nodes[i]] == 0) {
-                Serial.println(".. not collected");
-                sendCollectPacket(nodes[i], 0, ++++seq);
-                lastRequestNode(nodes[i]);
-                resetRequestTimer();
-                return;
+            if (nodes_collected[nodes[i]] == COLLECTION_CODE_UNREACHABLE) {
+                println("***** WARNING ***** unreachable node: %d", nodes[i]);
             }
         }
-        // No remaining uncollected, but check for previous timeouts
-        for (int i=0; i<node_count; i++) {
-            Serial.print("Checking if collected: ");
-            Serial.println(nodes[i]);
-            if (nodes_collected[nodes[i]] == 2) {
-                Serial.println(".. not collected (previously timed out)");
-                sendCollectPacket(nodes[i], 0, ++++seq);
-                lastRequestNode(nodes[i]);
-                resetRequestTimer();
-                return;
-            }
-        }
-        for (int i=0; i<node_count; i++) {
-            if (nodes_collected[nodes[i]] == 3) {
-                Serial.print("****** WARNING ****** unreachable node: ");
-                Serial.println(nodes[i]);
-            }
-        }
-        // mark all collected and reset timer
-        Serial.println("Resetting collection state for next cycle");
+        println("Resetting collection state for next cycle");
         memset(nodes_collected, 0, sizeof(nodes_collected));
         resetRequestTimer();
     }
-
-/*
-    if (runEvery()) {
-        memset(nodes_collected, 0, sizeof(nodes_collected));
-        sendCollectPacket(nodes[0], 0, ++++seq);
-        lastRequestNode(nodes[0]);
-        resetRequestTimer();
-    }
-    */
 }
