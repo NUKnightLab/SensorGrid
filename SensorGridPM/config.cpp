@@ -53,6 +53,10 @@ bool RadioConfig::loadConfig() {
       getConfig("RFM95_INT", DEFAULT_RFM95_INT))); 
     return true;
   } else {
+      SD_CHIP_SELECT_PIN = (uint32_t)(atoi(DEFAULT_SD_CHIP_SELECT_PIN));
+      RFM95_CS = (uint32_t)(atoi(DEFAULT_RFM95_CS));
+      RFM95_RST = (uint32_t)(atoi(DEFAULT_RFM95_RST));
+      RFM95_INT = (uint32_t)(atoi(DEFAULT_RFM95_INT)); 
       logln(F("ERROR: No config file found"));
       return false;
   }
@@ -83,10 +87,10 @@ bool Config::loadConfig() {
           getConfig("SAMPLE_PERIOD", DEFAULT_SAMPLE_PERIOD)));
       collection_period = (uint32_t)(atoi(
           getConfig("COLLECTION_PERIOD", DEFAULT_COLLECTION_PERIOD)));
-      Serial.print("Loading LoRa config ..");
-      RadioConfig::loadConfig();
-      Serial.println(".. done");
   }
+  Serial.print("Loading LoRa config ..");
+  RadioConfig::loadConfig();
+  Serial.println(".. done");
   if (node_id == 0) {
       Serial.println("Node ID not configured. Using Lower byte of Si7021 serial number A.");
       Adafruit_Si7021 _sensor = Adafruit_Si7021();
