@@ -242,8 +242,8 @@ void recordTxSettings()
     /* TODO: generalize this for all nodes */
     println("recording tx settings ..");
     DataSample *sample = appendData();
-    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"tx\":[[1,%d],[2,%d],[3,%d],[4,%d]]}",
-        txPower(1), txPower(2), txPower(3), txPower(4));
+    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"tx\":[[1,%d],[183,%d],[7,%d]]}",
+        txPower(1), txPower(183), txPower(7));
     recordData(sample->data, strlen(sample->data));
     println(".. done recording tx settings");
 }
