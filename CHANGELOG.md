@@ -1,3 +1,14 @@
+## v1.1 (2019-09-11)
+ * establishes baseline functionality for LoRa based wireless collection with new routerless protocol and arduino-LoRa in lieu of RadioHead
+ * routes are now managed by the collector which controls the full request-response cycle for data
+ * time is now set via the protocol instead of manually by the user. Time originates from the collector via NTP
+ * ID for sensor nodes is now extracted from the lsb of the upper part of the Si7012 serial number. Optionally, the node ID can still be set in SD config
+ * SD config and Adalogger no longer required. (Assumes default network configuration and node ID from sensor serial #)
+ * Introduces dynamic TX power selection based on RSSI and SNR
+
+## v1.0 (2019)
+ * establishes baseline SD card based data acquisition used for experimental calibration runs.
+ 
 ## v0.5 (2018-07-05)
  * increases delay between hpm samples
  * PR #64 converts namespace-based sensor drivers into classes
