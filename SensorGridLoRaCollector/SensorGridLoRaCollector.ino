@@ -1,174 +1,207 @@
+#include <LoRa.h>
 #include "config.h"
-#include "lora.h"
-#include <WiFi101.h>
+#include <LoRaHarvest.h>
+#include <console.h>
+#include <DataManager.h>
+#include "wifi.h"
 
-#define WIFI_CS 8
-#define WIFI_IRQ 7
-#define WIFI_RST 4
-#define WIFI_EN 2
+#define SERIAL_TIMEOUT 10000
+#define COLLECTION_CODE_UNCOLLECTED 0
+#define COLLECTION_CODE_COLLECTED 1
+#define COLLECTION_CODE_TIMEOUT 2
+#define COLLECTION_CODE_UNREACHABLE 3
 
-WiFiClient client;
-static bool wifi_present = false;
+static uint8_t nodes_collected[255] = {0};
+extern "C" char *sbrk(int i);
 
-void printWiFiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your WiFi shield's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
+int FreeRam () {
+  char stack_dummy = 0;
+  return &stack_dummy - sbrk(0);
 }
 
+static uint8_t seq = 0;
 
-void connectToServer(WiFiClient& client, char ssid[], char pass[], char host[], int port) {
-    int status = WL_IDLE_STATUS;
-    // client;
-    WiFi.setPins(WIFI_CS, WIFI_IRQ, WIFI_RST, WIFI_EN);
-    if (WiFi.status() == WL_NO_SHIELD) {
-        Serial.println("WiFi shield not present");
-        // don't continue
-        while (true) {}
-    }
-    while (status!= WL_CONNECTED) {
-        Serial.print("Attempting to connect to SSID: ");
-        Serial.println(ssid);
-        Serial.print("Using password: ");
-        Serial.println(pass);
-        status = WiFi.begin(ssid, pass);
-        delay(10000);  // wait 10 seconds for connection
-        Serial.println("Connected to WiFi");
-        printWiFiStatus();
-        Serial.println("\nStarting connection to server...");
-        if (client.connect(host, port)) {
-            Serial.println("connected to server");
-        } else {
-            Serial.println("server connection failed");
+void fetchRoutes()
+{
+    println("***** FETCH ROUTES FROM API *****");
+    size_t n = 255;
+    char json[n];
+    digitalWrite(WIFI_CS, LOW);
+    connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+    printWiFi("GET /networks/");
+    printWiFi(config.network_id);
+    printlnWiFi("/nodes HTTP/1.1");
+    printWiFi("Host: ");
+    printlnWiFi(config.api_host);
+    printlnWiFi("Content-Type: application/json");
+    printlnWiFi("Connection: close");
+    printlnWiFi("");
+    receiveWiFiResponse(json, n);
+    disconnectWiFi();
+    digitalWrite(WIFI_CS, HIGH);
+    SPI.endTransaction();
+    parseRoutingTable(json);
+}
+
+void sendDataToApi(uint8_t node_id)
+{
+    println("***** SEND DATA TO API *****");
+    int msg_length = 0;
+    for (int i=0; i<numBatches(0); i++) {
+        char *batch = (char*)getBatch(i);
+        msg_length += strlen(batch);
+        if (i < numBatches(0)-1) {
+            msg_length++;
         }
     }
+    msg_length += 13;
+    println("Message length: %d", msg_length);
+    println("Free ram: %d", FreeRam());
+    digitalWrite(WIFI_CS, LOW);
+    connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+    printWiFi("POST /networks/");
+    printWiFi(config.network_id);
+    printWiFi("/nodes/");
+    printWiFi(node_id);
+    printlnWiFi("/data/ HTTP/1.1");
+    printWiFi("Host: ");
+    printlnWiFi(config.api_host);
+    printlnWiFi("Content-Type: application/json");
+    printWiFi("Content-Length: ");
+    printlnWiFi(msg_length);
+    printlnWiFi("");
+    printWiFi("{ \"data\": [");
+    for (int i=0; i<numBatches(0); i++) {
+        char *batch = (char*)getBatch(i);
+        print(batch);
+        printWiFi(batch);
+        if (i < numBatches(0)-1) {
+            printWiFi(",");
+        }
+    }
+    printlnWiFi("]}");
+    receiveWiFiResponse();
+    disconnectWiFi();
+    digitalWrite(WIFI_CS, HIGH);
+    SPI.endTransaction();
+    clearData();
 }
 
-void reconnectClient(WiFiClient &client, char* ssid)
+void setTime()
 {
-    client.stop();
-    Serial.print("Reconnecting to ");
-    Serial.print(config.api_host);
-    Serial.print(":");
-    Serial.println(config.api_port);
-    if (client.connect(config.api_host, config.api_port)) {
-        Serial.println("connecting ...");
+    const uint32_t UNSET_RTCZ_TIME = 943920000;
+    rtcz.begin();
+    if (rtcz.getEpoch() == UNSET_RTCZ_TIME) {
+        connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+        uint32_t wifi_time = 0;
+        println("Getting time from NTP server ");
+        while (wifi_time == 0) {
+            wifi_time = WiFi.getTime();
+            Serial.print(".");
+            delay(2000);
+        }
+        println("Setting time from Wifi module: %lu", wifi_time);
+        rtcz.setEpoch(wifi_time);
+        disconnectWiFi();
     } else {
-        Serial.println("Failed to reconnect");
+        println("Using preset time: %lu", rtcz.getEpoch());
     }
 }
 
-void postToAPI(WiFiClient& client, Message* msg)
+void waitSerial()
 {
-    char str[200];
-    // sprintf(str,
-    //    "[{\"ver\":%i,\"net\":%i,\"node\":%i,\"data\":%s}]",
-    //    msg->sensorgrid_version, msg->network_id, msg->from_node, msg->data);
-    sprintf(str, "%s", msg->data);
-    Serial.println(str);
-    Serial.print("posting message len: ");
-    Serial.println(strlen(str), DEC);
+    unsigned long _start = millis();
+    while ( !Serial && (millis() - _start) < SERIAL_TIMEOUT ) {}
+}
 
-    // client.println("POST /data/ HTTP/1.1");
-    client.print("POST /networks/");
-    client.print(config.network_id);
-    client.println("/data/ HTTP/1.1");
-    client.println("Host: sensorgridapi.knightlab.com");
-    client.println("Content-Type: application/json");
-    client.print("Content-Length: ");
-    client.println(strlen(str));
-    client.println();
-    client.println(str);
-    Serial.println("Post to API completed.");
-    while (!client.available()) {}
-    while (client.available()) {
-        char c = client.read();
-        Serial.write(c);
+void tick()
+{
+    static unsigned long tick_time = 0;
+    if (millis() > tick_time) {
+        print(".");
+        tick_time = millis() + 1000;
     }
-    Serial.println("");
-    // client.println("Connection: close"); //close connection before sending a new request
+}
+
+bool sendNextCollectPacket(int collection_code)
+{
+    for (int i=0; i<node_count; i++) {
+        println("Checking if collected: %d", nodes[i]);
+        if (nodes_collected[nodes[i]] == collection_code) {
+            print(".. not collected");
+            if (collection_code == COLLECTION_CODE_TIMEOUT) {
+                println(" (previously timed out)");
+            } else {
+                println("");
+            }
+            sendCollectPacket(nodes[i], 0, ++++seq);
+            lastRequestNode(nodes[i]);
+            resetRequestTimer();
+            return true;
+        }
+    }
+    return false; // no collection requests were sent
 }
 
 void setup()
 {
-    // Serial.begin(9600);
-    delay(10000);
+    waitSerial();
+    isCollector(true);
     loadConfig();
-    Serial.println("Config loaded");
-    // delay(1000);
-    setup_radio(config.RFM95_CS, config.RFM95_INT, config.node_id);
-    if (config.wifi_password) {
-        Serial.print("Attempting to connect to Wifi: ");
-        Serial.print(config.wifi_ssid);
-        Serial.print(" with password: ");
-        Serial.println(config.wifi_password);
-        connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-        WiFi.maxLowPowerMode();
-        wifi_present = true;
-    } else {
-        Serial.println("No WiFi configuration found");
+    nodeId(config.node_id);
+    setTime(); 
+    println("Config loaded. Fetching routes ..");
+    fetchRoutes();
+    println("Configuring LoRa with pins: CS: %d; RST: %d; IRQ: %d",
+        config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    LoRa.setPins(config.RFM95_CS, config.RFM95_RST, config.RFM95_INT);
+    if (!LoRa.begin(915E6)) {
+        println("LoRa init failed");
+        while(true);
     }
+    LoRa.enableCrc();
+    LoRa.onReceive(onReceive);
 }
 
-void loop()
-{
-    static int i = 0;
-    Serial.println(i++, DEC);
-    static uint8_t buf[RH_ROUTER_MAX_MESSAGE_LEN];
-    //static Message msg[sizeof(Message)] = {0};
-    static Message *msg = (Message*)buf;
- 
-    /*
-    Message msg = {
-        .sensorgrid_version=config.sensorgrid_version,
-        .network_id=config.network_id,
-        .from_node=config.node_id,
-        .message_type=1,
-        .len=0
-    };
-    */
-    // uint8_t *_msg = (uint8_t*)&msg;
-    // uint8_t len = sizeof(msg);
-    // uint8_t toID = 2;
-    // send_message((uint8_t*)&msg, len, toID);
-
-    if (RECV_STATUS_SUCCESS == receive(msg, 60000)) {
-        Serial.println("Received message");
-        Serial.print("VERSION: "); Serial.println(msg->sensorgrid_version, DEC);
-        Serial.print("DATA: ");
-        Serial.println((char*)msg->data);
-        for (int i=0; i < msg->len; i++) print("%s", msg->data[i]);
-        Serial.println("");
-        Serial.print("WiFi Status");
-        printWiFiStatus();
-        if (wifi_present) {
-            if (WiFi.status() == WL_CONNECTED) {
-                while (!client.connected()) {
-                    Serial.println("Reconnecting wifi");
-                    reconnectClient(client, config.wifi_ssid);
-                }
-            } else {
-                connectToServer(client, config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
-            }
-            Serial.println("Posting to API");
-            postToAPI(client, msg);
-        } else {
-            Serial.println("Collector Node with no WiFi configuration. Assuming serial collection");
+void loop() {
+    tick();
+    if (readyToPost() > 0) {
+        LoRa.idle();
+        digitalWrite(config.RFM95_CS, HIGH);
+        SPI.endTransaction();
+        sendDataToApi(readyToPost());
+        nodes_collected[readyToPost()] = 1;
+        readyToPost(0);
+        digitalWrite(config.RFM95_CS, LOW);
+        /* A fresh begin seems to be required for LoRa to recover the SPI bus from WiFi */
+        if (!LoRa.begin(915E6)) {
+            Serial.println("LoRa init failed");
+            while(true);
         }
-    } else {
-        Serial.println("No message received ");
+        LoRa.receive();
+        //delay(1000);
+        println("Finding next uncollected node of node_count: %d", node_count);
+        if (sendNextCollectPacket(COLLECTION_CODE_UNCOLLECTED)) return;
+        //sendStandby(++++seq, nextCollection());
     }
-
-    // delay(10000);
+    if (requestTimer() > 30000) {
+        Serial.println("***** TIMEOUT *****");
+        // TODO: a partially collected node should be written to the API and collection continued
+        // on next cycle. Will require sensors to clear collected data based on request packet id
+        if (nodes_collected[lastRequestNode()] == COLLECTION_CODE_UNCOLLECTED) {
+            nodes_collected[lastRequestNode()] = COLLECTION_CODE_TIMEOUT; // simple timeout code for now
+        } else if (nodes_collected[lastRequestNode()] == COLLECTION_CODE_TIMEOUT) {
+            nodes_collected[lastRequestNode()] = COLLECTION_CODE_UNREACHABLE;
+        }
+        if (sendNextCollectPacket(COLLECTION_CODE_UNCOLLECTED)) return;
+        if (sendNextCollectPacket(COLLECTION_CODE_TIMEOUT)) return;
+        for (int i=0; i<node_count; i++) {
+            if (nodes_collected[nodes[i]] == COLLECTION_CODE_UNREACHABLE) {
+                println("***** WARNING ***** unreachable node: %d", nodes[i]);
+            }
+        }
+        println("Resetting collection state for next cycle");
+        memset(nodes_collected, 0, sizeof(nodes_collected));
+        resetRequestTimer();
+    }
 }

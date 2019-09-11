@@ -23,7 +23,22 @@ ADAFRUIT_SI7021::~ADAFRUIT_SI7021() {}
 bool ADAFRUIT_SI7021::setup() {
     Serial.print(F("Si7021 "));
     if (sensor.begin()) {
-        Serial.println(F("Found"));
+        Serial.println(F("Found Si7021 with serial number: "));
+        Serial.print((byte)(sensor.sernum_a >> 24), HEX);
+        Serial.print(" ");
+        Serial.print((byte)(sensor.sernum_a >> 16), HEX);
+        Serial.print(" ");
+        Serial.print((byte)(sensor.sernum_a >> 8), HEX);
+        Serial.print(" ");
+        Serial.print((byte)sensor.sernum_a, HEX);
+        Serial.print(" :: ");
+        Serial.println((byte)(sensor.sernum_b >> 24), HEX);
+        Serial.print(" ");
+        Serial.print((byte)(sensor.sernum_b >> 16), HEX);
+        Serial.print(" ");
+        Serial.print((byte)(sensor.sernum_b >> 8), HEX);
+        Serial.print(" ");
+        Serial.print((byte)sensor.sernum_b, HEX);
         return true;
     } else {
         Serial.println(F("Not Found"));
@@ -35,7 +50,7 @@ bool ADAFRUIT_SI7021::start() {
     return true;
 }
 
-size_t ADAFRUIT_SI7021::read(char* buf, int len) {
+size_t ADAFRUIT_SI7021::read(char buf[], int len) {
     char temp[7];
     char humid[7];
     ftoa(readTemperature(), temp, 2);

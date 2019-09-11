@@ -5,8 +5,8 @@
 #define SENSORGRIDPM_CONFIG_H_
 
 // #include <Adafruit_SleepyDog.h>
-#include <RTCZero.h>
-#include <RTClib.h>
+//#include <RTCZero.h>
+//#include <RTClib.h>
 #include <KnightLab_ArduinoUtils.h>
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
@@ -30,8 +30,8 @@
 
 // comment
 
-enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY, WAIT_FOR_BATTERY };
-extern enum Mode mode;
+//enum Mode { WAIT, INIT, SAMPLE, HEARTBEAT, COMMUNICATE, STANDBY, WAIT_FOR_BATTERY };
+//extern enum Mode mode;
 
 extern void _setup();
 extern void _loop();
@@ -43,7 +43,7 @@ extern void readDataSamples();
 extern void logData();
 
 
-extern RTCZero rtcz;
+//extern RTCZero rtcz;
 extern RTC_PCF8523 rtc;
 extern uint32_t get_time();
 extern long getNextTaskTEMP();

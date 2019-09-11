@@ -2,7 +2,6 @@
 #define __KNIGHTLAB__SENSORINTERFACE_H
 
 #include <Arduino.h>
-#include <ArduinoJson.h>
 #include <KnightLab_ArduinoUtils.h>
 
 #define MAX_SENSOR_ID_STR 30

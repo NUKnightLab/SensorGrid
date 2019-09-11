@@ -25,6 +25,7 @@ void loadSensorConfig(uint8_t node_id, TimeFunction time_fcn) {
     /* Adafruit Si7021 temperature/humidity breakout */
     sensor = new ADAFRUIT_SI7021(node_id, time_fcn);
     if (sensor->setup()) {
+        Serial.println("Configuring ADAFRUIT_SI7021");
         current_config = getNextSensorConfig(current_config);
         current_config->sensor = sensor;
     } else {
@@ -33,6 +34,7 @@ void loadSensorConfig(uint8_t node_id, TimeFunction time_fcn) {
 
     sensor = new HONEYWELL_HPM(node_id, time_fcn);
     if (sensor->setup()) {
+        Serial.println("Configuring HONEYWELL_HPM");
         current_config = getNextSensorConfig(current_config);
         current_config->sensor = sensor;
     } else {

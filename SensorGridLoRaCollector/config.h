@@ -4,8 +4,8 @@
 #ifndef KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
 #define KNIGHTLAB_SENSORGRID_SENSORGRIDPM_CONFIG_H_
 
-#include <RTCZero.h>
-#include <RTClib.h>
+//#include <RTCZero.h>
+//#include <RTClib.h>
 #include <KnightLab_ArduinoUtils.h>
 #include <KnightLab_FeatherUtils.h>
 #include <KnightLab_SDConfig.h>
@@ -26,7 +26,7 @@ extern void _setup();
 extern void _loop();
 
 extern RTCZero rtcz;
-extern RTC_PCF8523 rtc;
+//extern RTC_PCF8523 rtc;
 extern uint32_t get_time();
 // extern OLED oled;
 
@@ -37,7 +37,7 @@ extern uint32_t get_time();
 #define NODE_TYPE_COLLECTOR 1
 #define NODE_TYPE_SENSOR 2
 
-#define MAX_NODES 20
+//#define MAX_NODES 20
 
 #define CONFIG_FILE "CONFIG.TXT"  // Adalogger doesn't seem to like underscores
                                   // in the name!!!
