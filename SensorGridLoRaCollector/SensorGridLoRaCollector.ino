@@ -89,6 +89,9 @@ void _sendDataToApi(uint8_t node_id)
 
 void sendDataToApi(uint8_t node_id)
 {
+    /**
+     * Be sure to set `chunked_transfer_encoding on` in the Nginx config
+     */
     println("***** SENDING CHUNKED DATA TO API *****");
     digitalWrite(WIFI_CS, LOW);
     connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
