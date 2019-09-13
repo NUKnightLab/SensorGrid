@@ -77,9 +77,19 @@ byte printWiFi(int i)
     return client.print(i);
 }
 
+byte printWiFi(int i, int BASE)
+{
+    return client.print(i, BASE);
+}
+
 byte printlnWiFi(int i)
 {
     return client.println(i);
+}
+
+byte printlnWiFi(int i, int BASE)
+{
+    return client.println(i, BASE);
 }
 
 void receiveWiFiResponse()

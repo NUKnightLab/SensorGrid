@@ -14,6 +14,8 @@ byte printWiFi(char* s);
 byte printlnWiFi(char* s);
 byte printWiFi(int i);
 byte printlnWiFi(int i);
+byte printWiFi(int i, int BASE);
+byte printlnWiFi(int i, int BASE);
 void receiveWiFiResponse();
 void receiveWiFiResponse(char buffer[], size_t len);
 #endif

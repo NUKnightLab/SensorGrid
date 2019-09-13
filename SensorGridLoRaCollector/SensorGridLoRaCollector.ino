@@ -43,7 +43,7 @@ void fetchRoutes()
     parseRoutingTable(json);
 }
 
-void sendDataToApi(uint8_t node_id)
+void _sendDataToApi(uint8_t node_id)
 {
     println("***** SEND DATA TO API *****");
     int msg_length = 0;
@@ -85,6 +85,44 @@ void sendDataToApi(uint8_t node_id)
     digitalWrite(WIFI_CS, HIGH);
     SPI.endTransaction();
     clearData();
+}
+
+void sendDataToApi(uint8_t node_id)
+{
+    println("***** SENDING CHUNKED DATA TO API *****");
+    digitalWrite(WIFI_CS, LOW);
+    connectWiFi(config.wifi_ssid, config.wifi_password, config.api_host, config.api_port);
+    printWiFi("POST /networks/"); Serial.print("POST /networks/");
+    printWiFi(config.network_id); Serial.print(config.network_id);
+    printWiFi("/nodes/"); Serial.print("/nodes/");
+    printWiFi(node_id); Serial.print(node_id);
+    printlnWiFi("/data/ HTTP/1.1"); Serial.println("/data/ HTTP/1.1");
+    printWiFi("Host: "); Serial.print("Host: ");
+    printlnWiFi(config.api_host); Serial.println(config.api_host);
+    printlnWiFi("Content-Type: application/json"); Serial.println("Content-Type: application/json");
+    printlnWiFi("Transfer-Encoding: chunked"); Serial.println("Transfer-Encoding: chunked");
+    printlnWiFi(""); Serial.println("");
+    printlnWiFi(11, HEX); Serial.println(11, HEX);
+    printlnWiFi("{ \"data\": ["); Serial.println("{ \"data\": [");
+    while (getRecordCount() > 0) {
+        DataRecord record = getNextRecord();
+        if (getRecordCount() > 0) {
+            printlnWiFi(record.len + 1, HEX); Serial.println(record.len + 1, HEX);
+            printWiFi(record.data); Serial.print(record.data);
+            printlnWiFi(","); Serial.println(",");
+        } else {
+            printlnWiFi(record.len + 2, HEX); Serial.println(record.len + 2, HEX);
+            printWiFi(record.data); Serial.print(record.data);
+            printlnWiFi("]}"); Serial.println("]}");
+        }
+    }
+    printlnWiFi(0); Serial.println(0);
+    printlnWiFi(""); Serial.println("");
+    println("***** DONE *****");
+    receiveWiFiResponse();
+    disconnectWiFi();
+    digitalWrite(WIFI_CS, HIGH);
+    SPI.endTransaction();
 }
 
 void setTime()
@@ -134,7 +172,8 @@ bool sendNextCollectPacket(int collection_code)
             } else {
                 println("");
             }
-            sendCollectPacket(nodes[i], 0, ++++seq);
+            //sendCollectPacket(nodes[i], 0, ++++seq);
+            sendCollectPacket(nodes[i], 1, ++++seq);
             lastRequestNode(nodes[i]);
             resetRequestTimer();
             return true;
