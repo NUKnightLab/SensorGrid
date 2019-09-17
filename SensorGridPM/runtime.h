@@ -31,9 +31,11 @@ void setupRunner();
 void runRunner();
 
 /* data history */
+/*
 struct DataSample {
     char data[DATASAMPLE_DATASIZE];
     struct DataSample *next;
 };
+*/
 
 #endif  // SENSORGRIDPM_RUNTIME_H_

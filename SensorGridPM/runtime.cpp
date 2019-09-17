@@ -15,8 +15,6 @@
 
 static uint8_t msg_buf[140] = {0};
 static Message *msg = reinterpret_cast<Message*>(msg_buf);
-//StaticJsonBuffer<200> json_buffer;
-//JsonArray& data_array = json_buffer.createArray();
 
 Task initialize(60, TASK_FOREVER, &initSensors);
 Task sample(60, TASK_FOREVER, &readDataSamples);
@@ -24,10 +22,6 @@ Task sample(60, TASK_FOREVER, &readDataSamples);
 Task heartbeatOn(5, TASK_FOREVER, &flashHeartbeatOn);
 Task heartbeatOff(5, TASK_FOREVER, &flashHeartbeatOff);
 Scheduler runner;
-
-
-DataSample *datasample_head = NULL;
-DataSample *datasample_tail = NULL;
 
 void syncTime(uint32_t timestamp) {
     uint32_t uptime = rtcz.getEpoch() - systemStartTime();
@@ -55,24 +49,6 @@ long getNextTaskTEMP()
       minTime = nextIterationTime(sample);
   }
   return minTime;
-}
-
-DataSample *appendData()
-{
-    DataSample *new_sample = reinterpret_cast<DataSample*>(malloc(sizeof(DataSample)));
-    if (new_sample == NULL) {
-        logln(F("Error creating new sample"));
-        while (1) {}
-    }
-    if (datasample_head == NULL) {
-        datasample_head = new_sample;
-    }
-    if (datasample_tail != NULL) {
-        datasample_tail->next = new_sample;
-    }
-    datasample_tail = new_sample;
-    datasample_tail->next = NULL;
-    return datasample_tail;
 }
 
 /* -- end data history */
@@ -202,23 +178,22 @@ bool checkBatteryLevel() {
 void recordRestart()
 {
     println("recording restart ...");
-    DataSample *sample = appendData();
-    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"event\":\"restart\",\"ts\":%lu}",
+    char data[DATASAMPLE_DATASIZE];
+    snprintf(data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"event\":\"restart\",\"ts\":%lu}",
         nodeId(), rtcz.getEpoch());
-    recordData(sample->data, strlen(sample->data));
+    recordData(data, strlen(data));
     println("done recording restart ...");
 }
 
 void recordBatteryLevel()
 {
-    // float bat = batteryLevel();
     println("Recording battery ..");
     char bat[5];
     ftoa(batteryLevelAveraged(), bat, 2);
-    DataSample *batSample = appendData();
-    snprintf(batSample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%lu}",
+    char data[DATASAMPLE_DATASIZE];
+    snprintf(data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"bat\":%s,\"ts\":%lu}",
         config.node_id, bat, rtcz.getEpoch());
-    recordData(batSample->data, strlen(batSample->data));
+    recordData(data, strlen(data));
     println(".. done recording battery");
 }
 
@@ -230,10 +205,10 @@ void recordUptime()
     Serial.println(rtcz.getEpoch());
     Serial.println(systemStartTime());
     Serial.println(uptime);
-    DataSample *sample = appendData();
-    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"runtime\":%lu,\"ts\":%lu}",
+    char data[DATASAMPLE_DATASIZE];
+    snprintf(data, DATASAMPLE_DATASIZE, "{\"node\":%d,\"uptime\":%lu,\"runtime\":%lu,\"ts\":%lu}",
         config.node_id, uptime, runtime, rtcz.getEpoch());
-    recordData(sample->data, strlen(sample->data));
+    recordData(data, strlen(data));
     println(".. done recording uptime");
 }
 
@@ -241,13 +216,14 @@ void recordTxSettings()
 {
     /* TODO: generalize this for all nodes */
     println("recording tx settings ..");
-    DataSample *sample = appendData();
-    snprintf(sample->data, DATASAMPLE_DATASIZE, "{\"tx\":[[1,%d],[183,%d],[7,%d]]}",
-        txPower(1), txPower(183), txPower(7));
-    recordData(sample->data, strlen(sample->data));
+    char data[DATASAMPLE_DATASIZE];
+    snprintf(data, DATASAMPLE_DATASIZE, "{\"tx\":[[1,%d],[183,%d],[7,%d],[35,%d]]}",
+        txPower(1), txPower(183), txPower(7), txPower(35));
+    recordData(data, strlen(data));
     println(".. done recording tx settings");
 }
 
+/* TODO: rewrite this to work with the new records queue
 void logData() {
     Watchdog.enable();
     recordBatteryLevel();                   // Should get a battery recording level before each log
@@ -263,7 +239,7 @@ void logData() {
           return;
     }
     if (false) {  // true to check available SD filespace
-        /* TODO: does this work? */
+        // TODO: does this work?
         log_(F("SD free: "));
         uint32_t volFree = sd.vol()->freeClusterCount();
         float fs = 0.000512*volFree*sd.vol()->blocksPerCluster();
@@ -307,15 +283,16 @@ void logData() {
         standbySched();
     }
 }
+*/
 
 void readDataSamples() {
     Watchdog.enable();
     SensorConfig *cursor = sensor_config_head;
     while (cursor) {
         log_(F("Reading sensor %s .. "), cursor->sensor->id);
-        DataSample *sample = appendData();
-        size_t len = cursor->sensor->read(sample->data, DATASAMPLE_DATASIZE);
-        recordData(sample->data, len);
+        char data[DATASAMPLE_DATASIZE];
+        size_t len = cursor->sensor->read(data, DATASAMPLE_DATASIZE);
+        recordData(data, len);
         cursor->sensor->stop();
         logln(F("Sensor stopped: %s"), cursor->sensor->id);
         cursor = cursor->next;
