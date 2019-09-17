@@ -12,12 +12,15 @@
 #define COLLECTION_CODE_UNREACHABLE 3
 
 static uint8_t nodes_collected[255] = {0};
+
+/*
 extern "C" char *sbrk(int i);
 
 int FreeRam () {
   char stack_dummy = 0;
   return &stack_dummy - sbrk(0);
 }
+*/
 
 static uint8_t seq = 0;
 
@@ -43,6 +46,7 @@ void fetchRoutes()
     parseRoutingTable(json);
 }
 
+/*
 void _sendDataToApi(uint8_t node_id)
 {
     println("***** SEND DATA TO API *****");
@@ -86,6 +90,7 @@ void _sendDataToApi(uint8_t node_id)
     SPI.endTransaction();
     clearData();
 }
+*/
 
 void sendDataToApi(uint8_t node_id)
 {
@@ -118,6 +123,7 @@ void sendDataToApi(uint8_t node_id)
             printWiFi(record.data); Serial.print(record.data);
             printlnWiFi("]}"); Serial.println("]}");
         }
+        releaseDataRecord(record);
     }
     printlnWiFi(0); Serial.println(0);
     printlnWiFi(""); Serial.println("");
@@ -208,6 +214,7 @@ void setup()
 void loop() {
     tick();
     if (readyToPost() > 0) {
+        println("Free RAM: %d; Records: %d; Empty records: %d", FreeRam(), getRecordCount(), getEmptyRecordCount());
         LoRa.idle();
         digitalWrite(config.RFM95_CS, HIGH);
         SPI.endTransaction();
@@ -225,9 +232,11 @@ void loop() {
         println("Finding next uncollected node of node_count: %d", node_count);
         if (sendNextCollectPacket(COLLECTION_CODE_UNCOLLECTED)) return;
         //sendStandby(++++seq, nextCollection());
+        println("Free RAM: %d; Records: %d; Empty records: %d", FreeRam(), getRecordCount(), getEmptyRecordCount());
     }
     if (requestTimer() > 30000) {
         Serial.println("***** TIMEOUT *****");
+        println("Free RAM: %d; Records: %d; Empty records: %d", FreeRam(), getRecordCount(), getEmptyRecordCount());
         // TODO: a partially collected node should be written to the API and collection continued
         // on next cycle. Will require sensors to clear collected data based on request packet id
         if (nodes_collected[lastRequestNode()] == COLLECTION_CODE_UNCOLLECTED) {
@@ -245,5 +254,6 @@ void loop() {
         println("Resetting collection state for next cycle");
         memset(nodes_collected, 0, sizeof(nodes_collected));
         resetRequestTimer();
+        println("Free RAM: %d; Records: %d; Empty records: %d", FreeRam(), getRecordCount(), getEmptyRecordCount());
     }
 }
